@@ -36,8 +36,12 @@ GEN_CONFIG_FIXED = {
     "pad_etch": "square",
     "metal3": False,
     # "vias" etch: the spacing range every design's per-side count is chosen from (um). One range
-    # for all designs, so pads of different sizes get similar spacing.
-    "etch_via_spacing": (15.0, 20.0),
+    # for all designs, so pads of different sizes get similar spacing. 14.5, not 15: with the
+    # 3.75 um inset the 37 um dummy pad (35_36) fits 3 per side at 14.75 and nothing in 15-20.
+    "etch_via_spacing": (14.5, 20.0),
+    # "vias" etch: how much further in from the pad edge the etch vias sit than the routing via
+    # (via_offset_x = 2.75 -> centres 3.75 um in, 1.25 um metal between circle and pad edge).
+    "etch_via_inset_extra": 1.0,
 }
 GEN_ROUTING_FIXED = {
     "via_shape": "circle",   # "circle" (via_radius) or "rect" (via_w x via_h)

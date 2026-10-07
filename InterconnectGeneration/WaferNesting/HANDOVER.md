@@ -310,7 +310,7 @@ layer 1) is still free. The nearest device is as far from the new marks as from 
 
 01d result: all cells and TOP OK, changed as expected on 3/0 and 8/0 with every change
 inside the Metal2 pads; 38/38 placements exact; flattened XOR 0 on 5/0, 6/0, 7/0, 10/0;
-68.45 mm² on 3/0, 78.62 mm² on 8/0. 01e: the same XOR areas in the overlay.
+67.21 mm² on 3/0, 78.62 mm² on 8/0. 01e: the same XOR areas in the overlay.
 
 Output: `runs/wafer4_rev3/` (`wafer_wafer4_rev3.gds`, `overlay_wafer4_rev3.gds` + `.lyp`).
 

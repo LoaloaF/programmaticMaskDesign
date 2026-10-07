@@ -10,3 +10,6 @@ InterconnectGeneration/WaferNesting/runs/
 
 # generative_probe_design output (also listed in its own .gitignore)
 generative_probe_design/64Ch_4Shankdesigns/
+
+# Rev3 design outputs (~190 MB) -- regenerate with `python3 build_designs.py --rev 3`
+InterconnectGeneration/designs/rev3/

@@ -297,22 +297,24 @@ layer remap (§1.1). Forgetting `via_offset_y` leaves the via off its corner: 23
 | output | `designs/` | `designs/rev3/*_rev3.*` |
 
 **Rev3 etch vias** (`01_generate_*.py`, `perimeter_via_centres` / `vias_per_side_for` in
-`lib/generate_helpers.py`). Each circle has the routing via's diameter (5 µm) and its inset
-(centre 2.75 µm from the pad edge, 0.25 µm edge to edge), so the corner circles line up with
-the routing via. Every side carries the same number, corners included; the corner over the
+`lib/generate_helpers.py`). Each circle has the routing via's diameter (5 µm) and sits
+`etch_via_inset_extra` = 1 µm further in from the pad edge than the routing via: centre
+3.75 µm from the edge, 1.25 µm of metal between circle and edge (the routing via stays at
+2.75 / 0.25 µm). Every side carries the same number, corners included; the corner over the
 routing via (top-left) is left out. The count is the one whose spacing lies in
-`etch_via_spacing` = (15, 20) µm (`lib/constants.py`, one range for all designs) and is
-nearest its middle:
+`etch_via_spacing` = (14.5, 20) µm (`lib/constants.py`, one range for all designs) and is
+nearest its middle. The lower bound is 14.5, not 15, only for the 37 µm dummy pad, which
+fits 3 per side at 14.75 µm and no count inside 15–20:
 
 | Design | Pad (Metal2 = Metal3) | Per side | Spacing (centres) | Gap (edges) | Circles per pad |
 |---|---|---|---|---|---|
-| 12-block | 58 µm | 4 | 17.50 µm | 12.50 µm | 11 |
-| 8-block `51_35` | 53 µm | 4 | 15.83 µm | 10.83 µm | 11 |
-| 8-block `71_15` | 73 µm | 5 | 16.88 µm | 11.88 µm | 15 |
-| dummy `61_10` | 63 µm | 4 | 19.17 µm | 14.17 µm | 11 |
-| dummy `35_36` | 37 µm | 3 | 15.75 µm | 10.75 µm | 7 |
+| 12-block | 58 µm | 4 | 16.83 µm | 11.83 µm | 11 |
+| 8-block `51_35` | 53 µm | 4 | 15.17 µm | 10.17 µm | 11 |
+| 8-block `71_15` | 73 µm | 5 | 16.38 µm | 11.38 µm | 15 |
+| dummy `61_10` | 63 µm | 4 | 18.50 µm | 13.50 µm | 11 |
+| dummy `35_36` | 37 µm | 3 | 14.75 µm | 9.75 µm | 7 |
 
-Spacing = (`pad_side` − 5.5) / (per side − 1); circles per pad = 4 × (per side − 1) − 1.
+Spacing = (`pad_side` − 7.5) / (per side − 1); circles per pad = 4 × (per side − 1) − 1.
 The generator stops if no count fits the range, if circles would overlap, or if a pad does
 not have exactly one perimeter position on its routing via. The routers pass Metal3 and the
 circles through untouched (they read Polyimide_Negative only as HATCH); the dummy picks the

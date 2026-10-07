@@ -122,8 +122,8 @@ if __name__ == "__main__":
     #FINAL PI ETCH. "square": one pad_side_extra square per pad on EtchingPad (Rev2). "vias": via-sized
     #circles around the pad perimeter on Polyimide_Negative (Rev3) -- the same count on all four sides,
     #corners included, chosen so the spacing falls in etch_via_spacing (shared by every design, so all
-    #pads get similar spacing); at the routing via's diameter and at its inset from the pad edge, so the
-    #corner circles line up with the routing via. The perimeter position on the routing via (the
+    #pads get similar spacing); at the routing via's diameter, and etch_via_inset_extra further in
+    #from the pad edge than the routing via. The perimeter position over the routing via (the
     #top-left corner) is left out, so that via is not etched through twice.
     if CONFIG["pad_etch"] not in ("square", "vias"):
         raise SystemExit(f"pad_etch must be 'square' or 'vias', got {CONFIG['pad_etch']!r}")
@@ -131,7 +131,7 @@ if __name__ == "__main__":
         if ROUTING["via_shape"] != "circle":
             raise SystemExit("pad_etch='vias' copies the routing via's circle; set via_shape='circle'")
         etch_r = ROUTING["via_radius"]
-        etch_inset = ROUTING["via_offset_x"]
+        etch_inset = ROUTING["via_offset_x"] + CONFIG["etch_via_inset_extra"]
         etch_layer = POLYIMIDE["neg_layer"]
         n_side, etch_step = vias_per_side_for(pad_side, etch_inset, CONFIG["etch_via_spacing"])
         if etch_step - 2 * etch_r <= 0:
@@ -466,8 +466,9 @@ if __name__ == "__main__":
     if CONFIG["pad_etch"] == "vias":
         print(f"PI etch: {4 * (n_side - 1) - 1} circles per pad on {etch_layer} (r{etch_r} um, "
               f"{n_side} per side incl. corners, {etch_step:.3f} um apart -- range "
-              f"{CONFIG['etch_via_spacing']} um; centres {etch_inset} um in from the pad edge; the "
-              f"corner over the routing via left out)")
+              f"{CONFIG['etch_via_spacing']} um; centres {etch_inset} um in from the pad edge, "
+              f"{CONFIG['etch_via_inset_extra']} um more than the routing via; the corner over the "
+              f"routing via left out)")
     else:
         print(f"PI etch: one {pad_side_extra} um square per pad on {CONFIG['pad_layers_extra']}")
     if CONFIG["metal3"]:
