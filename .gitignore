@@ -1,0 +1,12 @@
+# Python / tooling
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+
+# Generated wafer runs -- regenerate with the WaferNesting stages (see
+# InterconnectGeneration/WaferNesting/HANDOVER.md). runs/wafer4_rev2 is rebuilt by 01c + 01d.
+InterconnectGeneration/WaferNesting/runs/
+
+# generative_probe_design output (also listed in its own .gitignore)
+generative_probe_design/64Ch_4Shankdesigns/

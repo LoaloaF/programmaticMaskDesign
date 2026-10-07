@@ -1,0 +1,6 @@
+# Generated output -- regenerate with `python3 -m electrode_bundle.batch` (shanks/) and
+# `python3 WaferNesting/nest_tiler.py` (wafer/). Kept out of git: ~27 MB per full run,
+# rewritten every time, derived entirely from electrode_bundle/design_sets.py + the
+# WaferNesting config.
+# One target folder per design set, holding both halves (shanks/ + wafer/).
+64Ch_4Shankdesigns/
