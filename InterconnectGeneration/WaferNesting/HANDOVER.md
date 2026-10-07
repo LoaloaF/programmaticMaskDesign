@@ -7,10 +7,12 @@ Puts MEA1K interconnect designs onto a 100 mm wafer and writes the combined GDS.
 |---|---|---|---|
 | **nest** | "arrange these N pieces legally on a new wafer" | `00` → `01` → `02` → `03` → `04` | `config.py` |
 | **reproduce** | "rebuild this existing wafer, exactly, from its sources" | `01c` → `01d` | `config_rev2.py` |
+| **revise** | "the same wafer, with revised designs at the same placements" | `01c` → `01d` → `01e` | `config_rev3.py` |
 
 The reproduce path is what the fabricated wafer is maintained with: the Rev2 wafer is
 rebuilt from `../designs/` geometry-identically (§4.2). New wafer revisions that keep the
-layout start there, not from a fresh nest.
+layout start there, not from a fresh nest: Rev3 (§4.3) is Rev2's placements with every cell
+swapped for its Rev3 design, checked against Rev2 layer by layer.
 
 Every stage is driven by one config file, chosen with `WAFERNEST_CONFIG`; the stage scripts
 hold no paths, clearances or layer numbers of their own. The wafer template and alignment
@@ -34,8 +36,9 @@ programmaticMaskDesign/
       00_check_setup.py … 04_verify_wafer.py       <- nest path
       01c_extract_exact_placements.py              <- reproduce path
       01d_rebuild_wafer.py
+      01e_overlay_wafers.py                        <- old + new wafer in one GDS
       exact_io.py                                  <- shared by 01c and 01d
-      config.py, config_rev2.py, config_common.py
+      config.py, config_rev2.py, config_rev3.py, config_common.py
       config_electrode_bundle.py                   <- legacy, see §6.4
       footprint_extract.py
       new_wafer_actually.GDS, marks_union.wkt      <- wafer template + marks
@@ -66,9 +69,22 @@ $KL -b -r WaferNesting/01d_rebuild_wafer.py              # ~2 min, mostly the fi
 ```
 
 01d must end with `GEOMETRY IDENTICAL`. To put revised content at the same placements,
-point that cell's entry in `config_rev2.SOURCES` at the new file and run 01d alone (§3.4).
+use a revision config (§1.2), not an edited `config_rev2.py`.
 
-### 1.2 Nest a new wafer
+### 1.2 Build the Rev3 wafer
+
+```bash
+python3 build_designs.py --rev 3                                     # ../designs/rev3/
+WAFERNEST_CONFIG=config_rev2 $KL -b -r WaferNesting/01c_extract_exact_placements.py
+WAFERNEST_CONFIG=config_rev3 $KL -b -r WaferNesting/01d_rebuild_wafer.py    # ~2 min
+WAFERNEST_CONFIG=config_rev3 $KL -b -r WaferNesting/01e_overlay_wafers.py   # ~4 min
+```
+
+01d must end with `IDENTICAL to MEA1K_wafer4_…_Rev2.gds except the expected changes on
+3/0, 8/0`. 01e writes `runs/wafer4_rev3/overlay_wafer4_rev3.gds` + `.lyp`: Rev2 on
+datatype 0, Rev3 on 1, their flattened XOR on 2 (open with `klayout <gds> -l <lyp>`).
+
+### 1.3 Nest a new wafer
 
 ```bash
 export WAFERNEST_CONFIG=config        # the default when unset
@@ -82,7 +98,7 @@ $KL -b -r WaferNesting/04_verify_wafer.py       # must end ALL CHECKS PASSED
 `config.py` nests the three connector designs only — no dummies — and writes the
 pre-renumbering layer numbers (§6.1). Read §6 before fabricating anything from it.
 
-### 1.3 Stages and outputs
+### 1.4 Stages and outputs
 
 | Stage | Does | Runs in |
 |---|---|---|
@@ -93,6 +109,7 @@ pre-renumbering layer numbers (§6.1). Read §6 before fabricating anything from
 | `04_verify_wafer.py` | counts, per-layer shape totals, max radius vs the sources | KLayout |
 | `01c_extract_exact_placements.py` | existing wafer → `placements.json`, every part proven against its source | KLayout |
 | `01d_rebuild_wafer.py` | `placements.json` + sources + template → wafer GDS, checked against the original | KLayout |
+| `01e_overlay_wafers.py` | the original + the rebuilt wafer → one GDS on datatypes 0 / 1, XOR on 2, + `.lyp` | KLayout |
 
 All output goes to `runs/<RUN_TAG>/`:
 
@@ -104,9 +121,10 @@ All output goes to `runs/<RUN_TAG>/`:
 | `poses.json`, `nest_preview.png` | 02 | the nest |
 | `wafer_<RUN_TAG>.gds` | 03 / 01d | the wafer |
 | `placements.json` | 01c | target identity, template layers, per-cell source + offset + XOR proof, every placement |
+| `overlay_<RUN_TAG>.gds` + `.lyp` | 01e | old and new wafer overlaid, with their XOR |
 
 Runs present today: `interconnect_4x3` (config.py, 2026-10-07), `wafer4_rev2`
-(config_rev2), and two older ones, `example_4x3` and `electrode_bundle_IONP_id11`, kept
+(config_rev2), `wafer4_rev3` (config_rev3), and two older ones, `example_4x3` and `electrode_bundle_IONP_id11`, kept
 for comparison. Stage 03 refuses to overwrite its GDS; 01d overwrites its own (it is fully
 determined by `placements.json` and the sources).
 
@@ -145,6 +163,7 @@ reproduces a cell and the stage that builds the cell from it cannot disagree abo
 |---|---|
 | `config.py` | nest path: the 3 connector DXFs, counts, clearances, seed, `LAYER_MAP` |
 | `config_rev2.py` | reproduce path: target wafer, template, one `SOURCES` entry per wafer cell, the fabricated layer maps |
+| `config_rev3.py` | revise path: Rev2's `placements.json`, Rev3 `SOURCES`, `EXTRA_TOP_LAYERS`, `EXPECTED_CHANGED_LAYERS`, `CHANGES_WITHIN` |
 | `config_common.py` | derived settings for the nest configs (paths, `DESIGNS` helpers) |
 | `footprint_extract.py` | DXF → silhouette, for stage 01 |
 | `exact_io.py` | source → polygons, template → polygons, GDS header, transform records |
@@ -216,9 +235,18 @@ What "identical" means in 01d's check, and why:
   276.7510046450001): ~1e-13 µm at the rim, invisible on a 1 nm grid, and check 4 proves it.
 - **bytes**: reported, not required. GDS carries timestamps and the writer's record order.
 
-**Swapping content.** Point a `SOURCES` entry at a new file and run 01d alone: it warns
-that the source differs from what 01c recorded, builds with the new one, and its check then
-reports exactly that cell's difference — the expected outcome, not a failure to fix.
+**Revising content.** A revision config points `SOURCES` at the new files and reuses the old
+wafer's `placements.json`. 01d notes every swapped source, builds with the new ones and still
+checks against the old wafer, with three settings that make the check mean something:
+
+- `EXPECTED_CHANGED_LAYERS` — differences on these layers are reported, not failed; any other
+  difference still fails.
+- `CHANGES_WITHIN` — per device cell, the change on a layer must lie inside another layer
+  (Rev3: the changes on 3 and 8 inside the Metal2 pads, layer 6). A revision meant to touch
+  only the pads therefore cannot touch anything else unnoticed.
+- `EXTRA_TOP_LAYERS` — template layers added to TOP (Rev3: layer 8, Metal3's marks).
+
+Placements must still match exactly.
 
 ---
 
@@ -265,6 +293,27 @@ that cell (574 095 µm² on 3/0) and on the flattened 3/0 (4 × that).
 
 Output: `runs/wafer4_rev2/`.
 
+### 4.3 `config_rev3.py` — the Rev3 wafer (built 2026-10-07)
+
+The Rev2 wafer with the Rev3 pad stack (`../HANDOVER.md` §4.5): the PI etch squares become
+perimeter etch vias on layer 3, and a new Metal3 layer (the pad squares) goes on layer 8.
+Sources: `../designs/rev3/*_rev3.*` from `build_designs.py --rev 3`. Layer maps: Rev2's plus
+`metal3 → 8` (DXF) and `8 → 8` (dummy GDS); the etch circles need no entry, since they are on
+Polyimide_Negative / dummy layer 1, already mapped to 3.
+
+**Metal3's alignment mark.** Template layer 8 holds a small (non-inverted) vernier in the
+third of the five mark slots, between Etching's (slot 1) and PI's (slot 4) inverted marks,
+plus the coarse marks every layer repeats. Rev2 dropped template layers 1 and 8, so both of
+their slots were free; Rev3 keeps layer 8 as-is (`EXTRA_TOP_LAYERS`). Slot 2 (template
+layer 1) is still free. The nearest device is as far from the new marks as from Rev2's
+(0.5–1 mm on the right, 1–1.5 mm on the left).
+
+01d result: all cells and TOP OK, changed as expected on 3/0 and 8/0 with every change
+inside the Metal2 pads; 38/38 placements exact; flattened XOR 0 on 5/0, 6/0, 7/0, 10/0;
+68.45 mm² on 3/0, 78.62 mm² on 8/0. 01e: the same XOR areas in the overlay.
+
+Output: `runs/wafer4_rev3/` (`wafer_wafer4_rev3.gds`, `overlay_wafer4_rev3.gds` + `.lyp`).
+
 ---
 
 ## 5. Adapting it
@@ -292,8 +341,11 @@ puts a piece the seed has no pose for into the slot of a seed piece not placed t
 
 ### 5.3 A new wafer revision that keeps the layout
 
-Copy `config_rev2.py`, point `TARGET_GDS` at the wafer to start from, run 01c, then swap
-sources in `SOURCES` and run 01d. To *move* or *add* pieces, edit `placements.json` (or the
+Copy `config_rev3.py`: point `PLACEMENTS_PATH` at the 01c output of the wafer to start from,
+`SOURCES` at the revised designs, and list the layers the revision is meant to change in
+`EXPECTED_CHANGED_LAYERS` (and where, in `CHANGES_WITHIN`). Run 01d, then 01e to look at it.
+To start from a wafer other than Rev2, first write a reproduce config for it like
+`config_rev2.py` and run 01c. To *move* or *add* pieces, edit `placements.json` (or the
 script that writes it) — 01d builds whatever it says.
 
 ### 5.4 Check each stage before moving on
@@ -305,7 +357,8 @@ script that writes it) — 01d builds whatever it says.
 | 03 | `DROPPED` lists only layers you meant to drop |
 | 04 | `ALL CHECKS PASSED` |
 | 01c | every cell `OK`, every TOP layer matched, `wrote placements.json` |
-| 01d | `GEOMETRY IDENTICAL` (or, after a swap, differences only in the swapped cells) |
+| 01d | `GEOMETRY IDENTICAL`; for a revision, `IDENTICAL … except the expected changes on …` |
+| 01e | XOR (datatype 2) empty on every layer the revision did not touch |
 
 ---
 
@@ -361,10 +414,11 @@ because `runs/electrode_bundle_IONP_id11/` came from it.
 5. **`extract()` is lossy on purpose** — it bridges splits up to 2 × `CLOSE_GAP` and keeps
    only the largest part of a disjoint result (§3.2).
 6. **`runs/` is disposable; `reference_run_2026-07/` is not.** Nothing regenerates the seed.
-   `runs/wafer4_rev2/` is regenerated by 01c + 01d.
+   `runs/wafer4_rev2/` is regenerated by 01c + 01d, `runs/wafer4_rev3/` by
+   `build_designs.py --rev 3` + 01c + 01d + 01e.
 7. **SA is stochastic.** If a run stalls, change `RNG_SEED` or raise `RESTARTS` / `ITERS` —
    after checking the clearances (§3.3).
-8. **Stages 01c, 01d, 03, 04 run under KLayout's Python** (no shapely / numpy / matplotlib).
+8. **Stages 01c, 01d, 01e, 03, 04 run under KLayout's Python** (no shapely / numpy / matplotlib).
    Keep configs and `exact_io.py` pure standard library + `pya`.
 9. **Units:** µm in the DXFs, mm in the nest path, dbu (1 nm) in KLayout and in
    `placements.json`.

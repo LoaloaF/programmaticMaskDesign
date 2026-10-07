@@ -9,7 +9,8 @@ programmaticMaskDesign/
   MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds   the fabricated interconnect wafer (Rev2)
   InterconnectGeneration/      MEA1K chip <-> Molex connector interconnects
     HANDOVER.md
-    WaferNesting/              interconnect wafers: nest, or reproduce Rev2 exactly
+    build_designs.py           all five wafer designs of a revision (Rev2, Rev3)
+    WaferNesting/              interconnect wafers: nest, reproduce Rev2, build Rev3
       HANDOVER.md
   generative_probe_design/     flexible 64-channel electrode probes
     README.md
@@ -39,6 +40,24 @@ $KL -b -r WaferNesting/01d_rebuild_wafer.py      # ends with GEOMETRY IDENTICAL
 The GDS layer numbers on it are the hand-renumbered ones (Metal1 7, Polyimide_Negative +
 EtchingPad 3, Etching + Via 5, Metal2 6); see `InterconnectGeneration/WaferNesting/HANDOVER.md` §4.2.
 
+## Rev3
+
+The same wafer — every piece at its Rev2 position — with a revised pad stack on all five
+designs: the final PI etch is no longer one square per pad but 5 µm etch vias around the pad
+perimeter (15–20 µm apart, on layer 3), and a new **Metal3** layer repeats the pad squares
+(layer 8, with the template's layer-8 alignment marks). Details:
+`InterconnectGeneration/HANDOVER.md` §4.5 and `InterconnectGeneration/WaferNesting/HANDOVER.md` §4.3.
+
+```bash
+cd InterconnectGeneration
+python3 build_designs.py --rev 3                 # designs/rev3/
+WAFERNEST_CONFIG=config_rev2 $KL -b -r WaferNesting/01c_extract_exact_placements.py
+WAFERNEST_CONFIG=config_rev3 $KL -b -r WaferNesting/01d_rebuild_wafer.py    # checked against Rev2
+WAFERNEST_CONFIG=config_rev3 $KL -b -r WaferNesting/01e_overlay_wafers.py   # Rev2 + Rev3 overlay
+```
+
+Output: `InterconnectGeneration/WaferNesting/runs/wafer4_rev3/wafer_wafer4_rev3.gds`.
+
 ## Status: two projects, being merged
 
 The two projects grew separately and overlap:
@@ -53,6 +72,5 @@ The two projects grew separately and overlap:
 - **different config styles**: dataclasses (`generative_probe_design`) vs module globals
   loaded by `lib/active.select()` (`InterconnectGeneration`).
 
-Environment: Python packages in the `dxf` conda env
-(`source /opt/anaconda3/etc/profile.d/conda.sh && conda activate dxf`); KLayout 0.29 app for
-every GDS stage. The folder is a git repository; generated output (`WaferNesting/runs/`, `64Ch_4Shankdesigns/`) is ignored.
+Environment: Python packages in the base conda python (`/opt/anaconda3/bin/python3`, which
+has gdstk for the dummy; the `dxf` env lacks it); KLayout 0.29 app for every GDS stage. The folder is a git repository; generated output (`WaferNesting/runs/`, `64Ch_4Shankdesigns/`) is ignored.

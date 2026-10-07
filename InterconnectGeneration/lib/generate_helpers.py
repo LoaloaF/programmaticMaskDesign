@@ -63,6 +63,48 @@ def circle_polyline(cx, cy, r, n):
     return np.array([(cx + r * np.cos(t), cy + r * np.sin(t)) for t in thetas])
 
 
+def perimeter_via_centres(x0, y0, side, n_per_side, inset):
+    """
+    Centres of vias spaced evenly around a square pad: n_per_side on every side counting both
+    corners, each corner once, so 4*(n_per_side - 1) points. (x0, y0) is the pad's lower-left
+    corner; every centre sits `inset` in from the pad edge, so all four sides are identical and
+    the spacing is (side - 2*inset) / (n_per_side - 1). Walks bottom -> right -> top -> left from
+    the bottom-left corner. Units: um.
+    """
+    if n_per_side < 2:
+        raise ValueError(f"n_per_side must be >= 2 (the two corners), got {n_per_side}")
+    lo, hi = inset, side - inset
+    step = (hi - lo) / (n_per_side - 1)
+    pts = []
+    for k in range(n_per_side - 1):
+        pts.append((x0 + lo + k * step, y0 + lo))      # bottom, left -> right
+    for k in range(n_per_side - 1):
+        pts.append((x0 + hi, y0 + lo + k * step))      # right, bottom -> top
+    for k in range(n_per_side - 1):
+        pts.append((x0 + hi - k * step, y0 + hi))      # top, right -> left
+    for k in range(n_per_side - 1):
+        pts.append((x0 + lo, y0 + hi - k * step))      # left, top -> bottom
+    return pts
+
+
+def vias_per_side_for(side, inset, spacing_range):
+    """
+    How many vias per side (both corners included) put the spacing of perimeter_via_centres
+    inside spacing_range = (lo, hi) um. Of the counts that do, the one whose spacing is nearest
+    the middle of the range -- so pads of different sizes end up with similar spacing. Returns
+    (n_per_side, spacing); raises ValueError if no count lands in the range.
+    """
+    lo, hi = spacing_range
+    span = side - 2 * inset
+    fits = [(abs(span / (n - 1) - 0.5 * (lo + hi)), n) for n in range(2, int(span // lo) + 3)
+            if lo <= span / (n - 1) <= hi]
+    if not fits:
+        raise ValueError(f"no via count puts the spacing of a {side} um pad (span {span} um) "
+                         f"inside {spacing_range} um")
+    n = min(fits)[1]
+    return n, span / (n - 1)
+
+
 def stroke_centerline_to_polygon(centerline, widths):
     """
     Turn a centerline (list of (x, y)) with a per-vertex full trace width into a

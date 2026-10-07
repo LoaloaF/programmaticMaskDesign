@@ -15,6 +15,13 @@ to do -- and ends with GEOMETRY IDENTICAL or a list of what differs:
 Byte identity is reported but not required. GDS files carry creation timestamps and the
 writer's own record order, so two files with identical geometry rarely match byte for byte.
 
+A NEW REVISION at the same placements (config_rev3.py): the config points SOURCES at the
+revised designs, may add template layers to TOP (EXTRA_TOP_LAYERS, e.g. a new layer's
+alignment mark) and names the layers it is meant to change (EXPECTED_CHANGED_LAYERS). The
+check then still runs against the old wafer, and passes only if everything else is identical;
+CHANGES_WITHIN additionally requires each cell's change on a layer to lie inside another layer
+(the pad metal), so a revision that is meant to touch only the pads cannot touch anything else.
+
 SWAPPING CONTENT. To put new content at the recorded placements (a revised dummy, say),
 point that cell's entry in config.SOURCES at the new file and run this stage alone. It warns
 that the source no longer matches what 01c recorded and builds with the new file; check 1
@@ -80,15 +87,16 @@ for rec in P["cells"]:
 
 top = L.create_cell(TOP)
 tmpl = X.template_polygons(P["template"]["path"], P["template"]["keep_radius_mm"], dbu)
-for wl, tl in P["template"]["top_layers"].items():
+top_layers = dict(P["template"]["top_layers"])
+top_layers.update(getattr(C, "EXTRA_TOP_LAYERS", {}))
+for wl, tl in top_layers.items():
     ld = tuple(int(v) for v in wl.split("/"))
     shapes = top.shapes(li(ld))
     for p in tmpl[tuple(tl)]:
         shapes.insert(p)
 for r in P["instances"]:
     top.insert(pya.CellInstArray(cells[r["cell"]].cell_index(), X.trans_from_record(r)))
-print("TOP: template layers %s; %d placements" % (", ".join(sorted(P["template"]["top_layers"])),
-                                                  len(P["instances"])))
+print("TOP: template layers %s; %d placements" % (", ".join(sorted(top_layers)), len(P["instances"])))
 
 os.makedirs(C.OUT_DIR, exist_ok=True)
 opt = pya.SaveLayoutOptions()
@@ -107,7 +115,11 @@ if not os.path.exists(target):
 T = pya.Layout(); T.read(target)
 B = pya.Layout(); B.read(C.WAFER_OUT)      # re-read what was WRITTEN, not the in-memory copy
 fails = []
-print("\nchecking against %s" % os.path.basename(target))
+EXPECTED = {tuple(ld) for ld in getattr(C, "EXPECTED_CHANGED_LAYERS", ())}
+WITHIN = {tuple(k): tuple(v) for k, v in getattr(C, "CHANGES_WITHIN", {}).items()}
+expected_seen = []                          # (where, layer, XOR um2) of the intended changes
+print("\nchecking against %s%s" % (os.path.basename(target), "" if not EXPECTED else
+      "  (changes expected on %s)" % ", ".join("%d/%d" % ld for ld in sorted(EXPECTED))))
 
 # 1. cells
 tnames = {c.name for c in T.each_cell()}
@@ -121,9 +133,19 @@ for name in sorted(tnames & bnames):
         a, b = X.cell_layer_polys(T, tc, ld), X.cell_layer_polys(B, bc, ld)
         x = X.xor_um2(a, b, dbu)
         flag = "OK" if x <= C.XOR_TOL_UM2 and len(a) == len(b) else "DIFF"
-        if flag != "OK":
+        if flag != "OK" and ld in EXPECTED:
+            expected_seen.append((name, ld, x))
+            if ld in WITHIN and name != TOP:     # the change must stay inside another layer
+                change = X.region(a) ^ X.region(b)
+                outside = (change - X.region(X.cell_layer_polys(B, bc, WITHIN[ld]))).area() * dbu * dbu
+                if outside > C.XOR_TOL_UM2:
+                    fails.append("%s %d/%d: %.3f um2 of the change lies outside %d/%d"
+                                 % ((name,) + ld + (outside,) + WITHIN[ld]))
+        elif flag != "OK":
             fails.append("%s %d/%d: XOR %.6f um2, polys %d vs %d" % ((name,) + ld + (x, len(a), len(b))))
-    print("  1. cell %-22s %s" % (name, "OK" if not any(f.startswith(name + " ") for f in fails) else "DIFF"))
+    here = sorted("%d/%d" % ld for n, ld, _ in expected_seen if n == name)
+    print("  1. cell %-22s %s" % (name, "DIFF" if any(f.startswith(name + " ") for f in fails)
+                                  else "OK" + ("  (changed as expected: %s)" % ", ".join(here) if here else "")))
 
 # 3. placements (2 is covered by check 1 on the TOP cell's own shapes)
 #
@@ -170,8 +192,10 @@ for ld in lds:
     if k is not None:
         rb = pya.Region(B.cell(TOP).begin_shapes_rec(k))
     x = (rt ^ rb).area() * dbu * dbu
-    print("  4. flattened %2d/%d  XOR %.6f um2  %s" % (ld + (x, "OK" if x <= C.XOR_TOL_UM2 else "DIFF")))
-    if x > C.XOR_TOL_UM2:
+    ok = x <= C.XOR_TOL_UM2
+    print("  4. flattened %2d/%d  XOR %14.6f um2  %s" % (ld + (x, "OK" if ok else
+          "changed as expected" if ld in EXPECTED else "DIFF")))
+    if not ok and ld not in EXPECTED:
         fails.append("flattened %d/%d: XOR %.6f um2" % (ld + (x,)))
 
 same_bytes = X.md5(target) == X.md5(C.WAFER_OUT)
@@ -184,4 +208,8 @@ if fails:
     for f in fails:
         print("  - " + f)
     raise SystemExit(1)
-print("GEOMETRY IDENTICAL")
+if expected_seen:
+    print("IDENTICAL to %s except the expected changes on %s"
+          % (os.path.basename(target), ", ".join(sorted({"%d/%d" % ld for _, ld, _ in expected_seen}))))
+else:
+    print("GEOMETRY IDENTICAL")

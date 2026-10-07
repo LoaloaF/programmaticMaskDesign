@@ -26,7 +26,11 @@ GEN_CONFIG = {
     "origin_x": 0.0,         # bottom-left pad corner (um)
     "origin_y": 0.0,
     "pad_side_extra": 61.0,  # etch opening side, EtchingPad (um) -- the SMALLER square, centred on the
-                             # metal pad; rim = (pad_side - pad_side_extra)/2 per side
+                             # metal pad; rim = (pad_side - pad_side_extra)/2 per side. "square" only
+    "pad_etch": "vias",      # final PI etch: "square" = one pad_side_extra square on EtchingPad (Rev2);
+                             # "vias" = via-sized circles around the pad perimeter on Polyimide_Negative
+                             # (Rev3), spacing from etch_via_spacing in lib/constants.py
+    "metal3":   True,        # also draw every pad square on Metal3: Metal2's pads, no wires (Rev3)
     "emit_b":   False,       # also draw part B (A rotated 180 deg)
 }
 
@@ -81,13 +85,16 @@ DUMMY = {
     "polyimide_follow_pads": True,  # bottom edge follows the pad rows; False -> plain rectangle
 }
 
-# DXF layer -> GDS (layer, datatype) written by 02_make_dummy.py. Polyimide layers are dropped.
-# The fabricated wafer renumbers these by hand (1 -> 3, 3 -> 7) -- see HANDOVER §1.1.
+# DXF layer -> GDS (layer, datatype) written by 02_make_dummy.py. Only LWPOLYLINEs are read, so
+# Polyimide_Negative contributes the Rev3 etch circles but not its band (a HATCH); Polyimide is
+# dropped. The fabricated wafer renumbers these by hand (1 -> 3, 3 -> 7) -- see HANDOVER §1.1.
 DUMMY_LAYER_MAP = {
     "EtchingPad": (1, 0),
+    "Polyimide_Negative": (1, 0),
     "Etching":    (5, 0),
     "Metal1":     (3, 0),
     "Metal2":     (6, 0),
+    "Metal3":     (8, 0),
 }
 DUMMY_METAL_LAYER = (3, 0)    # bars, circles, extensions (= Metal1)
 DUMMY_ETCH_LAYER = (1, 0)     # circle etch windows + polyimide ring

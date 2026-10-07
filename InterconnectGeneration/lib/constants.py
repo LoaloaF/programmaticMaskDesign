@@ -29,8 +29,15 @@ POLY_FAN_TAPER_RES = 48     # vertices per tapering polyimide neck wall (12-bloc
 # ---- Stage-01 generator entries that are not design knobs ----------------------------
 GEN_CONFIG_FIXED = {
     "layer": "Metal2",                    # pad squares
-    "pad_layers_extra": ["EtchingPad"],   # each pad is also drawn here, at pad_side_extra
+    "pad_layers_extra": ["EtchingPad"],   # pad_etch="square": the PI etch square is drawn here
+    "layer_top": "Metal3",                # pad squares again, when metal3 is on (Rev3)
     "out_path": None,                     # set from --out by the generator's CLI
+    # Defaults for the pad-stack knobs = Rev2; every config sets its own (see config_<design>.py)
+    "pad_etch": "square",
+    "metal3": False,
+    # "vias" etch: the spacing range every design's per-side count is chosen from (um). One range
+    # for all designs, so pads of different sizes get similar spacing.
+    "etch_via_spacing": (15.0, 20.0),
 }
 GEN_ROUTING_FIXED = {
     "via_shape": "circle",   # "circle" (via_radius) or "rect" (via_w x via_h)

@@ -4,7 +4,8 @@ from shapely.geometry import Polygon, MultiPolygon
 from shapely.affinity import affine_transform
 
 from lib.generate_helpers import (create_rectangle, convert_rectangle_to_polyline, point_reflect,
-                                  bulb_profile, circle_polyline, stroke_centerline_to_polygon)
+                                  bulb_profile, circle_polyline, stroke_centerline_to_polygon,
+                                  perimeter_via_centres, vias_per_side_for)
 from lib.active import in_designs as _in_designs      # bare filename -> designs/
 
 # Every knob for this design lives in config_8block.py (section 1) -- edit it there.
@@ -55,6 +56,8 @@ if __name__ == "__main__":
     doc.layers.new(name='Metal2', dxfattribs={'linetype': 'CONTINUOUS', 'color': 3})
     doc.layers.new(name='EtchingPad', dxfattribs={'linetype': 'CONTINUOUS', 'color': 2})
     doc.layers.new(name='Etching', dxfattribs={'linetype': 'CONTINUOUS', 'color': 1})
+    if CONFIG["metal3"]:
+        doc.layers.new(name=CONFIG["layer_top"], dxfattribs={'linetype': 'CONTINUOUS', 'color': 6})
     
     doc.layers.new(name=POLYIMIDE["layer"],
                    dxfattribs={'linetype': 'CONTINUOUS', 'color': POLYIMIDE["color"]})
@@ -122,6 +125,25 @@ if __name__ == "__main__":
         print(f"WARNING: via_pitch ({via_pitch}) > wire_pitch ({wire_pitch}); lower vias will land "
               f"to the RIGHT of their trace. Keep via_pitch <= wire_pitch to keep the via left.")
 
+    #FINAL PI ETCH. "square": one pad_side_extra square per pad on EtchingPad (Rev2). "vias": via-sized
+    #circles around the pad perimeter on Polyimide_Negative (Rev3) -- the same count on all four sides,
+    #corners included, chosen so the spacing falls in etch_via_spacing (shared by every design, so all
+    #pads get similar spacing); at the routing via's diameter and at its inset from the pad edge, so the
+    #corner circles line up with the routing via. The perimeter position on the routing via (the
+    #top-left corner) is left out, so that via is not etched through twice.
+    if CONFIG["pad_etch"] not in ("square", "vias"):
+        raise SystemExit(f"pad_etch must be 'square' or 'vias', got {CONFIG['pad_etch']!r}")
+    if CONFIG["pad_etch"] == "vias":
+        if ROUTING["via_shape"] != "circle":
+            raise SystemExit("pad_etch='vias' copies the routing via's circle; set via_shape='circle'")
+        etch_r = ROUTING["via_radius"]
+        etch_inset = ROUTING["via_offset_x"]
+        etch_layer = POLYIMIDE["neg_layer"]
+        n_side, etch_step = vias_per_side_for(pad_side, etch_inset, CONFIG["etch_via_spacing"])
+        if etch_step - 2 * etch_r <= 0:
+            raise SystemExit(f"etch vias {etch_step:.2f} um apart overlap at {2 * etch_r} um diameter; "
+                             f"raise etch_via_spacing")
+
     def build_shapes(row_start, short_pairs=()):
         """Generate one design instance's geometry as a list of (points, layer). row_start(col)
         gives the lowest row index that column keeps (1 = drop the bottom pad). Routing is derived
@@ -140,12 +162,15 @@ if __name__ == "__main__":
                 rect = create_rectangle(x0, y0, pad_side, pad_side)
                 pad_pts = convert_rectangle_to_polyline(rect)
                 shapes.append((pad_pts, CONFIG["layer"]))
-                # Extra-layer (EtchingPad) pad: its OWN side length, centred on the same pad centre.
-                extra_rect = create_rectangle(cx - pad_side_extra / 2.0, cy - pad_side_extra / 2.0,
-                                              pad_side_extra, pad_side_extra)
-                extra_pts = convert_rectangle_to_polyline(extra_rect)
-                for extra in CONFIG.get("pad_layers_extra", []):
-                    shapes.append((extra_pts, extra))
+                if CONFIG["metal3"]:
+                    shapes.append((pad_pts, CONFIG["layer_top"]))     # same square, no wires
+                if CONFIG["pad_etch"] == "square":
+                    # Extra-layer (EtchingPad) pad: its OWN side length, centred on the same pad centre.
+                    extra_rect = create_rectangle(cx - pad_side_extra / 2.0, cy - pad_side_extra / 2.0,
+                                                  pad_side_extra, pad_side_extra)
+                    extra_pts = convert_rectangle_to_polyline(extra_rect)
+                    for extra in CONFIG.get("pad_layers_extra", []):
+                        shapes.append((extra_pts, extra))
                 pad_info.append((cx, cy, col, x0))
         n_pads = len(pad_info)
 
@@ -184,6 +209,7 @@ if __name__ == "__main__":
                   f"{ROUTING['min_wire_via_margin']} um trace-via margin; increase pad_side/via_left_jog "
                   f"or reduce {size_knob}/min_wire_via_margin for full clearance.")
         y_top = max(pad_info[i][1] for i in range(n_pads)) + ROUTING["top_margin"]
+        n_etch_skipped = [0]
 
         #Resolve each pair (left_col, right_col) to pad indices: L = left col's BOTTOM pad (min y),
         #R = right col's TOP pad (max y). Only L's OWN wire is skipped below (its bottom pad is folded
@@ -223,6 +249,15 @@ if __name__ == "__main__":
                 vpts = convert_rectangle_to_polyline(vrect)
             shapes.append((vpts, ROUTING["layer_via"]))
 
+            #Rev3 etch vias around this pad's perimeter, minus any that would touch the routing via.
+            if CONFIG["pad_etch"] == "vias":
+                x0 = pad_info[i][3]; y0 = cy - pad_side / 2.0
+                for ex, ey in perimeter_via_centres(x0, y0, pad_side, n_side, etch_inset):
+                    if np.hypot(ex - vx, ey - vcy) < 2 * etch_r + 1e-6:
+                        n_etch_skipped[0] += 1
+                        continue
+                    shapes.append((circle_polyline(ex, ey, etch_r, ROUTING["via_arc"]), etch_layer))
+
             #Metal1 wire: down the lane from the top, then a 45-deg jog DOWN-LEFT into the via centre
             #(vx, vcy). The jog length = lane_x - via_x, so the diagonal stays exactly 45 deg for any
             #via_pitch; the bend sits (lane_x - vx) above vcy.
@@ -254,6 +289,9 @@ if __name__ == "__main__":
             ring = stroke_centerline_to_polygon(centerline, [wire_width] * len(centerline))
             if ring is not None:
                 shapes.append((np.asarray(ring, dtype=float), ROUTING["layer_wire"]))
+        if CONFIG["pad_etch"] == "vias" and n_etch_skipped[0] != n_pads:
+            raise SystemExit(f"expected exactly one etch via per pad to land on the routing via, "
+                             f"skipped {n_etch_skipped[0]} for {n_pads} pads -- check via_offset_x/y")
         return shapes, pad_info
 
     #Build both instances: A and B use the same pattern (no drops), so B is a plain 180-deg mirror
@@ -478,4 +516,13 @@ if __name__ == "__main__":
           f"knobs wrapped; B band = 180-deg reflection of A's); min band gap "
           f"{POLYIMIDE['center_gap']:.0f} um at the knob tip (knob depth {knob_depth:.0f} um), "
           f"straight-seam gap {straight_band_gap:.0f} um")
+    if CONFIG["pad_etch"] == "vias":
+        print(f"PI etch: {4 * (n_side - 1) - 1} circles per pad on {etch_layer} (r{etch_r} um, "
+              f"{n_side} per side incl. corners, {etch_step:.3f} um apart -- range "
+              f"{CONFIG['etch_via_spacing']} um; centres {etch_inset} um in from the pad edge; the "
+              f"corner over the routing via left out)")
+    else:
+        print(f"PI etch: one {pad_side_extra} um square per pad on {CONFIG['pad_layers_extra']}")
+    if CONFIG["metal3"]:
+        print(f"{CONFIG['layer_top']}: the {pad_side} um pad squares (Metal2's pads, no wires)")
     print(f"wrote {CONFIG['out_path']}")

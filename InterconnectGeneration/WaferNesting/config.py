@@ -1,6 +1,6 @@
 """Config -- NEST path: the three connector designs, 4 + 4 + 4, seeded from the 2026-07 nest.
 
-DEFAULT config (used when WAFERNEST_CONFIG is unset). Stages 00-04; HANDOVER.md §1.2.
+DEFAULT config (used when WAFERNEST_CONFIG is unset). Stages 00-04; HANDOVER.md §1.3.
 
 This NESTS: it finds a new legal arrangement, seeded from reference_run_2026-07/. It does
 not reproduce the fabricated wafer -- that is config_rev2.py with 01c/01d -- and it differs

@@ -714,7 +714,7 @@ def interconnect_pad_bbox(msp, pad_um=(20.0, 100.0)):
         p = np.array(e.get_points("xy"), dtype=float)
         if len(p) < 4:
             continue
-        w, h = p[:, 0].ptp(), p[:, 1].ptp()
+        w, h = np.ptp(p[:, 0]), np.ptp(p[:, 1])
         if lo <= w <= hi and lo <= h <= hi:
             found = True
             xs0 = min(xs0, p[:, 0].min()); ys0 = min(ys0, p[:, 1].min())

@@ -16,9 +16,9 @@ Every part of the wafer comes from one of three places:
     the cells          one source per cell, listed in SOURCES below
     the placements     only the wafer itself knows them -- 01c reads them out exactly
 
-To put NEW content at the SAME placements (e.g. a revised dummy), point that cell's entry
-in SOURCES at the new file and run 01d alone: it warns that the source changed and builds
-the wafer with it. The check against the target then reports the difference, as it should.
+To put NEW content at the SAME placements, write a revision config that reuses this one's
+placements.json -- config_rev3.py is the example (HANDOVER.md §5.3) -- rather than editing
+SOURCES here: this config stays the proof that the Rev2 wafer is reproduced.
 
 Pure standard library: KLayout's Python runs this.
 """

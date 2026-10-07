@@ -22,7 +22,11 @@ GEN_CONFIG = {
     "origin_x": 0.0,         # bottom-left pad corner (um)
     "origin_y": 0.0,
     "pad_side_extra": 56.0,  # etch opening side, EtchingPad (um) -- the SMALLER square, centred on the
-                             # metal pad; rim = (pad_side - pad_side_extra)/2 per side
+                             # metal pad; rim = (pad_side - pad_side_extra)/2 per side. "square" only
+    "pad_etch": "vias",      # final PI etch: "square" = one pad_side_extra square on EtchingPad (Rev2);
+                             # "vias" = via-sized circles around the pad perimeter on Polyimide_Negative
+                             # (Rev3), spacing from etch_via_spacing in lib/constants.py
+    "metal3":   True,        # also draw every pad square on Metal3: Metal2's pads, no wires (Rev3)
     "emit_b":   False,       # also draw part B (A rotated 180 deg); A is identical either way
 }
 
