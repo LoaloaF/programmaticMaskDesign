@@ -3,6 +3,7 @@
     python3 build_designs.py --rev 3                      # all five -> designs/rev3/
     python3 build_designs.py --rev 3 --only 8block_71_15  # one of them
     python3 build_designs.py --rev 2 --out-dir /tmp/rev2  # Rev2 settings, e.g. as a regression
+    python3 build_designs.py --rev 3 --stage01 --out-dir designs/rev3/draft   # pad grids only, ~5 s
 
 A design is a config plus a few overrides (VARIANTS -- the HANDOVER §4.4 table as data), and a
 revision is a few more (REVISIONS). Nothing is edited on disk: each stage runs in its own
@@ -105,11 +106,11 @@ def _check_log(text):
     return probs
 
 
-def build(name, rev, out_dir):
+def build(name, rev, out_dir, stages=("gen", "route")):
     mid, final = paths(name, rev, out_dir)
     logs = os.path.join(out_dir, "logs")
     os.makedirs(logs, exist_ok=True)
-    for stage in ("gen", "route"):
+    for stage in stages:
         log = os.path.join(logs, "%s_%s.log" % (name, stage))
         cmd = [sys.executable, os.path.abspath(__file__), "--_stage", name, str(rev), stage, mid, final]
         p = subprocess.run(cmd, cwd=HERE, capture_output=True, text=True)
@@ -132,15 +133,19 @@ def main():
     ap.add_argument("--only", nargs="+", choices=sorted(VARIANTS), default=sorted(VARIANTS))
     ap.add_argument("--out-dir", default=None,
                     help="default: designs/ for Rev2, designs/rev3/ for Rev3")
+    ap.add_argument("--stage01", action="store_true",
+                    help="stage 01 only (the pad grids), e.g. to review a pad change quickly")
     a = ap.parse_args()
+    stages = ("gen",) if a.stage01 else ("gen", "route")
     out_dir = os.path.abspath(a.out_dir or REVISIONS[a.rev]["out_dir"])
     os.makedirs(out_dir, exist_ok=True)
     print("Rev%d -> %s: %s" % (a.rev, out_dir, ", ".join(a.only)))
     with ThreadPoolExecutor(max_workers=len(a.only)) as ex:
-        results = list(ex.map(lambda n: build(n, a.rev, out_dir), a.only))
+        results = list(ex.map(lambda n: build(n, a.rev, out_dir, stages), a.only))
     bad = 0
     for name, probs in results:
-        print("  %-14s %s  %s" % (name, "FAIL" if probs else "ok", os.path.basename(paths(name, a.rev, out_dir)[1])))
+        print("  %-14s %s  %s" % (name, "FAIL" if probs else "ok",
+                                  os.path.basename(paths(name, a.rev, out_dir)[0 if a.stage01 else 1])))
         for pr in probs:
             print("      " + pr)
         bad += bool(probs)

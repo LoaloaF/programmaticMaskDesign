@@ -296,31 +296,42 @@ layer remap (§1.1). Forgetting `via_offset_y` leaves the via off its corner: 23
 | `metal3` | `False` | `True`: the pad squares again on Metal3, no wires |
 | output | `designs/` | `designs/rev3/*_rev3.*` |
 
-**Rev3 etch vias** (`01_generate_*.py`, `perimeter_via_centres` / `vias_per_side_for` in
-`lib/generate_helpers.py`). Each circle has the routing via's diameter (5 µm) and sits
-`etch_via_inset_extra` = 1 µm further in from the pad edge than the routing via: centre
-3.75 µm from the edge, 1.25 µm of metal between circle and edge (the routing via stays at
-2.75 / 0.25 µm). Every side carries the same number, corners included; the corner over the
-routing via (top-left) is left out. The count is the one whose spacing lies in
-`etch_via_spacing` = (14.5, 20) µm (`lib/constants.py`, one range for all designs) and is
-nearest its middle. The lower bound is 14.5, not 15, only for the 37 µm dummy pad, which
-fits 3 per side at 14.75 µm and no count inside 15–20:
+**Rev3 etch vias** (`01_generate_*.py`; the layout is `etch_via_layout` in
+`lib/generate_helpers.py`, the knobs are in `lib/constants.py`, `GEN_CONFIG_FIXED`).
 
-| Design | Pad (Metal2 = Metal3) | Per side | Spacing (centres) | Gap (edges) | Circles per pad |
+- **Size and inset.** Each circle has the routing via's diameter (5 µm) and sits
+  `etch_via_inset_extra` = 1 µm further in from the pad edge than the routing via: centre
+  3.75 µm from the edge, 1.25 µm of metal between circle and edge. The routing via stays at
+  2.75 µm (0.25 µm to the edge) and is not touched.
+- **No via in a corner.** Each corner instead gets two neighbours, one on each adjacent side,
+  the same distance `a` along the side from the corner point (3.75, 3.75 µm in). `a` is the
+  smallest distance that keeps `etch_via_corner_gap` = 3 µm (edge to edge) between the
+  neighbours and the routing via in the top-left corner, and between the two neighbours of a
+  corner; it is the same at all four corners: **a = 6.938 µm** (the neighbours of one corner
+  are then 4.81 µm apart, edge to edge).
+- **Between the corner neighbours** each side gets k evenly spaced circles (k may be 0), the
+  k whose spacing lies in `etch_via_spacing` = (15, 21) µm and is nearest its middle. One
+  range for all designs. The upper bound is 21, not 20, only for the 63 µm dummy pad: one via
+  between its neighbours gives 20.81 µm, two give 13.87 µm.
+
+| Design | Pad (Metal2 = Metal3) | Per side | Between neighbours | Spacing (centres) | Circles per pad |
 |---|---|---|---|---|---|
-| 12-block | 58 µm | 4 | 16.83 µm | 11.83 µm | 11 |
-| 8-block `51_35` | 53 µm | 4 | 15.17 µm | 10.17 µm | 11 |
-| 8-block `71_15` | 73 µm | 5 | 16.38 µm | 11.38 µm | 15 |
-| dummy `61_10` | 63 µm | 4 | 18.50 µm | 13.50 µm | 11 |
-| dummy `35_36` | 37 µm | 3 | 14.75 µm | 9.75 µm | 7 |
+| 12-block | 58 µm | 3 | 1 | 18.31 µm | 12 |
+| 8-block `51_35` | 53 µm | 3 | 1 | 15.81 µm | 12 |
+| 8-block `71_15` | 73 µm | 4 | 2 | 17.21 µm | 16 |
+| dummy `61_10` | 63 µm | 3 | 1 | 20.81 µm | 12 |
+| dummy `35_36` | 37 µm | 2 | 0 | 15.62 µm | 8 |
 
-Spacing = (`pad_side` − 7.5) / (per side − 1); circles per pad = 4 × (per side − 1) − 1.
-The generator stops if no count fits the range, if circles would overlap, or if a pad does
-not have exactly one perimeter position on its routing via. The routers pass Metal3 and the
-circles through untouched (they read Polyimide_Negative only as HATCH); the dummy picks the
-circles up through `"Polyimide_Negative": (1, 0)` in `DUMMY_LAYER_MAP`, which reads its
-LWPOLYLINEs only, not the band hatch. Against Rev2, every Rev3 design differs on exactly these
-layers and nothing else.
+Spacing = (`pad_side` − 7.5 − 2a) / (k + 1); circles per pad = 4 × (k + 2).
+The generator stops if no k fits the range, if the corner neighbours leave no room, or if
+any circle comes closer than the corner gap to its pad's routing via. The routers pass
+Metal3 and the circles through untouched (they read Polyimide_Negative only as HATCH); the
+dummy picks the circles up through `"Polyimide_Negative": (1, 0)` in `DUMMY_LAYER_MAP`, which
+reads its LWPOLYLINEs only, not the band hatch. Against Rev2, every Rev3 design differs on
+exactly these layers and nothing else.
+
+To review a pad change before building everything:
+`python3 build_designs.py --rev 3 --stage01 --out-dir designs/rev3/draft` (stage 01 only).
 
 The design names (§4.3) still describe the Rev2 etch squares.
 

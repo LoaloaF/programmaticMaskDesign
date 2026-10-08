@@ -44,7 +44,7 @@ EtchingPad 3, Etching + Via 5, Metal2 6); see `InterconnectGeneration/WaferNesti
 
 The same wafer — every piece at its Rev2 position — with a revised pad stack on all five
 designs: the final PI etch is no longer one square per pad but 5 µm etch vias around the pad
-perimeter (3.75 µm in from the pad edge, 14.75–18.5 µm apart, on layer 3), and a new **Metal3** layer repeats the pad squares
+perimeter (3.75 µm in from the pad edge, none in the corners, 15–21 µm apart, on layer 3), and a new **Metal3** layer repeats the pad squares
 (layer 8, with the template's layer-8 alignment marks). Details:
 `InterconnectGeneration/HANDOVER.md` §4.5 and `InterconnectGeneration/WaferNesting/HANDOVER.md` §4.3.
 

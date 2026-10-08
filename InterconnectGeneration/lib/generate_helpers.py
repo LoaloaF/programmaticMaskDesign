@@ -63,46 +63,54 @@ def circle_polyline(cx, cy, r, n):
     return np.array([(cx + r * np.cos(t), cy + r * np.sin(t)) for t in thetas])
 
 
-def perimeter_via_centres(x0, y0, side, n_per_side, inset):
+def etch_via_layout(side, inset, r, gap, via_rel, spacing_range):
     """
-    Centres of vias spaced evenly around a square pad: n_per_side on every side counting both
-    corners, each corner once, so 4*(n_per_side - 1) points. (x0, y0) is the pad's lower-left
-    corner; every centre sits `inset` in from the pad edge, so all four sides are identical and
-    the spacing is (side - 2*inset) / (n_per_side - 1). Walks bottom -> right -> top -> left from
-    the bottom-left corner. Units: um.
-    """
-    if n_per_side < 2:
-        raise ValueError(f"n_per_side must be >= 2 (the two corners), got {n_per_side}")
-    lo, hi = inset, side - inset
-    step = (hi - lo) / (n_per_side - 1)
-    pts = []
-    for k in range(n_per_side - 1):
-        pts.append((x0 + lo + k * step, y0 + lo))      # bottom, left -> right
-    for k in range(n_per_side - 1):
-        pts.append((x0 + hi, y0 + lo + k * step))      # right, bottom -> top
-    for k in range(n_per_side - 1):
-        pts.append((x0 + hi - k * step, y0 + hi))      # top, right -> left
-    for k in range(n_per_side - 1):
-        pts.append((x0 + lo, y0 + hi - k * step))      # left, top -> bottom
-    return pts
+    Rev3 PI-etch via centres for one square pad, relative to its lower-left corner. Units: um.
 
+    No via sits in a corner. Each corner instead gets two NEIGHBOURS, one on each adjacent side,
+    `a` along the side from the corner point; then each side gets k evenly spaced vias between
+    its two corner neighbours. All centres sit `inset` in from the pad edge, so the corner points
+    are (inset, inset) etc. and the four sides are identical.
 
-def vias_per_side_for(side, inset, spacing_range):
+    a is the smallest offset that keeps `gap` (edge to edge) between the two neighbours of a
+    corner and between every neighbour and the routing via at `via_rel`; it is the same at all
+    four corners. k is the count whose spacing (side run between the neighbours) / (k + 1) lies
+    in spacing_range = (lo, hi) and is nearest its middle; k = 0 is allowed.
+
+    Returns (centres, info) with info = dict(a, k, step, per_side, n).
     """
-    How many vias per side (both corners included) put the spacing of perimeter_via_centres
-    inside spacing_range = (lo, hi) um. Of the counts that do, the one whose spacing is nearest
-    the middle of the range -- so pads of different sizes end up with similar spacing. Returns
-    (n_per_side, spacing); raises ValueError if no count lands in the range.
-    """
+    pitch = 2.0 * r + gap                      # centre distance that leaves `gap` between edges
+    run = side - 2.0 * inset                   # corner point to corner point
+    a = pitch / np.sqrt(2.0)                   # the two neighbours of one corner
+    # The routing via sits near one corner point C. A neighbour at C + t*u (u along a side, into
+    # the pad) keeps `pitch` from it for t >= the larger root of |C - V + t*u| = pitch.
+    vx, vy = via_rel
+    corners = [(inset, inset), (side - inset, inset), (side - inset, side - inset), (inset, side - inset)]
+    cx, cy = min(corners, key=lambda c: np.hypot(c[0] - vx, c[1] - vy))
+    w = np.array([cx - vx, cy - vy])
+    for u in (np.array([1.0 if cx == inset else -1.0, 0.0]), np.array([0.0, 1.0 if cy == inset else -1.0])):
+        b = float(w @ u)
+        disc = b * b - float(w @ w) + pitch * pitch
+        if disc > 0:
+            a = max(a, -b + np.sqrt(disc))
+    a = np.ceil(a * 1000.0) / 1000.0           # up to the 1 nm grid
+    inner = run - 2.0 * a                      # between the two corner neighbours of a side
+    if inner < pitch:
+        raise ValueError(f"a {side} um pad has no room for corner neighbours {a:.3f} um from each "
+                         f"corner with a {gap} um gap; reduce etch_via_corner_gap")
     lo, hi = spacing_range
-    span = side - 2 * inset
-    fits = [(abs(span / (n - 1) - 0.5 * (lo + hi)), n) for n in range(2, int(span // lo) + 3)
-            if lo <= span / (n - 1) <= hi]
+    fits = [(abs(inner / (k + 1) - 0.5 * (lo + hi)), k) for k in range(0, int(inner // lo) + 2)
+            if lo <= inner / (k + 1) <= hi]
     if not fits:
-        raise ValueError(f"no via count puts the spacing of a {side} um pad (span {span} um) "
-                         f"inside {spacing_range} um")
-    n = min(fits)[1]
-    return n, span / (n - 1)
+        raise ValueError(f"no via count puts the spacing between the corner neighbours of a {side} um "
+                         f"pad ({inner:.3f} um) inside {spacing_range} um")
+    k = min(fits)[1]
+    step = inner / (k + 1)
+    ts = [a + j * step for j in range(k + 2)]  # along a side, from one corner point
+    lo_, hi_ = inset, side - inset
+    centres = ([(lo_ + t, lo_) for t in ts] + [(lo_ + t, hi_) for t in ts] +       # bottom, top
+               [(lo_, lo_ + t) for t in ts] + [(hi_, lo_ + t) for t in ts])        # left, right
+    return centres, dict(a=a, k=k, step=step, per_side=k + 2, n=len(centres))
 
 
 def stroke_centerline_to_polygon(centerline, widths):

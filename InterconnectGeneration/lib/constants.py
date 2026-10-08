@@ -35,10 +35,13 @@ GEN_CONFIG_FIXED = {
     # Defaults for the pad-stack knobs = Rev2; every config sets its own (see config_<design>.py)
     "pad_etch": "square",
     "metal3": False,
-    # "vias" etch: the spacing range every design's per-side count is chosen from (um). One range
-    # for all designs, so pads of different sizes get similar spacing. 14.5, not 15: with the
-    # 3.75 um inset the 37 um dummy pad (35_36) fits 3 per side at 14.75 and nothing in 15-20.
-    "etch_via_spacing": (14.5, 20.0),
+    # "vias" etch: the spacing range the vias between two corner neighbours are counted from (um).
+    # One range for all designs, so pads of different sizes get similar spacing. 21, not 20: the
+    # 63 um dummy pad (61_10) gets 20.81 with one via between its neighbours, 13.87 with two.
+    "etch_via_spacing": (15.0, 21.0),
+    # "vias" etch: min edge-to-edge gap between the two neighbours of a corner, and between them
+    # and the routing via (um). Sets how far from the corner point the neighbours sit.
+    "etch_via_corner_gap": 3.0,
     # "vias" etch: how much further in from the pad edge the etch vias sit than the routing via
     # (via_offset_x = 2.75 -> centres 3.75 um in, 1.25 um metal between circle and pad edge).
     "etch_via_inset_extra": 1.0,
