@@ -8,6 +8,7 @@ layer. Settings: config_dummy.py, section 2.
     python3 02_make_dummy.py [--in DXF] [--out GDS]
 """
 import argparse
+import math
 
 import ezdxf
 import gdstk
@@ -237,6 +238,30 @@ def build_dummy_targets(band_y, x_lo, x_hi, band_polylines):
     return polys, bbox
 
 
+def handle_polygon(cx, y0, r, fillet, res=48):
+    """Handle on a horizontal edge y = y0, sticking out UPWARD: a circle of radius r centred ON the
+    edge at x = cx, its two roots blended into the edge by concave fillets of radius `fillet` (the
+    connector designs' extraction-tab bulb, lib/geometry.filleted_bulb, turned to a horizontal
+    wall). The base is dropped 10 um below the edge so it overlaps the outline when unioned.
+    fillet <= 0 -> plain circle. Returns a gdstk.Polygon."""
+    f = float(fillet)
+    if f <= 0.0:
+        return gdstk.ellipse((cx, y0), r, tolerance=0.01)
+    dy = math.sqrt(r * r + 2.0 * r * f)      # edge-tangent point of each fillet, from cx
+    al = math.atan2(f, dy)                   # fillet / bulb tangent direction
+
+    def arc(ox, oy, rad, a0, a1):
+        n = max(3, int(res * abs(a1 - a0) / (2 * math.pi)) + 1)
+        return [(ox + rad * math.cos(a0 + (a1 - a0) * i / n), oy + rad * math.sin(a0 + (a1 - a0) * i / n))
+                for i in range(n + 1)]
+
+    pts = (arc(cx - dy, y0 + f, f, -math.pi / 2, -al)                  # left root: edge -> bulb
+           + arc(cx, y0, r, math.pi - al, al)                          # the bulb, over the top
+           + arc(cx + dy, y0 + f, f, -math.pi + al, -math.pi / 2))     # right root: bulb -> edge
+    pts = [(cx - dy, y0 - 10.0)] + pts + [(cx + dy, y0 - 10.0)]
+    return gdstk.Polygon(pts)
+
+
 def build_polyimide_outline(dev_bbox, seam=None):
     """Build the polyimide outline as a hollow band ring on the etch layer (GDS 1).
 
@@ -272,6 +297,14 @@ def build_polyimide_outline(dev_bbox, seam=None):
     # Offset the whole profile rather than growing a rectangle, so the step survives.
     etch_l, etch_d = RECT_ETCH_LAYER
     outer = gdstk.Polygon(pts)
+    if CONFIG.get("handle_radius", 0.0) > 0:
+        # handle on the top edge; the ring below is stroked around outline + handle together
+        hx = ox_lo + CONFIG["handle_x_frac"] * (ox_hi - ox_lo)
+        h = handle_polygon(hx, oy_hi, CONFIG["handle_radius"], CONFIG["handle_fillet"])
+        outer = gdstk.boolean(outer, h, "or")[0]
+        print(f"polyimide handle: r={CONFIG['handle_radius']:.0f} um, fillet {CONFIG['handle_fillet']:.0f} um, "
+              f"centre x={hx:.1f} on the top edge y={oy_hi:.1f} (sticks out to y={oy_hi + CONFIG['handle_radius']:.1f}, "
+              f"ring to y={oy_hi + CONFIG['handle_radius'] + w:.1f})")
     grown = gdstk.offset(outer, w, join="miter", use_union=True)
     ring = gdstk.boolean(grown, outer, "not", layer=etch_l, datatype=etch_d)
     return ring

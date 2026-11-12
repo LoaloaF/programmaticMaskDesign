@@ -20,7 +20,8 @@ revised designs, may add template layers to TOP (EXTRA_TOP_LAYERS, e.g. a new la
 alignment mark) and names the layers it is meant to change (EXPECTED_CHANGED_LAYERS). The
 check then still runs against the old wafer, and passes only if everything else is identical;
 CHANGES_WITHIN additionally requires each cell's change on a layer to lie inside another layer
-(the pad metal), so a revision that is meant to touch only the pads cannot touch anything else.
+(the pad metal), so a revision that is meant to touch only the pads cannot touch anything else
+(CHANGES_WITHIN_SKIP names cells exempt from that, per layer).
 
 SWAPPING CONTENT. To put new content at the recorded placements (a revised dummy, say),
 point that cell's entry in config.SOURCES at the new file and run this stage alone. It warns
@@ -87,6 +88,10 @@ for rec in P["cells"]:
 
 top = L.create_cell(TOP)
 tmpl = X.template_polygons(P["template"]["path"], P["template"]["keep_radius_mm"], dbu)
+if getattr(C, "MARK_INVERT_LAYERS", None):      # new dark-field masks: inverted vernier (exact_io.invert_marks)
+    print("alignment marks:")
+    X.invert_marks(tmpl, C.MARK_INVERT_LAYERS, C.MARK_STENCIL, C.MARK_COMPANION, C.MARK_SELFTEST_LAYER,
+                   P["template"]["keep_radius_mm"], dbu)
 top_layers = dict(P["template"]["top_layers"])
 top_layers.update(getattr(C, "EXTRA_TOP_LAYERS", {}))
 for wl, tl in top_layers.items():
@@ -106,6 +111,22 @@ if P["target"].get("libname"):
 L.write(C.WAFER_OUT, opt)
 print("\nwrote %s" % C.WAFER_OUT)
 
+# Named layers (config LAYER_NAMES), as the electrode wafer does (generative_probe_design/WaferNesting/
+# 03_export_wafer.py): GDS2 has no layer-name record, so the names go (a) into an .oas twin, whose
+# LAYERNAME records carry them in the file itself, and (b) into a KLayout .lyp next to the GDS.
+# The GDS written above is untouched; the check below reads it back, not these.
+NAMES = getattr(C, "LAYER_NAMES", {})
+if NAMES:
+    for ld, li_ in layer_index.items():
+        if ld[0] in NAMES:
+            L.set_info(li_, pya.LayerInfo(ld[0], ld[1], NAMES[ld[0]]))
+    oas_path = os.path.splitext(C.WAFER_OUT)[0] + ".oas"
+    L.write(oas_path)
+    lyp_path = os.path.splitext(C.WAFER_OUT)[0] + ".lyp"
+    X.write_lyp(lyp_path, sorted(layer_index), NAMES, getattr(C, "LAYER_STYLE", {}), getattr(C, "LAYER_ORDER", []))
+    print("wrote %s  (same layout, layer names stored in the file)\nwrote %s  (layer names for KLayout / the GDS)"
+          % (os.path.basename(oas_path), os.path.basename(lyp_path)))
+
 # --- check against the target -----------------------------------------------------
 target = P["target"]["path"]
 if not os.path.exists(target):
@@ -117,6 +138,7 @@ B = pya.Layout(); B.read(C.WAFER_OUT)      # re-read what was WRITTEN, not the i
 fails = []
 EXPECTED = {tuple(ld) for ld in getattr(C, "EXPECTED_CHANGED_LAYERS", ())}
 WITHIN = {tuple(k): tuple(v) for k, v in getattr(C, "CHANGES_WITHIN", {}).items()}
+WITHIN_SKIP = {tuple(k): set(v) for k, v in getattr(C, "CHANGES_WITHIN_SKIP", {}).items()}   # layer -> cells exempt
 expected_seen = []                          # (where, layer, XOR um2) of the intended changes
 print("\nchecking against %s%s" % (os.path.basename(target), "" if not EXPECTED else
       "  (changes expected on %s)" % ", ".join("%d/%d" % ld for ld in sorted(EXPECTED))))
@@ -135,7 +157,7 @@ for name in sorted(tnames & bnames):
         flag = "OK" if x <= C.XOR_TOL_UM2 and len(a) == len(b) else "DIFF"
         if flag != "OK" and ld in EXPECTED:
             expected_seen.append((name, ld, x))
-            if ld in WITHIN and name != TOP:     # the change must stay inside another layer
+            if ld in WITHIN and name != TOP and name not in WITHIN_SKIP.get(ld, ()):   # change must stay inside another layer
                 change = X.region(a) ^ X.region(b)
                 outside = (change - X.region(X.cell_layer_polys(B, bc, WITHIN[ld]))).area() * dbu * dbu
                 if outside > C.XOR_TOL_UM2:

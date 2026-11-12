@@ -96,5 +96,37 @@ def check_transition(info, lanes, target_pitch, fan_target_gap=None):
             ok = False
             msgs.append(f"  FAIL: eased fan gap {gmin:.2f} < target {fan_target_gap:.2f} um "
                         f"(raise FAN_LEN_SLACK / lower FAN_TILT_CAP_DEG)")
+    jog_polys = info.get("jog_polys")
+    if jog_polys:
+        gj = min_adjacent_fan_gap(jog_polys, WIRE_W)
+        msgs.append(f"band jog min wire gap = {gj:.3f} um (hard floor 2.5 um)")
+        if gj < 2.5 - FAN_CHECK_TOL_UM:
+            ok = False
+            msgs.append(f"  FAIL: band jog gap {gj:.3f} < 2.5 um (lengthen BAND_JOG_LEN)")
     msgs.append(f"target pitch = {target_pitch} um; via transition: " + ("OK" if ok else "FAIL"))
     return ok, msgs
+
+
+def check_band_pairing(actual, ref, max_dx=5.0):
+    """Wire i of the real band and wire i of the reference band (both sorted by x) must be the same
+    wire, a few um apart at most -- otherwise the reference is not this design's earlier revision."""
+    if len(actual) != len(ref):
+        raise RuntimeError(f"band reference has {len(ref)} wires, this design {len(actual)}")
+    d = [a[0] - r[0] for a, r in zip(actual, ref)]
+    worst = max(abs(v) for v in d)
+    if worst > max_dx:
+        raise RuntimeError(f"band reference differs by up to {worst:.2f} um (> {max_dx}): wrong reference?")
+    print(f"band reference: {len(ref)} wires, real band end - reference end = "
+          f"{min(d):+.3f} .. {max(d):+.3f} um in x")
+    return d
+
+
+def jog_to_reference(ex, ref_x, band_y, jog_len, res=24):
+    """Centreline from the real band end (ex, band_y) to the reference position (ref_x, band_y -
+    jog_len): x eases with smootherstep, vertical at both ends."""
+    pts = []
+    for k in range(res + 1):
+        t = k / res
+        h = t * t * t * (10.0 - 15.0 * t + 6.0 * t * t)
+        pts.append((ex + (ref_x - ex) * h, band_y - t * jog_len))
+    return pts

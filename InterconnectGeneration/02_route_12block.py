@@ -27,6 +27,7 @@ CSV's units), converted to um on write. KLayout reads 1 unit = 1 um.
 """
 
 import math
+import os
 import numpy as np
 import ezdxf
 from shapely.ops import unary_union
@@ -57,7 +58,8 @@ from lib.geometry import (create_polygon_circle, ensure_layer, entity_xy_points,
 from lib.teardrop import (angled_entry_len, angled_pad_entry, clamp_teardrop_fillets,
     pad_approach_for, pad_cols_by_index, pad_rows_by_index, repair_angled_crossings,
     teardrop_len_for, teardrop_ring, teardrop_tip_width, widen_pad_approach)
-from lib.phase1 import check_transition, emit_transition, load_and_rotate_interconnect
+from lib.phase1 import (check_band_pairing, check_transition, emit_transition, jog_to_reference,
+    load_and_rotate_interconnect)
 from lib.connector import (_load_extended_sig, conn_rank_mixed, conn_rank_right_direct,
     connect_handoff_to_routes, load_connector, translate_chan, translated_signal_pads)
 from lib.checks import _check_fast
@@ -116,7 +118,7 @@ def build_fan_lanes(endpoints, target_pitch=FAN_TARGET_PITCH):
     return lanes, x_center, max_shift
 
 
-def build_transition(endpoints, lanes, fan_g, fan_len):
+def build_transition(endpoints, lanes, fan_g, fan_len, actual=None):
     """Fan + via-transition geometry. Every wire hands off to Phase 2 at (lane, y_via)
     on its assigned layer (even -> Metal1 pass-through, odd -> Metal2 after the via). The fan is the
     EASED curve x(s) = ex + (lane - ex) * g(s): vertical at the band entry (tight end), curving out
@@ -131,11 +133,19 @@ def build_transition(endpoints, lanes, fan_g, fan_len):
     m1_pads, m2_pads, vias = [], [], []
     layer_of, handoff = [], []
     fan_polys = []
+    jog_polys = []
+    # `endpoints` is the band the whole route is built around. `actual` (Rev4+) is the band the
+    # stage-01 DXF really has: each wire first jogs from its real end onto its `endpoints` position.
 
     for i, ((ex, _ey), lane) in enumerate(zip(endpoints, lanes)):
         fan_pts = [(ex + (lane - ex) * g, y_neck - (k / res) * fan_len)
                    for k, g in enumerate(fan_g)]      # top (ex, y_neck) -> bottom (lane, y_fan)
-        head = [(ex, band_y)] + fan_pts + [(lane, y_via)]
+        if actual is not None:
+            jog = jog_to_reference(actual[i][0], ex, band_y, BAND_JOG_LEN)
+            jog_polys.append(jog)
+            head = jog + fan_pts + [(lane, y_via)]      # fan_pts[0] = (ex, y_neck): vertical to it
+        else:
+            head = [(ex, band_y)] + fan_pts + [(lane, y_via)]
         fan_polys.append(fan_pts)
         handoff.append((float(lane), float(y_via)))
         if i % 2 == 0:
@@ -149,7 +159,7 @@ def build_transition(endpoints, lanes, fan_g, fan_len):
     return {
         "m1_polys": m1_polys, "m2_polys": m2_polys,
         "m1_pads": m1_pads, "m2_pads": m2_pads, "vias": vias,
-        "layer_of": layer_of, "handoff": handoff, "fan_polys": fan_polys,
+        "layer_of": layer_of, "handoff": handoff, "fan_polys": fan_polys, "jog_polys": jog_polys,
         "band_y": band_y, "y_neck": y_neck, "y_fan": y_fan, "y_via": y_via,
     }
 
@@ -726,6 +736,14 @@ def main():
     print("=== Phase 1: rotate + fan + via transition ===")
     doc, msp, _center = load_and_rotate_interconnect()
     endpoints = extract_band_endpoints(msp)
+    actual_endpoints = None
+    if BAND_REF_DXF:
+        print(f"building around the band of {os.path.basename(BAND_REF_DXF)}; real band joins it by a "
+              f"{BAND_JOG_LEN:.0f} um jog")
+        _rd, ref_msp, _rc = load_and_rotate_interconnect(BAND_REF_DXF)
+        ref_endpoints = extract_band_endpoints(ref_msp)
+        check_band_pairing(endpoints, ref_endpoints)
+        actual_endpoints, endpoints = endpoints, ref_endpoints
     # Capture the MEA1K bond-pad footprint now, while msp holds ONLY the rotated interconnect.
     ic_pads_bbox = interconnect_pad_bbox(msp)
     lanes, x_center_um, max_shift = build_fan_lanes(endpoints)
@@ -742,7 +760,7 @@ def main():
     print(f"phase-1 fan (eased): native pitch {native_pitch:.2f} um, target gap {fan_target_gap:.2f} um, "
           f"len {fan_len:.0f} um, tilt cap {FAN_TILT_CAP_DEG:.0f} deg, center x={x_center_um:.1f} um")
 
-    info = build_transition(endpoints, lanes, fan_g, fan_len)
+    info = build_transition(endpoints, lanes, fan_g, fan_len, actual=actual_endpoints)
     n_m1 = sum(l == WIRE_LAYER for l in info["layer_of"])
     n_m2 = sum(l == LIFT_LAYER for l in info["layer_of"])
     print(f"split: Metal1(even)={n_m1}, Metal2(odd)={n_m2}; via row y={info['y_via']:.1f} um")

@@ -316,6 +316,31 @@ Output: `runs/wafer4_rev3/` (`wafer_wafer4_rev3.gds`, `overlay_wafer4_rev3.gds` 
 
 ---
 
+### 4.4 `config_rev4.py` -- the Rev4 wafer
+
+Same placements as Rev2 (built from Rev2's `placements.json`; nothing is nested). Design changes: `../HANDOVER.md` §4.6.
+
+```bash
+cd InterconnectGeneration
+python3 build_designs.py --rev 4                                                  # designs/rev4/ (needs designs/rev3/)
+KL=/Applications/KLayout/klayout.app/Contents/MacOS/klayout
+WAFERNEST_CONFIG=config_rev2 $KL -b -r WaferNesting/01c_extract_exact_placements.py
+WAFERNEST_CONFIG=config_rev4 $KL -b -r WaferNesting/01d_rebuild_wafer.py          # checked against Rev2
+WAFERNEST_CONFIG=config_rev4 $KL -b -r WaferNesting/01e_overlay_wafers.py         # optional: Rev2 / Rev4 / XOR
+```
+
+- **Layers.** 1 stabilization vias (new mask, etched first), 3 PI outline, 5 Etching + Via, 6 Metal2, 7 Metal1, 8 Metal3,
+  10 outline. Against Rev2 only 1, 3, 5, 7, 8 may change (`EXPECTED_CHANGED_LAYERS`), each inside the Metal2 pads
+  (`CHANGES_WITHIN`) except the dummies' PI ring/handle on layer 3 (`CHANGES_WITHIN_SKIP`). Metal2 and the outline: XOR 0.
+- **Alignment mark for layer 1.** The template's free slot is layer 1 at |x| = 43.3 mm (second from the outside). It ships the
+  positive vernier; layer 1 is a dark-field etch mask, so 01d swaps in the inverted vernier copied from the 5/0 stencil,
+  registered on the Metal1 companion (`exact_io.invert_marks`, the electrode wafer's procedure). The transform is
+  self-tested on 3/0 on every run.
+- **Named layers.** 01d writes `wafer_<tag>.gds`, `.oas` (OASIS `LAYERNAME` records) and `.lyp`. GDS and OAS geometry are
+  identical. Colours/stipples live only in the `.lyp` (OASIS has no colour record) and are NOT loaded automatically:
+  `klayout wafer_wafer4_rev4.oas -l wafer_wafer4_rev4.lyp`, or File -> Load Layer Properties. Style: `LAYER_STYLE` /
+  `LAYER_ORDER` in `config_rev4.py` (KLayout draws entries lower in the list in front, so Metal1 is first = at the back).
+
 ## 5. Adapting it
 
 ### 5.1 Inspect a DXF first

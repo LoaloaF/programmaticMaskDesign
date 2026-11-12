@@ -83,6 +83,13 @@ DUMMY = {
     "polyimide_width": 200.0,   # ring width (um)
     "polyimide_margin": 200.0,  # clearance to the ring, left/right/top (um)
     "polyimide_follow_pads": True,  # bottom edge follows the pad rows; False -> plain rectangle
+    # Handle (Rev4): one semicircular polyimide tab on the TOP edge, to lift the flex off the wafer with
+    # tweezers -- the same blended bulb the connector designs carry on their neck walls (their r = 560 um),
+    # but small, because dummies sit as little as ~420 um (ring to ring) below the next device. The etch
+    # ring follows it. 0 = no handle (Rev2/Rev3).
+    "handle_radius":   0.0,     # tab radius = how far it sticks out of the outline's top edge (um)
+    "handle_fillet":   150.0,   # concave fillet blending each root into the edge (um); 0 -> sharp
+    "handle_x_frac":   0.62,    # tab centre along the top edge, 0 = left end, 1 = right end
 }
 
 # DXF layer -> GDS (layer, datatype) written by 02_make_dummy.py. Only LWPOLYLINEs are read, so
@@ -91,6 +98,7 @@ DUMMY = {
 DUMMY_LAYER_MAP = {
     "EtchingPad": (1, 0),
     "Polyimide_Negative": (1, 0),
+    "PI_Stab_Via": (2, 0),    # Rev4: the pad-perimeter stabilization vias, own mask (wafer layer 1)
     "Etching":    (5, 0),
     "Metal1":     (3, 0),
     "Metal2":     (6, 0),

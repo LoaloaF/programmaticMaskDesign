@@ -335,6 +335,32 @@ To review a pad change before building everything:
 
 The design names (§4.3) still describe the Rev2 etch squares.
 
+### 4.6 Rev4
+
+`REVISIONS[4]` in `build_designs.py` (output `designs/rev4/*_rev4.*`). Rev4 is Rev3 plus the changes below. It needs
+`designs/rev3/` to exist: stage 02 builds around Rev3's wire band (`band_ref_rev=3`), so build Rev3 first.
+
+- **Every via 2.5 µm from the pad edge** (`via_edge_gap`): routing via and etch circles alike (centre 5 µm in). The routing
+  via stays in the top-left corner; the etch circles lose their extra 1 µm inset and `etch_via_spacing` becomes (9.5, 21).
+- **Metal1 landing pad** on every routing via (`m1_pad`): a 7 µm circle blended into the wire by a teardrop
+  (`m1_tear_fillet_r` 14 µm, capped to the last straight run).
+- **12-block and dummies:** the top pad of each column gets a 3.5 µm via on a 5.5 µm Metal1 pad, centred between the two
+  lanes beside it (0.25 µm left); the lower pads' vias move 0.5 µm right. Metal1 then holds the 2.5 µm wire gap everywhere.
+  (`per_design` in `REVISIONS[4]`.) The polyimide outline is trimmed 2.25 µm (`trim_xmax`) to stay where Rev3 had it.
+- **Connector side unchanged.** The vias move the lane bundle by 2.0-2.25 µm; stage 02 therefore builds fan, layer-split
+  vias, Metal2, connector pads and the polyimide neck around Rev3's band and jogs each wire onto it over `BAND_JOG_LEN` =
+  300 µm. Below the jog the connector side is Rev3's, point for point; Metal2 does not change at all.
+- **Metal3 squares 2 µm smaller per side** (`metal3_inset`; e.g. 12-block 58 µm Metal2 pad -> 54 µm Metal3).
+- **Stabilization vias on their own layer** (`etch_via_layer` = `PI_Stab_Via`): the pad-perimeter circles leave
+  Polyimide_Negative, so they are their own mask (wafer layer 1, etched first); the PI outline and the connector-pad
+  openings stay on wafer layer 3. In the dummy GDS they are GDS layer 2 (`config_dummy.DUMMY_LAYER_MAP`).
+- **Dummy handle** (dummies only, `REVISIONS[4]["dummy_set"]`): a 300 µm semicircular PI tab, 150 µm blended roots,
+  at 62 % along the top edge (`config_dummy.handle_*`). 62 %, not the centre, because the free space above the top edge is
+  smallest toward the left; checked on all 26 dummy placements (no overlap with another device's PI body, etch ring
+  >= 125 µm from foreign device layers). Rev2/Rev3 builds have `handle_radius` = 0.
+
+Rev2 and Rev3 builds are unchanged: the new knobs (`metal3_inset`, `etch_via_layer`, handle, ...) default to off.
+
 ## 5. Teardrops and angled entry (`lib/teardrop.py`)
 
 Each connector pad is a teardrop matching the mating electrode bundle

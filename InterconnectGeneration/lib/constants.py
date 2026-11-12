@@ -35,6 +35,11 @@ GEN_CONFIG_FIXED = {
     # Defaults for the pad-stack knobs = Rev2; every config sets its own (see config_<design>.py)
     "pad_etch": "square",
     "metal3": False,
+    # Metal3 squares are pulled in this far from each side of Metal2's pad (um). Rev4: 2.
+    "metal3_inset": 0.0,
+    # DXF layer for the "vias" etch circles (the pad-perimeter stabilization vias). None = on
+    # Polyimide_Negative with the PI outline (Rev3); Rev4 gives them their own layer = their own mask.
+    "etch_via_layer": None,
     # "vias" etch: the spacing range the vias between two corner neighbours are counted from (um).
     # One range for all designs, so pads of different sizes get similar spacing. 21, not 20: the
     # 63 um dummy pad (61_10) gets 20.81 with one via between its neighbours, 13.87 with two.
@@ -53,6 +58,19 @@ GEN_ROUTING_FIXED = {
     "via_h": 43.0,           # rect vias only (um)
     "layer_wire": "Metal1",
     "layer_via": "Etching",
+    # Rev4: each Metal1 wire ends in a round landing pad centred on its routing via, blended into the
+    # wire by a tangent-fillet teardrop. Off = Rev2/Rev3 (the wire stops at the via centre).
+    "m1_pad": False,
+    "m1_pad_enc": 1.0,        # pad radius = via_radius + this (um): 2.5 + 1 -> 7 um diameter
+    # Rev4, 12-block generator only (01_generate_12block.py; the 8-block ignores them). The top pad of a
+    # column sits between two lanes only 12.5 um apart (centres), too tight for a full via + 1 um
+    # Metal1 margin: its via gets radius via_k0_radius, moved via_k0_dx in x. The lower pads' vias move
+    # via_rest_dx in x, clear of the previous column's last lane. None / 0 = unchanged.
+    "via_k0_radius": None,
+    "via_k0_dx": 0.0,
+    "via_rest_dx": 0.0,
+    "m1_tear_fillet_r": 14.0, # teardrop fillet radius (um); larger = longer, gentler blend. Capped
+                              # per wire so the tip stays on the last straight run
 }
 GEN_POLYIMIDE_FIXED = {
     "layer": "Polyimide",
@@ -60,4 +78,18 @@ GEN_POLYIMIDE_FIXED = {
     "neg_layer": "Polyimide_Negative",
     "neg_color": 5,
     "n_arc": 48,             # segments per jigsaw bulb
+    # Rev4: the outline is sized to the wire bbox, whose far lane moved 2.25 um outward with the vias.
+    # Shrinking the right extent by this (B's mirrored left extent follows) keeps the outline where
+    # Rev3 had it. 0 = unchanged.
+    "trim_xmax": 0.0,
 }
+
+# Stage 02, Rev4+: keep the connector side where an earlier revision had it. A revision that moves the
+# vias (and with them the lanes) moves the stage-01 band; stage 02 builds the fan, the layer-split
+# vias, Metal2, the connector pads and the polyimide neck around that band, so they would all move
+# relative to the pad grid. BAND_REF_DXF = the stage-01 DXF of the revision whose band to keep
+# (set by build_designs). Stage 02 then builds EVERYTHING from the reference band and only joins
+# each wire's real band end to its reference position with a short smootherstep jog of BAND_JOG_LEN um
+# right below the band -- from there on the Metal1 path is the reference revision's, point for point.
+BAND_REF_DXF = None
+BAND_JOG_LEN = 300.0

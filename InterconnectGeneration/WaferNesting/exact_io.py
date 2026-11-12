@@ -129,6 +129,99 @@ def template_polygons(path, keep_radius_mm, target_dbu):
     return out
 
 
+def invert_marks(tmpl, layers, stencil, companion, selftest, keep_radius_mm, dbu,
+                 vernier_w_um=(550.0, 700.0), band_y_um=1000.0):
+    """Give each of `layers` the INVERTED vernier in its alignment-mark slot (in `tmpl`, in place).
+
+    The template ships each slot's vernier either POSITIVE (129 separate bars: 6/0, 8/0, 1/0) or
+    INVERTED (one polygon with the bars as holes: 3/0, 5/0). A dark-field mask -- every etch mask --
+    needs the inverted form: on that plate the positive form is 129 slits in chrome and hides the
+    metal scale underneath. The inverted form is copied from the `stencil` layer's slot, registered on
+    the `companion` layer (Metal1: an identical cluster sits at the centre of every slot and is the
+    feature already on the wafer when the later mask is aligned), one band (left / right of the wafer
+    centre) at a time. The transform is proven first on `selftest`, a layer whose inverted mark the
+    template already carries: rebuilding it from the stencil must reproduce it exactly.
+    (Same procedure as generative_probe_design/WaferNesting/03_export_wafer.py.)
+    """
+    um = lambda v: int(round(v / dbu))
+
+    def verniers(ld, xlo, xhi):
+        reg = region(tmpl.get(tuple(ld), [])) & pya.Region(
+            pya.Box(um(xlo), -um(band_y_um), um(xhi), um(band_y_um)))
+        reg.merge()
+        grouped = reg.dup()
+        grouped.size(um(40.0))
+        grouped.merge()
+        out = [(c.bbox(), reg & pya.Region(c.bbox())) for c in grouped.each()
+               if vernier_w_um[0] < c.bbox().width() * dbu < vernier_w_um[1]]
+        return sorted(out, key=lambda t: t[0].center().x)
+
+    def nearest(comps, bbox):
+        return min(comps, key=lambda t: abs(t[0].center().x - bbox.center().x))[0]
+
+    r = keep_radius_mm * 1000.0
+    for xlo, xhi in ((-r, 0.0), (0.0, r)):
+        comps = verniers(companion, xlo, xhi)
+        stencils = verniers(stencil, xlo, xhi)
+        if len(stencils) != 1 or not comps:
+            raise SystemExit("band [%.1f, %.1f] mm: found %d stencil marks on %s and %d companions on %s"
+                             % (xlo / 1000, xhi / 1000, len(stencils), stencil, len(comps), companion))
+        sbb, sten = stencils[0]
+        scomp = nearest(comps, sbb)
+
+        def stencil_on(ld):
+            found = verniers(ld, xlo, xhi)
+            if len(found) != 1:
+                raise SystemExit("expected one vernier on %s in band [%.1f, %.1f] mm, found %d"
+                                 % (ld, xlo / 1000, xhi / 1000, len(found)))
+            bbox, present = found[0]
+            comp = nearest(comps, bbox)
+            made = sten.dup()
+            made.transform(pya.Trans(comp.center().x - scomp.center().x, comp.center().y - scomp.center().y))
+            return bbox, present, made
+
+        _, real, rebuilt = stencil_on(selftest)
+        if not (rebuilt ^ real).is_empty():
+            raise SystemExit("mark self-test FAILED on %s in band [%.1f, %.1f] mm: rebuilding it from %s "
+                             "differs by %.4f um2 -- the companion registration is wrong"
+                             % (selftest, xlo / 1000, xhi / 1000, stencil, (rebuilt ^ real).area() * dbu * dbu))
+        print("  marks [%+.1f, %+.1f] mm: self-test OK (%d/%d rebuilt from %d/%d exactly)"
+              % (xlo / 1000, xhi / 1000, selftest[0], selftest[1], stencil[0], stencil[1]))
+        for ld in layers:
+            bbox, old, new = stencil_on(ld)
+            rest = region(tmpl[tuple(ld)]) - pya.Region(bbox)
+            tmpl[tuple(ld)] = [p for p in (rest + new).each()]
+            print("    %d/%d: positive vernier (%d polys) -> inverted (%d polys) at x = %+.4f mm"
+                  % (ld[0], ld[1], old.count(), new.count(), new.bbox().center().x * dbu / 1000))
+
+
+def write_lyp(path, layers, names, style, order):
+    """KLayout layer-properties file: `layers` = [(layer, datatype)], `names` {layer: name},
+    `style` {layer: dict(color, pattern, width)}, `order` = layers top -> bottom of the panel.
+
+    KLayout draws entries further DOWN the list in front of those above (verified by rendering), so
+    the first entry in `order` is the back of the stack. Layers not in `order` go below it, in
+    layer-number order (so in front)."""
+    rank = {ln: i for i, ln in enumerate(order)}
+    ordered = sorted(layers, key=lambda ld: (rank.get(ld[0], len(order)), ld))
+    out = ['<?xml version="1.0" encoding="utf-8"?>', "<layer-properties>"]
+    for ld in ordered:
+        st = style.get(ld[0], dict(color="#808080", pattern="I1", width=1))
+        out += ["  <properties>",
+                "    <frame-color>%s</frame-color>" % st["color"],
+                "    <fill-color>%s</fill-color>" % st["color"],
+                "    <frame-brightness>0</frame-brightness>",
+                "    <fill-brightness>0</fill-brightness>",
+                "    <dither-pattern>%s</dither-pattern>" % st["pattern"],
+                "    <visible>true</visible>", "    <transparent>false</transparent>",
+                "    <width>%d</width>" % st["width"], "    <marked>false</marked>",
+                "    <name>%s (%d/%d)</name>" % (names.get(ld[0], "unnamed"), ld[0], ld[1]),
+                "    <source>%d/%d@1</source>" % ld,
+                "  </properties>"]
+    out.append("</layer-properties>")
+    open(path, "w").write("\n".join(out) + "\n")
+
+
 def region(polys):
     r = pya.Region()
     for p in polys:

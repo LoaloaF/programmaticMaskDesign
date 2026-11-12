@@ -3,6 +3,8 @@
 Not the same as lib/geometry.py: stroke_centerline_to_polygon here is the generators' own
 version, and these need no design config.
 """
+import math
+
 import numpy as np
 
 
@@ -156,3 +158,98 @@ def stroke_centerline_to_polygon(centerline, widths):
         right[i] = pts[i] - off
     ring = np.vstack([left, right[::-1]])                 # forward left, backward right
     return [(float(x), float(y)) for x, y in ring]
+
+
+# ---- Metal1 landing pad + teardrop at the routing via (Rev4) ---------------------------------
+# A standalone copy of the tangent-fillet teardrop in lib/teardrop.py (teardrop_ring): the stage-01
+# generators cannot import lib/ (it needs a selected router config), and the construction is pure
+# geometry. Both give the same outline -- checked numerically when this was written.
+
+def _arc(ox, oy, rad, a0, a1, res, longway=False, chord_r=None):
+    d = (a1 - a0 + math.pi) % (2 * math.pi) - math.pi          # shortest signed sweep
+    if longway:
+        d -= math.copysign(2 * math.pi, d)
+    scale = 1.0 if not chord_r else rad / float(chord_r)
+    n = max(3, int(round(res * scale * abs(d) / (2 * math.pi))))
+    a = np.linspace(a0, a0 + d, n)
+    return np.column_stack((ox + rad * np.cos(a), oy + rad * np.sin(a)))
+
+
+def tear_tip_dist(r, fillet_r, width):
+    """Pad centre -> tear tip (where the fillets meet the trace edges); None if no tear fits."""
+    hw = max(float(width), 0.0) / 2.0
+    if fillet_r is None or fillet_r <= 0.0 or hw >= r:
+        return None
+    d2 = (r + fillet_r) ** 2 - (hw + fillet_r) ** 2
+    if d2 <= 0.0:
+        return None
+    L = math.sqrt(d2)
+    return L if L > r else None
+
+
+def tear_fillet_for_tip(r, width, tip_dist):
+    """Inverse of tear_tip_dist: the fillet radius that puts the tip `tip_dist` from the centre."""
+    hw = max(float(width), 0.0) / 2.0
+    return (tip_dist ** 2 - r * r + hw * hw) / (2.0 * (r - hw))
+
+
+def tear_ring(px, py, r, ux, uy, fillet_r, width, res=48):
+    """Pad circle (px, py, r) plus two concave fillet arcs of radius `fillet_r`, each tangent to the
+    circle and to one edge of the `width`-wide trace leaving along (ux, uy). Closed ring, tip edge
+    implied (the trace covers it); the plain circle when no tear fits."""
+    n = float(np.hypot(ux, uy))
+    L = tear_tip_dist(r, fillet_r, width)
+    if L is None or n == 0.0:
+        t = np.linspace(0.0, 2 * np.pi, res, endpoint=False)
+        pts = np.column_stack((px + r * np.cos(t), py + r * np.sin(t)))
+        return np.vstack((pts, pts[0]))
+    ux, uy = ux / n, uy / n
+    nx, ny = -uy, ux
+    f, hw = float(fillet_r), width / 2.0
+    k = r / (r + f)
+    bx, by = px + ux * L, py + uy * L
+    ang = lambda p, o: math.atan2(p[1] - o[1], p[0] - o[0])
+
+    def flank(s):
+        O = (bx + nx * s * (hw + f), by + ny * s * (hw + f))
+        return (O, (px + (O[0] - px) * k, py + (O[1] - py) * k), (bx + nx * s * hw, by + ny * s * hw))
+
+    Ol, Cl, Wl = flank(+1)
+    Or_, Cr, Wr = flank(-1)
+    pts = np.vstack([
+        _arc(Ol[0], Ol[1], f, ang(Wl, Ol), ang(Cl, Ol), res, chord_r=r),
+        _arc(px, py, r, ang(Cl, (px, py)), ang(Cr, (px, py)), res, longway=True)[1:],
+        _arc(Or_[0], Or_[1], f, ang(Cr, Or_), ang(Wr, Or_), res, chord_r=r)[1:],
+    ])
+    return np.vstack((pts, pts[0]))
+
+
+def wire_with_end_pad(ring, centerline, wire_width, pad_r, fillet_r, res=48, tip_margin=1.0):
+    """Merge a landing pad of radius `pad_r` and a teardrop into a wire polygon `ring`, at the
+    wire's LAST centerline point (where the routing via is). One polygon comes back, so a wire stays
+    one Metal1 entity (stage 02 finds each wire's band end from its own polygon).
+
+    The tear leaves along the last segment, so its tip is capped to `tip_margin` short of that
+    segment's start -- a longer tear would run past the 45-degree bend. Returns (points, kind) with
+    kind "tear" or "circle" (the cap left no room for a tear)."""
+    from shapely.geometry import Polygon
+    c = np.asarray(centerline, dtype=float)
+    px, py = c[-1]
+    keep = [0]
+    for i in range(1, len(c)):                    # same duplicate-point drop as the stroker
+        if not np.allclose(c[i], c[keep[-1]]):
+            keep.append(i)
+    c = c[keep]
+    seg = c[-2] - c[-1]
+    run = float(np.hypot(*seg))
+    ux, uy = seg / run
+    f = fillet_r
+    L_max = run - tip_margin
+    if f is not None and L_max > pad_r:
+        f = min(f, tear_fillet_for_tip(pad_r, wire_width, L_max))
+    kind = "tear" if tear_tip_dist(pad_r, f, wire_width) is not None else "circle"
+    tear = tear_ring(px, py, pad_r, ux, uy, f, wire_width, res)
+    merged = Polygon(ring).buffer(0).union(Polygon(tear).buffer(0))
+    if merged.geom_type != "Polygon" or merged.interiors:
+        raise ValueError("wire + end pad did not merge into one simple polygon")
+    return np.asarray(merged.exterior.coords, dtype=float), kind

@@ -74,3 +74,20 @@ The two projects grew separately and overlap:
 
 Environment: Python packages in the base conda python (`/opt/anaconda3/bin/python3`, which
 has gdstk for the dummy; the `dxf` env lacks it); KLayout 0.29 app for every GDS stage. The folder is a git repository; generated output (`WaferNesting/runs/`, `64Ch_4Shankdesigns/`) is ignored.
+
+## Rev4
+
+Rev3 plus: every via 2.5 µm from the pad edge, a round Metal1 landing pad on every routing via, a 3.5 µm top-row via on the
+12-block and dummies, Metal3 squares 2 µm smaller per side, a small PI handle on the dummies, and the pad-perimeter
+stabilization vias moved onto their own mask (wafer layer 1, with its alignment mark in the template's free slot). The
+connector side stays identical to Rev3 / Rev2. Details: `InterconnectGeneration/HANDOVER.md` §4.6 and
+`InterconnectGeneration/WaferNesting/HANDOVER.md` §4.4.
+
+```bash
+cd InterconnectGeneration
+python3 build_designs.py --rev 4                 # designs/rev4/  (needs designs/rev3/ -- build Rev3 first)
+WAFERNEST_CONFIG=config_rev4 $KL -b -r WaferNesting/01d_rebuild_wafer.py    # checked against Rev2
+```
+
+Output: `InterconnectGeneration/WaferNesting/runs/wafer4_rev4/wafer_wafer4_rev4.{gds,oas,lyp}` (named layers in the OAS;
+load the `.lyp` for colours).

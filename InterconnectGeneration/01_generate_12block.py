@@ -5,7 +5,7 @@ from shapely.affinity import affine_transform
 
 from lib.generate_helpers import (create_rectangle, convert_rectangle_to_polyline, point_reflect,
                                   bulb_profile, circle_polyline, stroke_centerline_to_polygon,
-                                  etch_via_layout)
+                                  etch_via_layout, wire_with_end_pad)
 from lib.active import in_designs as _in_designs      # bare filename -> designs/
 
 # Every knob lives in config_<name>.py (section 1) -- edit it there. Two configs use this
@@ -70,6 +70,8 @@ if __name__ == "__main__":
                    dxfattribs={'linetype': 'CONTINUOUS', 'color': POLYIMIDE["color"]})
     doc.layers.new(name=POLYIMIDE["neg_layer"],
                    dxfattribs={'linetype': 'CONTINUOUS', 'color': POLYIMIDE["neg_color"]})
+    if CONFIG["pad_etch"] == "vias" and CONFIG["etch_via_layer"]:
+        doc.layers.new(name=CONFIG["etch_via_layer"], dxfattribs={'linetype': 'CONTINUOUS', 'color': 1})
 
     #Which columns drop their BOTTOM (row-0) pad. Design A DROPS cols 0..half_col and KEEPS
     #half_col+1..end, so the retained bottom row lives in the RIGHT (second) half. Design B is a
@@ -132,13 +134,17 @@ if __name__ == "__main__":
             raise SystemExit("pad_etch='vias' copies the routing via's circle; set via_shape='circle'")
         etch_r = ROUTING["via_radius"]
         etch_inset = ROUTING["via_offset_x"] + CONFIG["etch_via_inset_extra"]
-        etch_layer = POLYIMIDE["neg_layer"]
+        #Rev4: the stabilization vias get their own layer (own mask); None = Polyimide_Negative (Rev3)
+        etch_layer = CONFIG["etch_via_layer"] or POLYIMIDE["neg_layer"]
         etch_gap = CONFIG["etch_via_corner_gap"]
         #The routing via relative to its pad's lower-left corner -- the top-left corner here; each pad's
         #actual via is checked against its etch circles below.
-        via_rel = (ROUTING["via_offset_x"], pad_side / 2.0 + ROUTING["via_offset_y"])
+        via_rel = (ROUTING["via_offset_x"] + max(ROUTING["via_rest_dx"], 0.0),
+                   pad_side / 2.0 + ROUTING["via_offset_y"])
         etch_rel, etch_info = etch_via_layout(pad_side, etch_inset, etch_r, etch_gap, via_rel,
                                               CONFIG["etch_via_spacing"])
+
+    m1_pad_kinds = {}      # Rev4: how many wire-end pads got a teardrop / only a circle
 
     def build_shapes(row_start):
         """Generate one design instance's geometry as a list of (points, layer). row_start(col)
@@ -157,7 +163,11 @@ if __name__ == "__main__":
                 pad_pts = convert_rectangle_to_polyline(rect)
                 shapes.append((pad_pts, CONFIG["layer"]))
                 if CONFIG["metal3"]:
-                    shapes.append((pad_pts, CONFIG["layer_top"]))     # same square, no wires
+                    # Metal2's pad square, each side pulled in by metal3_inset (Rev4: 2 um); no wires
+                    m3 = CONFIG["metal3_inset"]
+                    m3_pts = convert_rectangle_to_polyline(
+                        create_rectangle(x0 + m3, y0 + m3, pad_side - 2 * m3, pad_side - 2 * m3))
+                    shapes.append((m3_pts, CONFIG["layer_top"]))
                 if CONFIG["pad_etch"] == "square":
                     # Extra-layer (EtchingPad) pad: its OWN side length, centred on the same pad centre.
                     extra_rect = create_rectangle(cx - pad_side_extra / 2.0, cy - pad_side_extra / 2.0,
@@ -177,7 +187,13 @@ if __name__ == "__main__":
         #width -- and the inter-column clearance -- is untouched). Vias are clamped to the pad's left
         #edge (vx0). The TOP pad (k=0) needs no jog: its via sits at the left edge and the wire runs
         #STRAIGHT DOWN into it (fully inside).
-        via_x, lane_x = {}, {}
+        #Rev4 (12-block lane geometry only; all 0/None = Rev2/Rev3): the pad next to a lane is tight, so
+        #the top pad of every column gets a smaller via (via_k0_radius) centred between its two
+        #neighbour lanes (via_k0_dx), and the lower pads' vias move via_rest_dx right of the lane
+        #bundle's left edge, away from the previous column's last lane. Lanes below the top one stay put.
+        k0_r = ROUTING["via_k0_radius"] if ROUTING["via_k0_radius"] is not None else ROUTING["via_radius"]
+        k0_dx, rest_dx = ROUTING["via_k0_dx"], ROUTING["via_rest_dx"]
+        via_x, lane_x, via_r = {}, {}, {}
         clamped_cols = 0
         for col in range(CONFIG["n_cols"]):
             members = [i for i in range(n_pads) if pad_info[i][2] == col]
@@ -186,9 +202,11 @@ if __name__ == "__main__":
             #k=0 -> top pad; iterate this column's pads by DESCENDING y.
             for k, i in enumerate(sorted(members, key=lambda j: pad_info[j][1], reverse=True)):
                 nat_via = vx0 + k * via_pitch                # natural staircase position
+                via_r[i] = ROUTING["via_radius"]
                 if k == 0:
-                    lane_x[i] = nat_via                      # top pad: straight down over the via
-                    via_x[i] = nat_via
+                    lane_x[i] = nat_via + k0_dx              # top pad: straight down over the via
+                    via_x[i] = lane_x[i]
+                    via_r[i] = k0_r
                 else:
                     lane_x[i] = max(nat_via + jog0, prev_lane + wire_pitch)
                     #Pull the via LEFT so the trace clears it by min_wire_via_margin; keep on the pad.
@@ -196,6 +214,7 @@ if __name__ == "__main__":
                     via_x[i] = max(want, vx0)
                     if via_x[i] > lane_x[i] - min_jog + 1e-6:
                         clamped_cols += 1                    # couldn't reach the full margin on the pad
+                    via_x[i] += rest_dx
                 prev_lane = lane_x[i]
         if clamped_cols:
             size_knob = "via_radius" if ROUTING["via_shape"] == "circle" else "via_w"
@@ -216,7 +235,7 @@ if __name__ == "__main__":
             #point; a circular via is emitted as a closed polyline so design B's 180-deg reflection and
             #the add_lwpolyline pipeline handle it identically to the rectangle.
             if ROUTING["via_shape"] == "circle":
-                vpts = circle_polyline(vx, vcy, ROUTING["via_radius"], ROUTING["via_arc"])
+                vpts = circle_polyline(vx, vcy, via_r[i], ROUTING["via_arc"])
             else:
                 vrect = create_rectangle(vx - ROUTING["via_w"] / 2.0, vcy - ROUTING["via_h"] / 2.0,
                                          ROUTING["via_w"], ROUTING["via_h"])
@@ -228,7 +247,7 @@ if __name__ == "__main__":
                 x0 = pad_info[i][3]; y0 = cy - pad_side / 2.0
                 for rx, ry in etch_rel:
                     ex, ey = x0 + rx, y0 + ry
-                    if np.hypot(ex - vx, ey - vcy) < 2 * etch_r + etch_gap - 1e-6:
+                    if np.hypot(ex - vx, ey - vcy) < etch_r + via_r[i] + etch_gap - 1e-6:
                         raise SystemExit(f"etch via ({ex:.3f}, {ey:.3f}) closer than {etch_gap} um to the "
                                          f"routing via of pad {i} -- check via_offset_x/y")
                     shapes.append((circle_polyline(ex, ey, etch_r, ROUTING["via_arc"]), etch_layer))
@@ -239,7 +258,13 @@ if __name__ == "__main__":
             centerline = [(lane_x[i], y_top), (lane_x[i], vcy + (lane_x[i] - vx)), (vx, vcy)]
             ring = stroke_centerline_to_polygon(centerline, [wire_width] * 3)
             if ring is not None:
-                shapes.append((np.asarray(ring, dtype=float), ROUTING["layer_wire"]))
+                ring = np.asarray(ring, dtype=float)
+                if ROUTING["m1_pad"]:      #Rev4: round Metal1 landing pad + teardrop at the via
+                    ring, kind = wire_with_end_pad(ring, centerline, wire_width,
+                                                   via_r[i] + ROUTING["m1_pad_enc"],
+                                                   ROUTING["m1_tear_fillet_r"])
+                    m1_pad_kinds[kind] = m1_pad_kinds.get(kind, 0) + 1
+                shapes.append((ring, ROUTING["layer_wire"]))
         return shapes, pad_info
 
     #Build both instances: A and B use the SAME drop pattern, so B is a plain 180-deg mirror of A
@@ -288,6 +313,8 @@ if __name__ == "__main__":
 
     A_xmin, A_xmax, A_ymin, A_ymax = bbox(shapes_A)
     B_xmin, B_xmax, B_ymin, B_ymax = bbox(shapes_B, lambda p: point_reflect(p, px, py))
+    A_xmax -= POLYIMIDE["trim_xmax"]                  # Rev4: keep the outline where Rev3 had it
+    B_xmin += POLYIMIDE["trim_xmax"]                  # (B is A reflected: its left extent is A's right)
 
     #Stepped seam. Each piece's seam is TWO horizontal lines (low + high) a `sm` clearance past that
     #piece's own seam-row pads, joined by a one-row (== pitch) step in a pad-free column gap. A grows
@@ -470,6 +497,14 @@ if __name__ == "__main__":
               f"{e['step']:.3f} um apart (range {CONFIG['etch_via_spacing']} um)")
     else:
         print(f"PI etch: one {pad_side_extra} um square per pad on {CONFIG['pad_layers_extra']}")
+    if ROUTING["via_k0_radius"] is not None or ROUTING["via_rest_dx"] or ROUTING["via_k0_dx"]:
+        print(f"top-row vias: r{ROUTING['via_k0_radius']} um at dx {ROUTING['via_k0_dx']:+g}; lower rows dx "
+              f"{ROUTING['via_rest_dx']:+g} um (vs the lane bundle, Rev4)")
+    if ROUTING["m1_pad"]:
+        print(f"Metal1 landing pads: {2 * (ROUTING['via_radius'] + ROUTING['m1_pad_enc']):g} um circle at each "
+              f"routing via, teardrop fillet r{ROUTING['m1_tear_fillet_r']:g} um (capped to the last straight "
+              f"run): {m1_pad_kinds}")
     if CONFIG["metal3"]:
-        print(f"{CONFIG['layer_top']}: the {pad_side} um pad squares (Metal2's pads, no wires)")
+        print(f"{CONFIG['layer_top']}: {pad_side - 2 * CONFIG['metal3_inset']:g} um squares centred on Metal2's "
+              f"{pad_side} um pads (inset {CONFIG['metal3_inset']:g} um per side, no wires)")
     print(f"wrote {CONFIG['out_path']}")

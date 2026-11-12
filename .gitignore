@@ -13,3 +13,4 @@ generative_probe_design/64Ch_4Shankdesigns/
 
 # Rev3 design outputs (~190 MB) -- regenerate with `python3 build_designs.py --rev 3`
 InterconnectGeneration/designs/rev3/
+InterconnectGeneration/designs/rev4/
