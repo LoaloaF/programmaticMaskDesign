@@ -1,0 +1,3034 @@
+{
+ "artifacts": {
+  "config/rev2_12block_gen.json": {
+   "kind": "json",
+   "sha": "e68bb0ee47744ce2"
+  },
+  "config/rev2_12block_route.json": {
+   "kind": "json",
+   "sha": "2dfd1f7d1d46fbcb"
+  },
+  "config/rev2_8block_51_35_gen.json": {
+   "kind": "json",
+   "sha": "0fba0fd04e46fe5e"
+  },
+  "config/rev2_8block_51_35_route.json": {
+   "kind": "json",
+   "sha": "75b0c7739c477132"
+  },
+  "config/rev2_8block_71_15_gen.json": {
+   "kind": "json",
+   "sha": "0529bbd62820584f"
+  },
+  "config/rev2_8block_71_15_route.json": {
+   "kind": "json",
+   "sha": "20a3ab77119b897d"
+  },
+  "config/rev2_dummy_35_36_gen.json": {
+   "kind": "json",
+   "sha": "ef5fb35f46eb98b1"
+  },
+  "config/rev2_dummy_35_36_route.json": {
+   "kind": "json",
+   "sha": "864c1ccce888a9db"
+  },
+  "config/rev2_dummy_61_10_gen.json": {
+   "kind": "json",
+   "sha": "f75fe35e6559f4cb"
+  },
+  "config/rev2_dummy_61_10_route.json": {
+   "kind": "json",
+   "sha": "029d88034ff657b3"
+  },
+  "config/rev3_12block_gen.json": {
+   "kind": "json",
+   "sha": "9002890cb4054dd6"
+  },
+  "config/rev3_12block_route.json": {
+   "kind": "json",
+   "sha": "fe9df2c659bdd2a0"
+  },
+  "config/rev3_8block_51_35_gen.json": {
+   "kind": "json",
+   "sha": "f78fe3673454a0d8"
+  },
+  "config/rev3_8block_51_35_route.json": {
+   "kind": "json",
+   "sha": "dda6521dc82a1a5a"
+  },
+  "config/rev3_8block_71_15_gen.json": {
+   "kind": "json",
+   "sha": "b5928913a5ff535a"
+  },
+  "config/rev3_8block_71_15_route.json": {
+   "kind": "json",
+   "sha": "9ee1be3b4aaa4fce"
+  },
+  "config/rev3_dummy_35_36_gen.json": {
+   "kind": "json",
+   "sha": "2d04b498cc60d90c"
+  },
+  "config/rev3_dummy_35_36_route.json": {
+   "kind": "json",
+   "sha": "cfca1d6bc627ea1b"
+  },
+  "config/rev3_dummy_61_10_gen.json": {
+   "kind": "json",
+   "sha": "b155453ba735290d"
+  },
+  "config/rev3_dummy_61_10_route.json": {
+   "kind": "json",
+   "sha": "1e1554b4547545b0"
+  },
+  "config/rev4_12block_gen.json": {
+   "kind": "json",
+   "sha": "6f0eb6d2da52657f"
+  },
+  "config/rev4_12block_route.json": {
+   "kind": "json",
+   "sha": "371498e3b9066206"
+  },
+  "config/rev4_8block_51_35_gen.json": {
+   "kind": "json",
+   "sha": "26ab5232cbaf42dd"
+  },
+  "config/rev4_8block_51_35_route.json": {
+   "kind": "json",
+   "sha": "2bf12655a38f6190"
+  },
+  "config/rev4_8block_71_15_gen.json": {
+   "kind": "json",
+   "sha": "85e960d4ecd951d8"
+  },
+  "config/rev4_8block_71_15_route.json": {
+   "kind": "json",
+   "sha": "92e9421c240b99fc"
+  },
+  "config/rev4_dummy_35_36_gen.json": {
+   "kind": "json",
+   "sha": "4b0d8286107b72b7"
+  },
+  "config/rev4_dummy_35_36_route.json": {
+   "kind": "json",
+   "sha": "9157f31e19eb980c"
+  },
+  "config/rev4_dummy_61_10_gen.json": {
+   "kind": "json",
+   "sha": "fac7176cdd41b084"
+  },
+  "config/rev4_dummy_61_10_route.json": {
+   "kind": "json",
+   "sha": "b7deb4c8b723a992"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U1.6C00_info.json": {
+   "kind": "json",
+   "sha": "52b72d82e3ec1756"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U1.6C01_info.json": {
+   "kind": "json",
+   "sha": "25f8e09209ed55aa"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U1.6C02_info.json": {
+   "kind": "json",
+   "sha": "c54fda9d9a8922c0"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U1.6C03_info.json": {
+   "kind": "json",
+   "sha": "27a18ec1b792275d"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U1.6_electrodes.json": {
+   "kind": "json",
+   "sha": "a336462684dc0bf9"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U2.5C04_info.json": {
+   "kind": "json",
+   "sha": "42c86647e4c11127"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U2.5C05_info.json": {
+   "kind": "json",
+   "sha": "19795f3c98614f3e"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U2.5C06_info.json": {
+   "kind": "json",
+   "sha": "9d27e5f458d4f46b"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U2.5C07_info.json": {
+   "kind": "json",
+   "sha": "ed2363b4a2127a97"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U2.5_electrodes.json": {
+   "kind": "json",
+   "sha": "99cce8067216fe63"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U4C08_info.json": {
+   "kind": "json",
+   "sha": "96f77c82347ac601"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U4C09_info.json": {
+   "kind": "json",
+   "sha": "22250d9acdfcbdb1"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U4C10_info.json": {
+   "kind": "json",
+   "sha": "70e6445d7a86f89e"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U4C11_info.json": {
+   "kind": "json",
+   "sha": "888052afd628deb4"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U4_electrodes.json": {
+   "kind": "json",
+   "sha": "754516f2db549cf8"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U8C12_info.json": {
+   "kind": "json",
+   "sha": "d72c06a2751280a9"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U8C13_info.json": {
+   "kind": "json",
+   "sha": "795afc95134370fc"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U8C14_info.json": {
+   "kind": "json",
+   "sha": "06f1bbc36f78adf5"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U8C15_info.json": {
+   "kind": "json",
+   "sha": "938fc093ea47ff00"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/U8_electrodes.json": {
+   "kind": "json",
+   "sha": "dfdd1e747f124a93"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/all_designs_side_by_side.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "BLOCK:_ARCHTICK:0": {
+     "n": 1,
+     "sha": "2def5835df249466"
+    },
+    "BLOCK:_CLOSEDBLANK:0": {
+     "n": 1,
+     "sha": "27197d4f057ad94b"
+    },
+    "BLOCK:_CLOSEDFILLED:0": {
+     "n": 1,
+     "sha": "81319bc23823e85d"
+    },
+    "Etching": {
+     "n": 272,
+     "sha": "f35a965fcb516bc8"
+    },
+    "Labels": {
+     "n": 4,
+     "sha": "d97e46490ecc37ea"
+    },
+    "Metal": {
+     "n": 832,
+     "sha": "24bdec98bac22ac0"
+    },
+    "PEDOT_SIROF": {
+     "n": 477,
+     "sha": "ab14fd8f42eb5281"
+    },
+    "pad_etching": {
+     "n": 477,
+     "sha": "d75645a754ce4713"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/all_ionp_patterns_side_by_side.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "BLOCK:_ARCHTICK:0": {
+     "n": 1,
+     "sha": "2def5835df249466"
+    },
+    "BLOCK:_CLOSEDBLANK:0": {
+     "n": 1,
+     "sha": "27197d4f057ad94b"
+    },
+    "BLOCK:_CLOSEDFILLED:0": {
+     "n": 1,
+     "sha": "81319bc23823e85d"
+    },
+    "Etching": {
+     "n": 1088,
+     "sha": "8ffcbabb0cb9fd4f"
+    },
+    "IONP": {
+     "n": 104606,
+     "sha": "3c404eb95695c895"
+    },
+    "Labels": {
+     "n": 16,
+     "sha": "08d036ac8077a74e"
+    },
+    "Metal": {
+     "n": 3328,
+     "sha": "2d99db0f37f90eab"
+    },
+    "PEDOT_SIROF": {
+     "n": 1908,
+     "sha": "2331209294e89f1a"
+    },
+    "pad_etching": {
+     "n": 1908,
+     "sha": "57e7366bffb1ea28"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U1.6.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "fd09a299b9d272dc"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "4d21c9ab58babc30"
+    },
+    "Metal": {
+     "n": 210,
+     "sha": "5ab570e04872989b"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "2c439e787151a82a"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "21217a51aee1b569"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U1.6C00.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "fd09a299b9d272dc"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "4d21c9ab58babc30"
+    },
+    "IONP": {
+     "n": 3381,
+     "sha": "bb5e24c62ab5becc"
+    },
+    "Metal": {
+     "n": 210,
+     "sha": "5ab570e04872989b"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "2c439e787151a82a"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "21217a51aee1b569"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U1.6C01.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "fd09a299b9d272dc"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "4d21c9ab58babc30"
+    },
+    "IONP": {
+     "n": 2193,
+     "sha": "52652767ff50713d"
+    },
+    "Metal": {
+     "n": 210,
+     "sha": "934b232e72b0311d"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "2c439e787151a82a"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "21217a51aee1b569"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U1.6C02.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "fd09a299b9d272dc"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "4d21c9ab58babc30"
+    },
+    "IONP": {
+     "n": 3166,
+     "sha": "b526fd01e03dc71f"
+    },
+    "Metal": {
+     "n": 210,
+     "sha": "8449b2d834a84f0a"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "2c439e787151a82a"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "21217a51aee1b569"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U1.6C03.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "fd09a299b9d272dc"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "4d21c9ab58babc30"
+    },
+    "IONP": {
+     "n": 2223,
+     "sha": "ffaddc704286ce9d"
+    },
+    "Metal": {
+     "n": 210,
+     "sha": "a41558f3e4a715d0"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "2c439e787151a82a"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "21217a51aee1b569"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U2.5.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "7864f29881fb2616"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "2c9f46d4036f7b3c"
+    },
+    "Metal": {
+     "n": 210,
+     "sha": "3238f1d4ae54a27b"
+    },
+    "PEDOT_SIROF": {
+     "n": 111,
+     "sha": "6b0a95b6c1477866"
+    },
+    "pad_etching": {
+     "n": 111,
+     "sha": "33cb114db3ad100a"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U2.5C04.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "7864f29881fb2616"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "2c9f46d4036f7b3c"
+    },
+    "IONP": {
+     "n": 3635,
+     "sha": "c833824099fa11c7"
+    },
+    "Metal": {
+     "n": 210,
+     "sha": "3238f1d4ae54a27b"
+    },
+    "PEDOT_SIROF": {
+     "n": 111,
+     "sha": "6b0a95b6c1477866"
+    },
+    "pad_etching": {
+     "n": 111,
+     "sha": "33cb114db3ad100a"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U2.5C05.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "7864f29881fb2616"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "2c9f46d4036f7b3c"
+    },
+    "IONP": {
+     "n": 3645,
+     "sha": "cec430deff1172dc"
+    },
+    "Metal": {
+     "n": 210,
+     "sha": "1e7b358b97c9f643"
+    },
+    "PEDOT_SIROF": {
+     "n": 111,
+     "sha": "6b0a95b6c1477866"
+    },
+    "pad_etching": {
+     "n": 111,
+     "sha": "33cb114db3ad100a"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U2.5C06.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "7864f29881fb2616"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "2c9f46d4036f7b3c"
+    },
+    "IONP": {
+     "n": 4298,
+     "sha": "6907fc0394a24af9"
+    },
+    "Metal": {
+     "n": 210,
+     "sha": "9b09b9d6695f6d63"
+    },
+    "PEDOT_SIROF": {
+     "n": 111,
+     "sha": "6b0a95b6c1477866"
+    },
+    "pad_etching": {
+     "n": 111,
+     "sha": "33cb114db3ad100a"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U2.5C07.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "7864f29881fb2616"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "2c9f46d4036f7b3c"
+    },
+    "IONP": {
+     "n": 5430,
+     "sha": "d36ea1f00006cb69"
+    },
+    "Metal": {
+     "n": 210,
+     "sha": "25c40f37036f29c0"
+    },
+    "PEDOT_SIROF": {
+     "n": 111,
+     "sha": "6b0a95b6c1477866"
+    },
+    "pad_etching": {
+     "n": 111,
+     "sha": "33cb114db3ad100a"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U4.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "412137044a7c00d6"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "9f4c38f79f8952e9"
+    },
+    "Metal": {
+     "n": 206,
+     "sha": "fd8dbd249f05eae5"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "57790d36e928d24a"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "b55be5f850bc0e6a"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U4C08.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "412137044a7c00d6"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "9f4c38f79f8952e9"
+    },
+    "IONP": {
+     "n": 4781,
+     "sha": "f7201c5750fb6223"
+    },
+    "Metal": {
+     "n": 206,
+     "sha": "fd8dbd249f05eae5"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "57790d36e928d24a"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "b55be5f850bc0e6a"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U4C09.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "412137044a7c00d6"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "9f4c38f79f8952e9"
+    },
+    "IONP": {
+     "n": 6718,
+     "sha": "067215f7628abfb4"
+    },
+    "Metal": {
+     "n": 206,
+     "sha": "00d24c0194d8a3b0"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "57790d36e928d24a"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "b55be5f850bc0e6a"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U4C10.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "412137044a7c00d6"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "9f4c38f79f8952e9"
+    },
+    "IONP": {
+     "n": 6468,
+     "sha": "6d61b8b922bb8ae2"
+    },
+    "Metal": {
+     "n": 206,
+     "sha": "f54a3b0328a01d19"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "57790d36e928d24a"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "b55be5f850bc0e6a"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U4C11.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "412137044a7c00d6"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "9f4c38f79f8952e9"
+    },
+    "IONP": {
+     "n": 7681,
+     "sha": "985978a165f20fad"
+    },
+    "Metal": {
+     "n": 206,
+     "sha": "1243d4e847e27b76"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "57790d36e928d24a"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "b55be5f850bc0e6a"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U8.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "7fae50a5d9b0c5f0"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "e281056a27837106"
+    },
+    "Metal": {
+     "n": 206,
+     "sha": "50012f4e816cd1cc"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "ff700042804fc443"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "bdce863cb55ecc51"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U8C12.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "7fae50a5d9b0c5f0"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "e281056a27837106"
+    },
+    "IONP": {
+     "n": 13114,
+     "sha": "534220d0fa853eba"
+    },
+    "Metal": {
+     "n": 206,
+     "sha": "50012f4e816cd1cc"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "ff700042804fc443"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "bdce863cb55ecc51"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U8C13.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "7fae50a5d9b0c5f0"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "e281056a27837106"
+    },
+    "IONP": {
+     "n": 11563,
+     "sha": "097782da24369e16"
+    },
+    "Metal": {
+     "n": 206,
+     "sha": "bc2e71089a3d3f6c"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "ff700042804fc443"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "bdce863cb55ecc51"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U8C14.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "7fae50a5d9b0c5f0"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "e281056a27837106"
+    },
+    "IONP": {
+     "n": 12611,
+     "sha": "67184c343a0d5dac"
+    },
+    "Metal": {
+     "n": 206,
+     "sha": "c05a1a3135738b4a"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "ff700042804fc443"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "bdce863cb55ecc51"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_U8C15.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "@custom_vars": {
+     "n": 1,
+     "sha": "7fae50a5d9b0c5f0"
+    },
+    "Etching": {
+     "n": 68,
+     "sha": "e281056a27837106"
+    },
+    "IONP": {
+     "n": 13699,
+     "sha": "d17fdd4507ed5037"
+    },
+    "Metal": {
+     "n": 206,
+     "sha": "96f0b0aa38b5939e"
+    },
+    "PEDOT_SIROF": {
+     "n": 122,
+     "sha": "ff700042804fc443"
+    },
+    "pad_etching": {
+     "n": 122,
+     "sha": "bdce863cb55ecc51"
+    }
+   }
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_to_flex_mapping_U1.6.json": {
+   "kind": "json",
+   "sha": "42584537e2080fa4"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_to_flex_mapping_U2.5.json": {
+   "kind": "json",
+   "sha": "42584537e2080fa4"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_to_flex_mapping_U4.json": {
+   "kind": "json",
+   "sha": "42584537e2080fa4"
+  },
+  "electrode/64Ch_4Shankdesigns/shanks/electrode_to_flex_mapping_U8.json": {
+   "kind": "json",
+   "sha": "42584537e2080fa4"
+  },
+  "interconnect/rev2/dummy_new_interconnect_circular_dummy_35_36_padrows.gds": {
+   "kind": "gds",
+   "layers": {
+    "TOP/1/0": {
+     "n": 773,
+     "sha": "9e74f317e73be880"
+    },
+    "TOP/3/0": {
+     "n": 2250,
+     "sha": "00021d3219dafc95"
+    },
+    "TOP/5/0": {
+     "n": 768,
+     "sha": "7308bf1b4b6026ac"
+    },
+    "TOP/6/0": {
+     "n": 768,
+     "sha": "084d8006f93018e9"
+    }
+   }
+  },
+  "interconnect/rev2/dummy_new_interconnect_circular_dummy_61_10_padrows.gds": {
+   "kind": "gds",
+   "layers": {
+    "TOP/1/0": {
+     "n": 773,
+     "sha": "8fbb1986ba7f6fa0"
+    },
+    "TOP/3/0": {
+     "n": 2250,
+     "sha": "b56f507637b76ed4"
+    },
+    "TOP/5/0": {
+     "n": 768,
+     "sha": "389ac0454eb0c265"
+    },
+    "TOP/6/0": {
+     "n": 768,
+     "sha": "d9c83812136e2eaf"
+    }
+   }
+  },
+  "interconnect/rev2/new_interconnect_circular_12Block_56_15.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 768,
+     "sha": "b442adb4dd654976"
+    },
+    "EtchingPad": {
+     "n": 768,
+     "sha": "bf665ffca53ac900"
+    },
+    "Metal1": {
+     "n": 768,
+     "sha": "c0efaf2288ec3c02"
+    },
+    "Metal2": {
+     "n": 768,
+     "sha": "dbba7f212ce46b54"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "f000b67b5bd93ff3"
+    },
+    "Polyimide_Negative": {
+     "n": 1,
+     "sha": "1b22f5ff2f028989"
+    }
+   }
+  },
+  "interconnect/rev2/new_interconnect_circular_8block_51_35.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "40d139069aa02f30"
+    },
+    "EtchingPad": {
+     "n": 528,
+     "sha": "ff16da2a98eb5713"
+    },
+    "Metal1": {
+     "n": 528,
+     "sha": "6e76ea89c76faabf"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "c0d7f3985e51d1ac"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "e9807a452786cd89"
+    },
+    "Polyimide_Negative": {
+     "n": 1,
+     "sha": "2588c2b00fe86262"
+    }
+   }
+  },
+  "interconnect/rev2/new_interconnect_circular_8block_71_15.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "b87144420f5e892f"
+    },
+    "EtchingPad": {
+     "n": 528,
+     "sha": "113108e0e39fd28b"
+    },
+    "Metal1": {
+     "n": 528,
+     "sha": "2d190448868cbba4"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "01ec9520c8c14bcf"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "5d9ea5810c2d980f"
+    },
+    "Polyimide_Negative": {
+     "n": 1,
+     "sha": "7df083b25aab9ca5"
+    }
+   }
+  },
+  "interconnect/rev2/new_interconnect_circular_dummy_35_36.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 768,
+     "sha": "af51de7cac552b6e"
+    },
+    "EtchingPad": {
+     "n": 768,
+     "sha": "b97261b089aae602"
+    },
+    "Metal1": {
+     "n": 768,
+     "sha": "542aa96c84b67b01"
+    },
+    "Metal2": {
+     "n": 768,
+     "sha": "5d9c142891f7ed45"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "0933f7a4d6c8cca0"
+    },
+    "Polyimide_Negative": {
+     "n": 1,
+     "sha": "79113c41684a1db7"
+    }
+   }
+  },
+  "interconnect/rev2/new_interconnect_circular_dummy_61_10.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 768,
+     "sha": "955c15538c751d60"
+    },
+    "EtchingPad": {
+     "n": 768,
+     "sha": "2963c5fec522574d"
+    },
+    "Metal1": {
+     "n": 768,
+     "sha": "8cb50f132b882584"
+    },
+    "Metal2": {
+     "n": 768,
+     "sha": "12aed872f4036f10"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "01eaa89aa9c78818"
+    },
+    "Polyimide_Negative": {
+     "n": 1,
+     "sha": "3fe41c9e298e356d"
+    }
+   }
+  },
+  "interconnect/rev2/new_interconnect_with_connector_8blocks_chamfered_1layer_51_35.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "bab8e8eeb5b5dd9e"
+    },
+    "EtchingPad": {
+     "n": 528,
+     "sha": "7f10e9b99f83e549"
+    },
+    "Metal1": {
+     "n": 2064,
+     "sha": "2f802e1289154d8c"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "796cba4bfb2c13d5"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "b8c162afb018534d"
+    },
+    "Polyimide_Negative": {
+     "n": 513,
+     "sha": "a88255859ac9c77b"
+    }
+   }
+  },
+  "interconnect/rev2/new_interconnect_with_connector_8blocks_chamfered_1layer_71_15.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "997cda7be00cf1b7"
+    },
+    "EtchingPad": {
+     "n": 528,
+     "sha": "d3ff762f348084f6"
+    },
+    "Metal1": {
+     "n": 2064,
+     "sha": "8c7bbc94e4d081bf"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "9848f46ec73875e7"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "cad626fb6e3fc208"
+    },
+    "Polyimide_Negative": {
+     "n": 513,
+     "sha": "706edd0c484a0b28"
+    }
+   }
+  },
+  "interconnect/rev2/new_interconnect_with_connector_chamfered_12Block_56_15.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 768,
+     "sha": "43b71048b4992f1f"
+    },
+    "EtchingPad": {
+     "n": 768,
+     "sha": "bb52a1ecef49c93b"
+    },
+    "Metal1": {
+     "n": 2688,
+     "sha": "6107696f8e35fe6c"
+    },
+    "Metal2": {
+     "n": 1920,
+     "sha": "708dd328b92ec924"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "054db99c3245a285"
+    },
+    "Polyimide_Negative": {
+     "n": 769,
+     "sha": "58b286afb28bebf3"
+    },
+    "Via": {
+     "n": 384,
+     "sha": "a9e2ccb6b7343ed2"
+    }
+   }
+  },
+  "interconnect/rev3/dummy_new_interconnect_circular_dummy_35_36_padrows_rev3.gds": {
+   "kind": "gds",
+   "layers": {
+    "TOP/1/0": {
+     "n": 6149,
+     "sha": "af96325c5e62b896"
+    },
+    "TOP/3/0": {
+     "n": 2250,
+     "sha": "00021d3219dafc95"
+    },
+    "TOP/5/0": {
+     "n": 768,
+     "sha": "7308bf1b4b6026ac"
+    },
+    "TOP/6/0": {
+     "n": 768,
+     "sha": "084d8006f93018e9"
+    },
+    "TOP/8/0": {
+     "n": 768,
+     "sha": "084d8006f93018e9"
+    }
+   }
+  },
+  "interconnect/rev3/dummy_new_interconnect_circular_dummy_61_10_padrows_rev3.gds": {
+   "kind": "gds",
+   "layers": {
+    "TOP/1/0": {
+     "n": 9221,
+     "sha": "876aa5c154c34331"
+    },
+    "TOP/3/0": {
+     "n": 2250,
+     "sha": "b56f507637b76ed4"
+    },
+    "TOP/5/0": {
+     "n": 768,
+     "sha": "389ac0454eb0c265"
+    },
+    "TOP/6/0": {
+     "n": 768,
+     "sha": "d9c83812136e2eaf"
+    },
+    "TOP/8/0": {
+     "n": 768,
+     "sha": "d9c83812136e2eaf"
+    }
+   }
+  },
+  "interconnect/rev3/new_interconnect_circular_12Block_56_15_rev3.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 768,
+     "sha": "b442adb4dd654976"
+    },
+    "Metal1": {
+     "n": 768,
+     "sha": "c0efaf2288ec3c02"
+    },
+    "Metal2": {
+     "n": 768,
+     "sha": "dbba7f212ce46b54"
+    },
+    "Metal3": {
+     "n": 768,
+     "sha": "dbba7f212ce46b54"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "f000b67b5bd93ff3"
+    },
+    "Polyimide_Negative": {
+     "n": 9217,
+     "sha": "5b95c3357a994722"
+    }
+   }
+  },
+  "interconnect/rev3/new_interconnect_circular_8block_51_35_rev3.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "40d139069aa02f30"
+    },
+    "Metal1": {
+     "n": 528,
+     "sha": "6e76ea89c76faabf"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "c0d7f3985e51d1ac"
+    },
+    "Metal3": {
+     "n": 528,
+     "sha": "c0d7f3985e51d1ac"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "e9807a452786cd89"
+    },
+    "Polyimide_Negative": {
+     "n": 6337,
+     "sha": "1cf8f72f23cc2dbe"
+    }
+   }
+  },
+  "interconnect/rev3/new_interconnect_circular_8block_71_15_rev3.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "b87144420f5e892f"
+    },
+    "Metal1": {
+     "n": 528,
+     "sha": "2d190448868cbba4"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "01ec9520c8c14bcf"
+    },
+    "Metal3": {
+     "n": 528,
+     "sha": "01ec9520c8c14bcf"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "5d9ea5810c2d980f"
+    },
+    "Polyimide_Negative": {
+     "n": 8449,
+     "sha": "b5b167330bdb080e"
+    }
+   }
+  },
+  "interconnect/rev3/new_interconnect_circular_dummy_35_36_rev3.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 768,
+     "sha": "af51de7cac552b6e"
+    },
+    "Metal1": {
+     "n": 768,
+     "sha": "542aa96c84b67b01"
+    },
+    "Metal2": {
+     "n": 768,
+     "sha": "5d9c142891f7ed45"
+    },
+    "Metal3": {
+     "n": 768,
+     "sha": "5d9c142891f7ed45"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "0933f7a4d6c8cca0"
+    },
+    "Polyimide_Negative": {
+     "n": 6145,
+     "sha": "0d3dcfcdf5f1e52a"
+    }
+   }
+  },
+  "interconnect/rev3/new_interconnect_circular_dummy_61_10_rev3.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 768,
+     "sha": "955c15538c751d60"
+    },
+    "Metal1": {
+     "n": 768,
+     "sha": "8cb50f132b882584"
+    },
+    "Metal2": {
+     "n": 768,
+     "sha": "12aed872f4036f10"
+    },
+    "Metal3": {
+     "n": 768,
+     "sha": "12aed872f4036f10"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "01eaa89aa9c78818"
+    },
+    "Polyimide_Negative": {
+     "n": 9217,
+     "sha": "1e4732a7ca67d48b"
+    }
+   }
+  },
+  "interconnect/rev3/new_interconnect_with_connector_8blocks_chamfered_1layer_51_35_rev3.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "bab8e8eeb5b5dd9e"
+    },
+    "Metal1": {
+     "n": 2064,
+     "sha": "2f802e1289154d8c"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "796cba4bfb2c13d5"
+    },
+    "Metal3": {
+     "n": 528,
+     "sha": "796cba4bfb2c13d5"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "b8c162afb018534d"
+    },
+    "Polyimide_Negative": {
+     "n": 6849,
+     "sha": "2559423b0c3a566a"
+    }
+   }
+  },
+  "interconnect/rev3/new_interconnect_with_connector_8blocks_chamfered_1layer_71_15_rev3.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "997cda7be00cf1b7"
+    },
+    "Metal1": {
+     "n": 2064,
+     "sha": "8c7bbc94e4d081bf"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "9848f46ec73875e7"
+    },
+    "Metal3": {
+     "n": 528,
+     "sha": "9848f46ec73875e7"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "cad626fb6e3fc208"
+    },
+    "Polyimide_Negative": {
+     "n": 8961,
+     "sha": "e4e45de0196385a9"
+    }
+   }
+  },
+  "interconnect/rev3/new_interconnect_with_connector_chamfered_12Block_56_15_rev3.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 768,
+     "sha": "43b71048b4992f1f"
+    },
+    "Metal1": {
+     "n": 2688,
+     "sha": "6107696f8e35fe6c"
+    },
+    "Metal2": {
+     "n": 1920,
+     "sha": "708dd328b92ec924"
+    },
+    "Metal3": {
+     "n": 768,
+     "sha": "afe96aefe85e8313"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "054db99c3245a285"
+    },
+    "Polyimide_Negative": {
+     "n": 9985,
+     "sha": "d24b2185704a7bb7"
+    },
+    "Via": {
+     "n": 384,
+     "sha": "a9e2ccb6b7343ed2"
+    }
+   }
+  },
+  "interconnect/rev4/dummy_new_interconnect_circular_dummy_35_36_padrows_rev4.gds": {
+   "kind": "gds",
+   "layers": {
+    "TOP/1/0": {
+     "n": 5,
+     "sha": "4b700c4acce1a4be"
+    },
+    "TOP/2/0": {
+     "n": 6144,
+     "sha": "b396273c963f4dc4"
+    },
+    "TOP/3/0": {
+     "n": 2250,
+     "sha": "a2d6be250b611a04"
+    },
+    "TOP/5/0": {
+     "n": 768,
+     "sha": "e893df6c069a49f1"
+    },
+    "TOP/6/0": {
+     "n": 768,
+     "sha": "084d8006f93018e9"
+    },
+    "TOP/8/0": {
+     "n": 768,
+     "sha": "76c4957c383a70c5"
+    }
+   }
+  },
+  "interconnect/rev4/dummy_new_interconnect_circular_dummy_61_10_padrows_rev4.gds": {
+   "kind": "gds",
+   "layers": {
+    "TOP/1/0": {
+     "n": 5,
+     "sha": "fc877e8703fe20de"
+    },
+    "TOP/2/0": {
+     "n": 9216,
+     "sha": "9528310ef0a9299d"
+    },
+    "TOP/3/0": {
+     "n": 2250,
+     "sha": "856397cde5c34313"
+    },
+    "TOP/5/0": {
+     "n": 768,
+     "sha": "3f6e714e3be1015e"
+    },
+    "TOP/6/0": {
+     "n": 768,
+     "sha": "d9c83812136e2eaf"
+    },
+    "TOP/8/0": {
+     "n": 768,
+     "sha": "5fef4b1084a00e0b"
+    }
+   }
+  },
+  "interconnect/rev4/new_interconnect_circular_12Block_56_15_rev4.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 768,
+     "sha": "a4773b1a4d5c418a"
+    },
+    "Metal1": {
+     "n": 768,
+     "sha": "e6e6f77f399f01b9"
+    },
+    "Metal2": {
+     "n": 768,
+     "sha": "dbba7f212ce46b54"
+    },
+    "Metal3": {
+     "n": 768,
+     "sha": "4a204585492a271b"
+    },
+    "PI_Stab_Via": {
+     "n": 9216,
+     "sha": "dba45f4eeef64d5d"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "f000b67b5bd93ff3"
+    },
+    "Polyimide_Negative": {
+     "n": 1,
+     "sha": "1b22f5ff2f028989"
+    }
+   }
+  },
+  "interconnect/rev4/new_interconnect_circular_8block_51_35_rev4.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "1b7ad2fd8bfa0e5e"
+    },
+    "Metal1": {
+     "n": 528,
+     "sha": "05c0d7e75d051708"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "c0d7f3985e51d1ac"
+    },
+    "Metal3": {
+     "n": 528,
+     "sha": "d32ee7ad3ed55e86"
+    },
+    "PI_Stab_Via": {
+     "n": 6336,
+     "sha": "84d4f9b07e0c42b8"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "e9807a452786cd89"
+    },
+    "Polyimide_Negative": {
+     "n": 1,
+     "sha": "2588c2b00fe86262"
+    }
+   }
+  },
+  "interconnect/rev4/new_interconnect_circular_8block_71_15_rev4.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "c035589d778bf731"
+    },
+    "Metal1": {
+     "n": 528,
+     "sha": "633cc35d78374da0"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "01ec9520c8c14bcf"
+    },
+    "Metal3": {
+     "n": 528,
+     "sha": "e694e50cf112c81b"
+    },
+    "PI_Stab_Via": {
+     "n": 8448,
+     "sha": "b8449ef9a4b24aef"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "5d9ea5810c2d980f"
+    },
+    "Polyimide_Negative": {
+     "n": 1,
+     "sha": "7df083b25aab9ca5"
+    }
+   }
+  },
+  "interconnect/rev4/new_interconnect_circular_dummy_35_36_rev4.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 768,
+     "sha": "5e5a8ba101790854"
+    },
+    "Metal1": {
+     "n": 768,
+     "sha": "75196d9b11ec428c"
+    },
+    "Metal2": {
+     "n": 768,
+     "sha": "5d9c142891f7ed45"
+    },
+    "Metal3": {
+     "n": 768,
+     "sha": "027e376fc404a5a2"
+    },
+    "PI_Stab_Via": {
+     "n": 6144,
+     "sha": "0cc7064a0a2da528"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "0933f7a4d6c8cca0"
+    },
+    "Polyimide_Negative": {
+     "n": 1,
+     "sha": "79113c41684a1db7"
+    }
+   }
+  },
+  "interconnect/rev4/new_interconnect_circular_dummy_61_10_rev4.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 768,
+     "sha": "81973986451b5625"
+    },
+    "Metal1": {
+     "n": 768,
+     "sha": "cf0d1779e1776bc9"
+    },
+    "Metal2": {
+     "n": 768,
+     "sha": "12aed872f4036f10"
+    },
+    "Metal3": {
+     "n": 768,
+     "sha": "437c039f8ebf1486"
+    },
+    "PI_Stab_Via": {
+     "n": 9216,
+     "sha": "0b969d8818b8c021"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "01eaa89aa9c78818"
+    },
+    "Polyimide_Negative": {
+     "n": 1,
+     "sha": "3fe41c9e298e356d"
+    }
+   }
+  },
+  "interconnect/rev4/new_interconnect_with_connector_8blocks_chamfered_1layer_51_35_rev4.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "9a3ec4513a774986"
+    },
+    "Metal1": {
+     "n": 2064,
+     "sha": "414ec73197eb5ffc"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "796cba4bfb2c13d5"
+    },
+    "Metal3": {
+     "n": 528,
+     "sha": "78d749cd48c4c070"
+    },
+    "PI_Stab_Via": {
+     "n": 6336,
+     "sha": "92a36d1c4f23b5f0"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "b8c162afb018534d"
+    },
+    "Polyimide_Negative": {
+     "n": 513,
+     "sha": "a88255859ac9c77b"
+    }
+   }
+  },
+  "interconnect/rev4/new_interconnect_with_connector_8blocks_chamfered_1layer_71_15_rev4.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "73fd389fc5d2dbc0"
+    },
+    "Metal1": {
+     "n": 2064,
+     "sha": "f8937529ca0c0112"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "9848f46ec73875e7"
+    },
+    "Metal3": {
+     "n": 528,
+     "sha": "652a8caf3ac16428"
+    },
+    "PI_Stab_Via": {
+     "n": 8448,
+     "sha": "42be24b0eaa37ccc"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "cad626fb6e3fc208"
+    },
+    "Polyimide_Negative": {
+     "n": 513,
+     "sha": "706edd0c484a0b28"
+    }
+   }
+  },
+  "interconnect/rev4/new_interconnect_with_connector_chamfered_12Block_56_15_rev4.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 768,
+     "sha": "de6606c553eed905"
+    },
+    "Metal1": {
+     "n": 2688,
+     "sha": "716d797efea3589f"
+    },
+    "Metal2": {
+     "n": 1920,
+     "sha": "708dd328b92ec924"
+    },
+    "Metal3": {
+     "n": 768,
+     "sha": "d7c12baf483283fb"
+    },
+    "PI_Stab_Via": {
+     "n": 9216,
+     "sha": "643bb0f5e42176f9"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "054db99c3245a285"
+    },
+    "Polyimide_Negative": {
+     "n": 769,
+     "sha": "58b286afb28bebf3"
+    },
+    "Via": {
+     "n": 384,
+     "sha": "a9e2ccb6b7343ed2"
+    }
+   }
+  },
+  "interconnect/rev4/ref_rev3/new_interconnect_circular_12Block_56_15_rev3.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 768,
+     "sha": "b442adb4dd654976"
+    },
+    "Metal1": {
+     "n": 768,
+     "sha": "c0efaf2288ec3c02"
+    },
+    "Metal2": {
+     "n": 768,
+     "sha": "dbba7f212ce46b54"
+    },
+    "Metal3": {
+     "n": 768,
+     "sha": "dbba7f212ce46b54"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "f000b67b5bd93ff3"
+    },
+    "Polyimide_Negative": {
+     "n": 9217,
+     "sha": "5b95c3357a994722"
+    }
+   }
+  },
+  "interconnect/rev4/ref_rev3/new_interconnect_circular_8block_51_35_rev3.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "40d139069aa02f30"
+    },
+    "Metal1": {
+     "n": 528,
+     "sha": "6e76ea89c76faabf"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "c0d7f3985e51d1ac"
+    },
+    "Metal3": {
+     "n": 528,
+     "sha": "c0d7f3985e51d1ac"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "e9807a452786cd89"
+    },
+    "Polyimide_Negative": {
+     "n": 6337,
+     "sha": "1cf8f72f23cc2dbe"
+    }
+   }
+  },
+  "interconnect/rev4/ref_rev3/new_interconnect_circular_8block_71_15_rev3.dxf": {
+   "kind": "dxf",
+   "layers": {
+    "Etching": {
+     "n": 528,
+     "sha": "b87144420f5e892f"
+    },
+    "Metal1": {
+     "n": 528,
+     "sha": "2d190448868cbba4"
+    },
+    "Metal2": {
+     "n": 528,
+     "sha": "01ec9520c8c14bcf"
+    },
+    "Metal3": {
+     "n": 528,
+     "sha": "01ec9520c8c14bcf"
+    },
+    "Polyimide": {
+     "n": 1,
+     "sha": "5d9ea5810c2d980f"
+    },
+    "Polyimide_Negative": {
+     "n": 8449,
+     "sha": "b5b167330bdb080e"
+    }
+   }
+  },
+  "wafer/e64ch_4shank/placement.json": {
+   "kind": "json",
+   "sha": "8bec11c05913a776"
+  },
+  "wafer/e64ch_4shank/wafer_64Ch_4Shankdesigns.gds": {
+   "kind": "gds",
+   "layers": {
+    "CONN_U1.6C00/1/0": {
+     "n": 3381,
+     "sha": "175a074da2ecacf1"
+    },
+    "CONN_U1.6C00/3/0": {
+     "n": 122,
+     "sha": "91a684dcf4e117ca"
+    },
+    "CONN_U1.6C00/6/0": {
+     "n": 191,
+     "sha": "647360cb4c4e3b40"
+    },
+    "CONN_U1.6C00/7/0": {
+     "n": 213,
+     "sha": "0b8ca64d4ede0ab2"
+    },
+    "CONN_U1.6C00/8/0": {
+     "n": 122,
+     "sha": "c3f14ac2489ea54f"
+    },
+    "CONN_U1.6C01/1/0": {
+     "n": 2193,
+     "sha": "b96a3f9a9816e5c5"
+    },
+    "CONN_U1.6C01/3/0": {
+     "n": 122,
+     "sha": "91a684dcf4e117ca"
+    },
+    "CONN_U1.6C01/6/0": {
+     "n": 191,
+     "sha": "647360cb4c4e3b40"
+    },
+    "CONN_U1.6C01/7/0": {
+     "n": 213,
+     "sha": "79f68f177cc3d491"
+    },
+    "CONN_U1.6C01/8/0": {
+     "n": 122,
+     "sha": "c3f14ac2489ea54f"
+    },
+    "CONN_U1.6C02/1/0": {
+     "n": 3166,
+     "sha": "6ba2ce70f16a61a9"
+    },
+    "CONN_U1.6C02/3/0": {
+     "n": 122,
+     "sha": "91a684dcf4e117ca"
+    },
+    "CONN_U1.6C02/6/0": {
+     "n": 191,
+     "sha": "647360cb4c4e3b40"
+    },
+    "CONN_U1.6C02/7/0": {
+     "n": 213,
+     "sha": "0f9f8184928e7243"
+    },
+    "CONN_U1.6C02/8/0": {
+     "n": 122,
+     "sha": "c3f14ac2489ea54f"
+    },
+    "CONN_U1.6C03/1/0": {
+     "n": 2223,
+     "sha": "b45d2ced261d1dd5"
+    },
+    "CONN_U1.6C03/3/0": {
+     "n": 122,
+     "sha": "91a684dcf4e117ca"
+    },
+    "CONN_U1.6C03/6/0": {
+     "n": 191,
+     "sha": "647360cb4c4e3b40"
+    },
+    "CONN_U1.6C03/7/0": {
+     "n": 213,
+     "sha": "a46580919d50289e"
+    },
+    "CONN_U1.6C03/8/0": {
+     "n": 122,
+     "sha": "c3f14ac2489ea54f"
+    },
+    "CONN_U2.5C04/1/0": {
+     "n": 3635,
+     "sha": "1a8f34f549a51311"
+    },
+    "CONN_U2.5C04/3/0": {
+     "n": 111,
+     "sha": "764595dae1cb9867"
+    },
+    "CONN_U2.5C04/6/0": {
+     "n": 209,
+     "sha": "d48ad9bc271a1562"
+    },
+    "CONN_U2.5C04/7/0": {
+     "n": 213,
+     "sha": "033964e2c5045e52"
+    },
+    "CONN_U2.5C04/8/0": {
+     "n": 111,
+     "sha": "eb8b3ac46ffea853"
+    },
+    "CONN_U2.5C05/1/0": {
+     "n": 3645,
+     "sha": "53855d1647d1bc79"
+    },
+    "CONN_U2.5C05/3/0": {
+     "n": 111,
+     "sha": "764595dae1cb9867"
+    },
+    "CONN_U2.5C05/6/0": {
+     "n": 209,
+     "sha": "d48ad9bc271a1562"
+    },
+    "CONN_U2.5C05/7/0": {
+     "n": 213,
+     "sha": "828338cddbea5425"
+    },
+    "CONN_U2.5C05/8/0": {
+     "n": 111,
+     "sha": "eb8b3ac46ffea853"
+    },
+    "CONN_U2.5C06/1/0": {
+     "n": 4298,
+     "sha": "8007e08cad08356c"
+    },
+    "CONN_U2.5C06/3/0": {
+     "n": 111,
+     "sha": "764595dae1cb9867"
+    },
+    "CONN_U2.5C06/6/0": {
+     "n": 209,
+     "sha": "d48ad9bc271a1562"
+    },
+    "CONN_U2.5C06/7/0": {
+     "n": 213,
+     "sha": "e72d774319074151"
+    },
+    "CONN_U2.5C06/8/0": {
+     "n": 111,
+     "sha": "eb8b3ac46ffea853"
+    },
+    "CONN_U2.5C07/1/0": {
+     "n": 5430,
+     "sha": "2afe074454a74d75"
+    },
+    "CONN_U2.5C07/3/0": {
+     "n": 111,
+     "sha": "764595dae1cb9867"
+    },
+    "CONN_U2.5C07/6/0": {
+     "n": 209,
+     "sha": "d48ad9bc271a1562"
+    },
+    "CONN_U2.5C07/7/0": {
+     "n": 213,
+     "sha": "a773aaddb833e09c"
+    },
+    "CONN_U2.5C07/8/0": {
+     "n": 111,
+     "sha": "eb8b3ac46ffea853"
+    },
+    "CONN_U4C08/1/0": {
+     "n": 4781,
+     "sha": "903403f50948fa87"
+    },
+    "CONN_U4C08/3/0": {
+     "n": 122,
+     "sha": "2f183330e3f3e8f8"
+    },
+    "CONN_U4C08/6/0": {
+     "n": 196,
+     "sha": "37349c836926b484"
+    },
+    "CONN_U4C08/7/0": {
+     "n": 207,
+     "sha": "9dffe968999ab0b7"
+    },
+    "CONN_U4C08/8/0": {
+     "n": 122,
+     "sha": "00e6fa4d790572b4"
+    },
+    "CONN_U4C09/1/0": {
+     "n": 6718,
+     "sha": "5b9946e599f2f644"
+    },
+    "CONN_U4C09/3/0": {
+     "n": 122,
+     "sha": "2f183330e3f3e8f8"
+    },
+    "CONN_U4C09/6/0": {
+     "n": 196,
+     "sha": "37349c836926b484"
+    },
+    "CONN_U4C09/7/0": {
+     "n": 207,
+     "sha": "acc9b527f289729f"
+    },
+    "CONN_U4C09/8/0": {
+     "n": 122,
+     "sha": "00e6fa4d790572b4"
+    },
+    "CONN_U4C10/1/0": {
+     "n": 6468,
+     "sha": "fbdc4faedc380cea"
+    },
+    "CONN_U4C10/3/0": {
+     "n": 122,
+     "sha": "2f183330e3f3e8f8"
+    },
+    "CONN_U4C10/6/0": {
+     "n": 196,
+     "sha": "37349c836926b484"
+    },
+    "CONN_U4C10/7/0": {
+     "n": 207,
+     "sha": "449be18ac4fbd6ad"
+    },
+    "CONN_U4C10/8/0": {
+     "n": 122,
+     "sha": "00e6fa4d790572b4"
+    },
+    "CONN_U4C11/1/0": {
+     "n": 7681,
+     "sha": "8e6934c8342f8bf3"
+    },
+    "CONN_U4C11/3/0": {
+     "n": 122,
+     "sha": "2f183330e3f3e8f8"
+    },
+    "CONN_U4C11/6/0": {
+     "n": 196,
+     "sha": "37349c836926b484"
+    },
+    "CONN_U4C11/7/0": {
+     "n": 207,
+     "sha": "3263f05936a5aebc"
+    },
+    "CONN_U4C11/8/0": {
+     "n": 122,
+     "sha": "00e6fa4d790572b4"
+    },
+    "CONN_U8C12/1/0": {
+     "n": 13114,
+     "sha": "083f32539c01e8b7"
+    },
+    "CONN_U8C12/3/0": {
+     "n": 122,
+     "sha": "3813723f81f69f26"
+    },
+    "CONN_U8C12/6/0": {
+     "n": 167,
+     "sha": "c74178e2526544a3"
+    },
+    "CONN_U8C12/7/0": {
+     "n": 209,
+     "sha": "d387824bf5e89562"
+    },
+    "CONN_U8C12/8/0": {
+     "n": 122,
+     "sha": "ff64e8655ffd1834"
+    },
+    "CONN_U8C13/1/0": {
+     "n": 11563,
+     "sha": "e7b12060728c8ef4"
+    },
+    "CONN_U8C13/3/0": {
+     "n": 122,
+     "sha": "3813723f81f69f26"
+    },
+    "CONN_U8C13/6/0": {
+     "n": 167,
+     "sha": "c74178e2526544a3"
+    },
+    "CONN_U8C13/7/0": {
+     "n": 209,
+     "sha": "7467bfaa7f565825"
+    },
+    "CONN_U8C13/8/0": {
+     "n": 122,
+     "sha": "ff64e8655ffd1834"
+    },
+    "CONN_U8C14/1/0": {
+     "n": 12611,
+     "sha": "7c9a65a549331747"
+    },
+    "CONN_U8C14/3/0": {
+     "n": 122,
+     "sha": "3813723f81f69f26"
+    },
+    "CONN_U8C14/6/0": {
+     "n": 167,
+     "sha": "c74178e2526544a3"
+    },
+    "CONN_U8C14/7/0": {
+     "n": 209,
+     "sha": "57c3a71db68efd48"
+    },
+    "CONN_U8C14/8/0": {
+     "n": 122,
+     "sha": "ff64e8655ffd1834"
+    },
+    "CONN_U8C15/1/0": {
+     "n": 13699,
+     "sha": "826f08d04e81d720"
+    },
+    "CONN_U8C15/3/0": {
+     "n": 122,
+     "sha": "3813723f81f69f26"
+    },
+    "CONN_U8C15/6/0": {
+     "n": 167,
+     "sha": "c74178e2526544a3"
+    },
+    "CONN_U8C15/7/0": {
+     "n": 209,
+     "sha": "ad434337aad16467"
+    },
+    "CONN_U8C15/8/0": {
+     "n": 122,
+     "sha": "ff64e8655ffd1834"
+    },
+    "TOP/1/0": {
+     "n": 18,
+     "sha": "60b10fb443442600"
+    },
+    "TOP/10/0": {
+     "n": 1,
+     "sha": "f3ac07427a983f8b"
+    },
+    "TOP/3/0": {
+     "n": 18,
+     "sha": "106b66825e75c7e6"
+    },
+    "TOP/6/0": {
+     "n": 18,
+     "sha": "3669d7807a1f4030"
+    },
+    "TOP/7/0": {
+     "n": 6964,
+     "sha": "5eba2a50365fba95"
+    },
+    "TOP/8/0": {
+     "n": 18,
+     "sha": "84b5c069c6e51546"
+    },
+    "TOP/@refs": {
+     "n": 59,
+     "sha": "6cd758fff5ae1891"
+    }
+   }
+  },
+  "wafer/e64ch_4shank/wafer_64Ch_4Shankdesigns.lyp": {
+   "kind": "text",
+   "sha": "3f6f52942117323e"
+  },
+  "wafer/e64ch_4shank/wafer_64Ch_4Shankdesigns.oas": {
+   "kind": "gds",
+   "layers": {
+    "CONN_U1.6C00/1/0": {
+     "n": 3381,
+     "sha": "175a074da2ecacf1"
+    },
+    "CONN_U1.6C00/3/0": {
+     "n": 122,
+     "sha": "91a684dcf4e117ca"
+    },
+    "CONN_U1.6C00/6/0": {
+     "n": 68,
+     "sha": "c8f01c7e38bf2147"
+    },
+    "CONN_U1.6C00/7/0": {
+     "n": 210,
+     "sha": "44f25a48dab22e5f"
+    },
+    "CONN_U1.6C00/8/0": {
+     "n": 122,
+     "sha": "c3f14ac2489ea54f"
+    },
+    "CONN_U1.6C01/1/0": {
+     "n": 2193,
+     "sha": "b96a3f9a9816e5c5"
+    },
+    "CONN_U1.6C01/3/0": {
+     "n": 122,
+     "sha": "91a684dcf4e117ca"
+    },
+    "CONN_U1.6C01/6/0": {
+     "n": 68,
+     "sha": "c8f01c7e38bf2147"
+    },
+    "CONN_U1.6C01/7/0": {
+     "n": 210,
+     "sha": "2af6ff48a11c178c"
+    },
+    "CONN_U1.6C01/8/0": {
+     "n": 122,
+     "sha": "c3f14ac2489ea54f"
+    },
+    "CONN_U1.6C02/1/0": {
+     "n": 3166,
+     "sha": "6ba2ce70f16a61a9"
+    },
+    "CONN_U1.6C02/3/0": {
+     "n": 122,
+     "sha": "91a684dcf4e117ca"
+    },
+    "CONN_U1.6C02/6/0": {
+     "n": 68,
+     "sha": "c8f01c7e38bf2147"
+    },
+    "CONN_U1.6C02/7/0": {
+     "n": 210,
+     "sha": "ac6b942c788e9751"
+    },
+    "CONN_U1.6C02/8/0": {
+     "n": 122,
+     "sha": "c3f14ac2489ea54f"
+    },
+    "CONN_U1.6C03/1/0": {
+     "n": 2223,
+     "sha": "b45d2ced261d1dd5"
+    },
+    "CONN_U1.6C03/3/0": {
+     "n": 122,
+     "sha": "91a684dcf4e117ca"
+    },
+    "CONN_U1.6C03/6/0": {
+     "n": 68,
+     "sha": "c8f01c7e38bf2147"
+    },
+    "CONN_U1.6C03/7/0": {
+     "n": 210,
+     "sha": "7d7b698c768db89a"
+    },
+    "CONN_U1.6C03/8/0": {
+     "n": 122,
+     "sha": "c3f14ac2489ea54f"
+    },
+    "CONN_U2.5C04/1/0": {
+     "n": 3635,
+     "sha": "1a8f34f549a51311"
+    },
+    "CONN_U2.5C04/3/0": {
+     "n": 111,
+     "sha": "764595dae1cb9867"
+    },
+    "CONN_U2.5C04/6/0": {
+     "n": 68,
+     "sha": "3b54c40232196992"
+    },
+    "CONN_U2.5C04/7/0": {
+     "n": 210,
+     "sha": "96a3bc317cac5d87"
+    },
+    "CONN_U2.5C04/8/0": {
+     "n": 111,
+     "sha": "eb8b3ac46ffea853"
+    },
+    "CONN_U2.5C05/1/0": {
+     "n": 3645,
+     "sha": "53855d1647d1bc79"
+    },
+    "CONN_U2.5C05/3/0": {
+     "n": 111,
+     "sha": "764595dae1cb9867"
+    },
+    "CONN_U2.5C05/6/0": {
+     "n": 68,
+     "sha": "3b54c40232196992"
+    },
+    "CONN_U2.5C05/7/0": {
+     "n": 210,
+     "sha": "cd474e5565fdd6b9"
+    },
+    "CONN_U2.5C05/8/0": {
+     "n": 111,
+     "sha": "eb8b3ac46ffea853"
+    },
+    "CONN_U2.5C06/1/0": {
+     "n": 4298,
+     "sha": "8007e08cad08356c"
+    },
+    "CONN_U2.5C06/3/0": {
+     "n": 111,
+     "sha": "764595dae1cb9867"
+    },
+    "CONN_U2.5C06/6/0": {
+     "n": 68,
+     "sha": "3b54c40232196992"
+    },
+    "CONN_U2.5C06/7/0": {
+     "n": 210,
+     "sha": "c92747f9d41d79d0"
+    },
+    "CONN_U2.5C06/8/0": {
+     "n": 111,
+     "sha": "eb8b3ac46ffea853"
+    },
+    "CONN_U2.5C07/1/0": {
+     "n": 5430,
+     "sha": "2afe074454a74d75"
+    },
+    "CONN_U2.5C07/3/0": {
+     "n": 111,
+     "sha": "764595dae1cb9867"
+    },
+    "CONN_U2.5C07/6/0": {
+     "n": 68,
+     "sha": "3b54c40232196992"
+    },
+    "CONN_U2.5C07/7/0": {
+     "n": 210,
+     "sha": "53225943baacae16"
+    },
+    "CONN_U2.5C07/8/0": {
+     "n": 111,
+     "sha": "eb8b3ac46ffea853"
+    },
+    "CONN_U4C08/1/0": {
+     "n": 4781,
+     "sha": "903403f50948fa87"
+    },
+    "CONN_U4C08/3/0": {
+     "n": 122,
+     "sha": "2f183330e3f3e8f8"
+    },
+    "CONN_U4C08/6/0": {
+     "n": 68,
+     "sha": "22e43f5aba829bef"
+    },
+    "CONN_U4C08/7/0": {
+     "n": 206,
+     "sha": "6ef15e7344bbcae8"
+    },
+    "CONN_U4C08/8/0": {
+     "n": 122,
+     "sha": "00e6fa4d790572b4"
+    },
+    "CONN_U4C09/1/0": {
+     "n": 6718,
+     "sha": "5b9946e599f2f644"
+    },
+    "CONN_U4C09/3/0": {
+     "n": 122,
+     "sha": "2f183330e3f3e8f8"
+    },
+    "CONN_U4C09/6/0": {
+     "n": 68,
+     "sha": "22e43f5aba829bef"
+    },
+    "CONN_U4C09/7/0": {
+     "n": 206,
+     "sha": "216ae48d221bc01e"
+    },
+    "CONN_U4C09/8/0": {
+     "n": 122,
+     "sha": "00e6fa4d790572b4"
+    },
+    "CONN_U4C10/1/0": {
+     "n": 6468,
+     "sha": "fbdc4faedc380cea"
+    },
+    "CONN_U4C10/3/0": {
+     "n": 122,
+     "sha": "2f183330e3f3e8f8"
+    },
+    "CONN_U4C10/6/0": {
+     "n": 68,
+     "sha": "22e43f5aba829bef"
+    },
+    "CONN_U4C10/7/0": {
+     "n": 206,
+     "sha": "951004b6c206a894"
+    },
+    "CONN_U4C10/8/0": {
+     "n": 122,
+     "sha": "00e6fa4d790572b4"
+    },
+    "CONN_U4C11/1/0": {
+     "n": 7681,
+     "sha": "8e6934c8342f8bf3"
+    },
+    "CONN_U4C11/3/0": {
+     "n": 122,
+     "sha": "2f183330e3f3e8f8"
+    },
+    "CONN_U4C11/6/0": {
+     "n": 68,
+     "sha": "22e43f5aba829bef"
+    },
+    "CONN_U4C11/7/0": {
+     "n": 206,
+     "sha": "369fff84eed59205"
+    },
+    "CONN_U4C11/8/0": {
+     "n": 122,
+     "sha": "00e6fa4d790572b4"
+    },
+    "CONN_U8C12/1/0": {
+     "n": 13114,
+     "sha": "083f32539c01e8b7"
+    },
+    "CONN_U8C12/3/0": {
+     "n": 122,
+     "sha": "3813723f81f69f26"
+    },
+    "CONN_U8C12/6/0": {
+     "n": 68,
+     "sha": "b21e16f115c7d0fe"
+    },
+    "CONN_U8C12/7/0": {
+     "n": 206,
+     "sha": "c0de8c4b39472329"
+    },
+    "CONN_U8C12/8/0": {
+     "n": 122,
+     "sha": "ff64e8655ffd1834"
+    },
+    "CONN_U8C13/1/0": {
+     "n": 11563,
+     "sha": "e7b12060728c8ef4"
+    },
+    "CONN_U8C13/3/0": {
+     "n": 122,
+     "sha": "3813723f81f69f26"
+    },
+    "CONN_U8C13/6/0": {
+     "n": 68,
+     "sha": "b21e16f115c7d0fe"
+    },
+    "CONN_U8C13/7/0": {
+     "n": 206,
+     "sha": "6ec328df9c93fdfb"
+    },
+    "CONN_U8C13/8/0": {
+     "n": 122,
+     "sha": "ff64e8655ffd1834"
+    },
+    "CONN_U8C14/1/0": {
+     "n": 12611,
+     "sha": "7c9a65a549331747"
+    },
+    "CONN_U8C14/3/0": {
+     "n": 122,
+     "sha": "3813723f81f69f26"
+    },
+    "CONN_U8C14/6/0": {
+     "n": 68,
+     "sha": "b21e16f115c7d0fe"
+    },
+    "CONN_U8C14/7/0": {
+     "n": 206,
+     "sha": "b37e18971d996747"
+    },
+    "CONN_U8C14/8/0": {
+     "n": 122,
+     "sha": "ff64e8655ffd1834"
+    },
+    "CONN_U8C15/1/0": {
+     "n": 13699,
+     "sha": "826f08d04e81d720"
+    },
+    "CONN_U8C15/3/0": {
+     "n": 122,
+     "sha": "3813723f81f69f26"
+    },
+    "CONN_U8C15/6/0": {
+     "n": 68,
+     "sha": "b21e16f115c7d0fe"
+    },
+    "CONN_U8C15/7/0": {
+     "n": 206,
+     "sha": "4a4854a5902257bb"
+    },
+    "CONN_U8C15/8/0": {
+     "n": 122,
+     "sha": "ff64e8655ffd1834"
+    },
+    "TOP/1/0": {
+     "n": 18,
+     "sha": "60b10fb443442600"
+    },
+    "TOP/10/0": {
+     "n": 1,
+     "sha": "f3ac07427a983f8b"
+    },
+    "TOP/3/0": {
+     "n": 18,
+     "sha": "106b66825e75c7e6"
+    },
+    "TOP/6/0": {
+     "n": 18,
+     "sha": "3669d7807a1f4030"
+    },
+    "TOP/7/0": {
+     "n": 6964,
+     "sha": "5eba2a50365fba95"
+    },
+    "TOP/8/0": {
+     "n": 18,
+     "sha": "84b5c069c6e51546"
+    },
+    "TOP/@refs": {
+     "n": 59,
+     "sha": "6cd758fff5ae1891"
+    }
+   }
+  },
+  "wafer/wafer4_rev2/wafer_wafer4_rev2.gds": {
+   "kind": "gds",
+   "layers": {
+    "CONN_BIG_NEW/3/0": {
+     "n": 1537,
+     "sha": "2838dedc46eeb1d6"
+    },
+    "CONN_BIG_NEW/5/0": {
+     "n": 1152,
+     "sha": "a353eebf1192e62c"
+    },
+    "CONN_BIG_NEW/6/0": {
+     "n": 1920,
+     "sha": "d7352ecf1ccfe48b"
+    },
+    "CONN_BIG_NEW/7/0": {
+     "n": 2688,
+     "sha": "396bac28fbfc4e52"
+    },
+    "CONN_SMALL_51_35_NEW/3/0": {
+     "n": 1041,
+     "sha": "4491943bc6697f3e"
+    },
+    "CONN_SMALL_51_35_NEW/5/0": {
+     "n": 528,
+     "sha": "42387d327b52953b"
+    },
+    "CONN_SMALL_51_35_NEW/6/0": {
+     "n": 528,
+     "sha": "e15235f5df7c09f4"
+    },
+    "CONN_SMALL_51_35_NEW/7/0": {
+     "n": 2064,
+     "sha": "e091f7125fd5d495"
+    },
+    "CONN_SMALL_71_15_NEW/3/0": {
+     "n": 1041,
+     "sha": "b6985f90b1d6e9c3"
+    },
+    "CONN_SMALL_71_15_NEW/5/0": {
+     "n": 528,
+     "sha": "27992c74646054d8"
+    },
+    "CONN_SMALL_71_15_NEW/6/0": {
+     "n": 528,
+     "sha": "98418589abc2423d"
+    },
+    "CONN_SMALL_71_15_NEW/7/0": {
+     "n": 2064,
+     "sha": "4516ce246863bacf"
+    },
+    "TOP/10/0": {
+     "n": 1,
+     "sha": "f3ac07427a983f8b"
+    },
+    "TOP/3/0": {
+     "n": 18,
+     "sha": "106b66825e75c7e6"
+    },
+    "TOP/5/0": {
+     "n": 18,
+     "sha": "71893f69255e1b3b"
+    },
+    "TOP/6/0": {
+     "n": 536,
+     "sha": "eb1e536d1cbdf810"
+    },
+    "TOP/7/0": {
+     "n": 6964,
+     "sha": "5eba2a50365fba95"
+    },
+    "TOP/@refs": {
+     "n": 38,
+     "sha": "e58d2ec7f51c17ed"
+    },
+    "dummy_35_36_NEW/3/0": {
+     "n": 773,
+     "sha": "211c78c8c446ffa9"
+    },
+    "dummy_35_36_NEW/5/0": {
+     "n": 768,
+     "sha": "fef184f67e958462"
+    },
+    "dummy_35_36_NEW/6/0": {
+     "n": 768,
+     "sha": "cf86ca70d65776f3"
+    },
+    "dummy_35_36_NEW/7/0": {
+     "n": 2250,
+     "sha": "d62533b8c2099bc7"
+    },
+    "dummy_61_10_NEW/3/0": {
+     "n": 773,
+     "sha": "d633c6d51dc2839f"
+    },
+    "dummy_61_10_NEW/5/0": {
+     "n": 768,
+     "sha": "7afa48454445ef21"
+    },
+    "dummy_61_10_NEW/6/0": {
+     "n": 768,
+     "sha": "8d8200b2dfd61a7a"
+    },
+    "dummy_61_10_NEW/7/0": {
+     "n": 2250,
+     "sha": "6586e2e342e51e13"
+    }
+   }
+  },
+  "wafer/wafer4_rev4/wafer_wafer4_rev4.gds": {
+   "kind": "gds",
+   "layers": {
+    "CONN_BIG_NEW/1/0": {
+     "n": 9216,
+     "sha": "e580c6cd6b1aee86"
+    },
+    "CONN_BIG_NEW/3/0": {
+     "n": 769,
+     "sha": "cac259bb3539039a"
+    },
+    "CONN_BIG_NEW/5/0": {
+     "n": 1152,
+     "sha": "118c75e2a0b0d39e"
+    },
+    "CONN_BIG_NEW/6/0": {
+     "n": 1920,
+     "sha": "d7352ecf1ccfe48b"
+    },
+    "CONN_BIG_NEW/7/0": {
+     "n": 2688,
+     "sha": "ac59aea2ab0a4fb9"
+    },
+    "CONN_BIG_NEW/8/0": {
+     "n": 768,
+     "sha": "cc701c26bbadeac2"
+    },
+    "CONN_SMALL_51_35_NEW/1/0": {
+     "n": 6336,
+     "sha": "a3fe51738f9f9bf6"
+    },
+    "CONN_SMALL_51_35_NEW/3/0": {
+     "n": 513,
+     "sha": "d42fa4c1aaac02a8"
+    },
+    "CONN_SMALL_51_35_NEW/5/0": {
+     "n": 528,
+     "sha": "8caf20745597103c"
+    },
+    "CONN_SMALL_51_35_NEW/6/0": {
+     "n": 528,
+     "sha": "e15235f5df7c09f4"
+    },
+    "CONN_SMALL_51_35_NEW/7/0": {
+     "n": 2064,
+     "sha": "daa42c066357ad3f"
+    },
+    "CONN_SMALL_51_35_NEW/8/0": {
+     "n": 528,
+     "sha": "80bb423541f47cda"
+    },
+    "CONN_SMALL_71_15_NEW/1/0": {
+     "n": 8448,
+     "sha": "d9c439b1f744603f"
+    },
+    "CONN_SMALL_71_15_NEW/3/0": {
+     "n": 513,
+     "sha": "423033b21d3acf0b"
+    },
+    "CONN_SMALL_71_15_NEW/5/0": {
+     "n": 528,
+     "sha": "f3d4958756e17465"
+    },
+    "CONN_SMALL_71_15_NEW/6/0": {
+     "n": 528,
+     "sha": "98418589abc2423d"
+    },
+    "CONN_SMALL_71_15_NEW/7/0": {
+     "n": 2064,
+     "sha": "5db56dc454a61652"
+    },
+    "CONN_SMALL_71_15_NEW/8/0": {
+     "n": 528,
+     "sha": "75b1a867e9458477"
+    },
+    "TOP/1/0": {
+     "n": 18,
+     "sha": "60b10fb443442600"
+    },
+    "TOP/10/0": {
+     "n": 1,
+     "sha": "f3ac07427a983f8b"
+    },
+    "TOP/3/0": {
+     "n": 18,
+     "sha": "106b66825e75c7e6"
+    },
+    "TOP/5/0": {
+     "n": 18,
+     "sha": "71893f69255e1b3b"
+    },
+    "TOP/6/0": {
+     "n": 536,
+     "sha": "eb1e536d1cbdf810"
+    },
+    "TOP/7/0": {
+     "n": 6964,
+     "sha": "5eba2a50365fba95"
+    },
+    "TOP/8/0": {
+     "n": 536,
+     "sha": "448af3425230c0d2"
+    },
+    "TOP/@refs": {
+     "n": 38,
+     "sha": "e58d2ec7f51c17ed"
+    },
+    "dummy_35_36_NEW/1/0": {
+     "n": 6144,
+     "sha": "537700a5d21f8a5a"
+    },
+    "dummy_35_36_NEW/3/0": {
+     "n": 5,
+     "sha": "fcb13cb336c129e7"
+    },
+    "dummy_35_36_NEW/5/0": {
+     "n": 768,
+     "sha": "d7e3df0f1b2e8457"
+    },
+    "dummy_35_36_NEW/6/0": {
+     "n": 768,
+     "sha": "cf86ca70d65776f3"
+    },
+    "dummy_35_36_NEW/7/0": {
+     "n": 2250,
+     "sha": "dd13e25b70597df6"
+    },
+    "dummy_35_36_NEW/8/0": {
+     "n": 768,
+     "sha": "f2d41df27a846442"
+    },
+    "dummy_61_10_NEW/1/0": {
+     "n": 9216,
+     "sha": "4e6fbcfbfc186efd"
+    },
+    "dummy_61_10_NEW/3/0": {
+     "n": 5,
+     "sha": "ccc308ef8fd2b23e"
+    },
+    "dummy_61_10_NEW/5/0": {
+     "n": 768,
+     "sha": "b3c4d9390b5c91eb"
+    },
+    "dummy_61_10_NEW/6/0": {
+     "n": 768,
+     "sha": "8d8200b2dfd61a7a"
+    },
+    "dummy_61_10_NEW/7/0": {
+     "n": 2250,
+     "sha": "24a9ce74ce28fce6"
+    },
+    "dummy_61_10_NEW/8/0": {
+     "n": 768,
+     "sha": "4d281f2ed8369e1a"
+    }
+   }
+  },
+  "wafer/wafer4_rev4/wafer_wafer4_rev4.lyp": {
+   "kind": "text",
+   "sha": "c7ba9a374d4550df"
+  },
+  "wafer/wafer4_rev4/wafer_wafer4_rev4.oas": {
+   "kind": "gds",
+   "layers": {
+    "CONN_BIG_NEW/1/0": {
+     "n": 9216,
+     "sha": "e580c6cd6b1aee86"
+    },
+    "CONN_BIG_NEW/3/0": {
+     "n": 769,
+     "sha": "cac259bb3539039a"
+    },
+    "CONN_BIG_NEW/5/0": {
+     "n": 1152,
+     "sha": "118c75e2a0b0d39e"
+    },
+    "CONN_BIG_NEW/6/0": {
+     "n": 1920,
+     "sha": "d7352ecf1ccfe48b"
+    },
+    "CONN_BIG_NEW/7/0": {
+     "n": 2688,
+     "sha": "ac59aea2ab0a4fb9"
+    },
+    "CONN_BIG_NEW/8/0": {
+     "n": 768,
+     "sha": "cc701c26bbadeac2"
+    },
+    "CONN_SMALL_51_35_NEW/1/0": {
+     "n": 6336,
+     "sha": "a3fe51738f9f9bf6"
+    },
+    "CONN_SMALL_51_35_NEW/3/0": {
+     "n": 513,
+     "sha": "d42fa4c1aaac02a8"
+    },
+    "CONN_SMALL_51_35_NEW/5/0": {
+     "n": 528,
+     "sha": "8caf20745597103c"
+    },
+    "CONN_SMALL_51_35_NEW/6/0": {
+     "n": 528,
+     "sha": "e15235f5df7c09f4"
+    },
+    "CONN_SMALL_51_35_NEW/7/0": {
+     "n": 2064,
+     "sha": "daa42c066357ad3f"
+    },
+    "CONN_SMALL_51_35_NEW/8/0": {
+     "n": 528,
+     "sha": "80bb423541f47cda"
+    },
+    "CONN_SMALL_71_15_NEW/1/0": {
+     "n": 8448,
+     "sha": "d9c439b1f744603f"
+    },
+    "CONN_SMALL_71_15_NEW/3/0": {
+     "n": 513,
+     "sha": "423033b21d3acf0b"
+    },
+    "CONN_SMALL_71_15_NEW/5/0": {
+     "n": 528,
+     "sha": "f3d4958756e17465"
+    },
+    "CONN_SMALL_71_15_NEW/6/0": {
+     "n": 528,
+     "sha": "98418589abc2423d"
+    },
+    "CONN_SMALL_71_15_NEW/7/0": {
+     "n": 2064,
+     "sha": "5db56dc454a61652"
+    },
+    "CONN_SMALL_71_15_NEW/8/0": {
+     "n": 528,
+     "sha": "75b1a867e9458477"
+    },
+    "TOP/1/0": {
+     "n": 18,
+     "sha": "60b10fb443442600"
+    },
+    "TOP/10/0": {
+     "n": 1,
+     "sha": "f3ac07427a983f8b"
+    },
+    "TOP/3/0": {
+     "n": 18,
+     "sha": "106b66825e75c7e6"
+    },
+    "TOP/5/0": {
+     "n": 18,
+     "sha": "71893f69255e1b3b"
+    },
+    "TOP/6/0": {
+     "n": 536,
+     "sha": "eb1e536d1cbdf810"
+    },
+    "TOP/7/0": {
+     "n": 6964,
+     "sha": "5eba2a50365fba95"
+    },
+    "TOP/8/0": {
+     "n": 536,
+     "sha": "448af3425230c0d2"
+    },
+    "TOP/@refs": {
+     "n": 38,
+     "sha": "e58d2ec7f51c17ed"
+    },
+    "dummy_35_36_NEW/1/0": {
+     "n": 6144,
+     "sha": "537700a5d21f8a5a"
+    },
+    "dummy_35_36_NEW/3/0": {
+     "n": 5,
+     "sha": "fcb13cb336c129e7"
+    },
+    "dummy_35_36_NEW/5/0": {
+     "n": 768,
+     "sha": "d7e3df0f1b2e8457"
+    },
+    "dummy_35_36_NEW/6/0": {
+     "n": 768,
+     "sha": "cf86ca70d65776f3"
+    },
+    "dummy_35_36_NEW/7/0": {
+     "n": 2250,
+     "sha": "dd13e25b70597df6"
+    },
+    "dummy_35_36_NEW/8/0": {
+     "n": 768,
+     "sha": "f2d41df27a846442"
+    },
+    "dummy_61_10_NEW/1/0": {
+     "n": 9216,
+     "sha": "4e6fbcfbfc186efd"
+    },
+    "dummy_61_10_NEW/3/0": {
+     "n": 5,
+     "sha": "ccc308ef8fd2b23e"
+    },
+    "dummy_61_10_NEW/5/0": {
+     "n": 768,
+     "sha": "b3c4d9390b5c91eb"
+    },
+    "dummy_61_10_NEW/6/0": {
+     "n": 768,
+     "sha": "8d8200b2dfd61a7a"
+    },
+    "dummy_61_10_NEW/7/0": {
+     "n": 2250,
+     "sha": "24a9ce74ce28fce6"
+    },
+    "dummy_61_10_NEW/8/0": {
+     "n": 768,
+     "sha": "4d281f2ed8369e1a"
+    }
+   }
+  }
+ },
+ "captured": "2026-11-12 15:32",
+ "frozen": {
+  "electrode_64ch_4shank_wafer/envelope_U1.6.json": "136b1b0273a7b528f468fe51a1c3d362",
+  "electrode_64ch_4shank_wafer/envelope_U2.5.json": "0307d1808fe1b6a10ad85694f2ab8ae1",
+  "electrode_64ch_4shank_wafer/envelope_U4.json": "6352aa4604054163e39e0ae7c07f5e4c",
+  "electrode_64ch_4shank_wafer/envelope_U8.json": "1dc1aae95c6e410764766519b8730342",
+  "electrode_64ch_4shank_wafer/footprint_U1.6C00.json": "5dc52c7bdc253f3466f4cf4b5caf5c6f",
+  "electrode_64ch_4shank_wafer/footprint_U1.6C00_offset.json": "9db0ce42a33343957e24bded18d80d65",
+  "electrode_64ch_4shank_wafer/footprint_U1.6C01.json": "5dc52c7bdc253f3466f4cf4b5caf5c6f",
+  "electrode_64ch_4shank_wafer/footprint_U1.6C01_offset.json": "9db0ce42a33343957e24bded18d80d65",
+  "electrode_64ch_4shank_wafer/footprint_U1.6C02.json": "5dc52c7bdc253f3466f4cf4b5caf5c6f",
+  "electrode_64ch_4shank_wafer/footprint_U1.6C02_offset.json": "9db0ce42a33343957e24bded18d80d65",
+  "electrode_64ch_4shank_wafer/footprint_U1.6C03.json": "5dc52c7bdc253f3466f4cf4b5caf5c6f",
+  "electrode_64ch_4shank_wafer/footprint_U1.6C03_offset.json": "9db0ce42a33343957e24bded18d80d65",
+  "electrode_64ch_4shank_wafer/footprint_U2.5C04.json": "957262a029ad3bc53aaaac5c4b24b839",
+  "electrode_64ch_4shank_wafer/footprint_U2.5C04_offset.json": "3e60f1a74a1a04e1d2cc3f0c57205502",
+  "electrode_64ch_4shank_wafer/footprint_U2.5C05.json": "957262a029ad3bc53aaaac5c4b24b839",
+  "electrode_64ch_4shank_wafer/footprint_U2.5C05_offset.json": "3e60f1a74a1a04e1d2cc3f0c57205502",
+  "electrode_64ch_4shank_wafer/footprint_U2.5C06.json": "957262a029ad3bc53aaaac5c4b24b839",
+  "electrode_64ch_4shank_wafer/footprint_U2.5C06_offset.json": "3e60f1a74a1a04e1d2cc3f0c57205502",
+  "electrode_64ch_4shank_wafer/footprint_U2.5C07.json": "957262a029ad3bc53aaaac5c4b24b839",
+  "electrode_64ch_4shank_wafer/footprint_U2.5C07_offset.json": "3e60f1a74a1a04e1d2cc3f0c57205502",
+  "electrode_64ch_4shank_wafer/footprint_U4C08.json": "bae1f057f8d9021b20194e7f77fe5352",
+  "electrode_64ch_4shank_wafer/footprint_U4C08_offset.json": "9a8d08cb7a3035a405a207e4f8da448d",
+  "electrode_64ch_4shank_wafer/footprint_U4C09.json": "da055668addadf73400409c05841c41b",
+  "electrode_64ch_4shank_wafer/footprint_U4C09_offset.json": "455d3a886e13b40197037d2c23f78e86",
+  "electrode_64ch_4shank_wafer/footprint_U4C10.json": "bdd2fb4fa5089d29cc8da126d9f28a07",
+  "electrode_64ch_4shank_wafer/footprint_U4C10_offset.json": "815ee85490b4011de42fd9e71a517665",
+  "electrode_64ch_4shank_wafer/footprint_U4C11.json": "a53175d9d33606c04d4bd085e948a0f3",
+  "electrode_64ch_4shank_wafer/footprint_U4C11_offset.json": "0452ec5382758f71b35cc3a4ec78c05d",
+  "electrode_64ch_4shank_wafer/footprint_U8C12.json": "1573fcbe2d513e3c4b3fbab2e0512404",
+  "electrode_64ch_4shank_wafer/footprint_U8C12_offset.json": "24a9cfeeb8d959fd1744903b25fef522",
+  "electrode_64ch_4shank_wafer/footprint_U8C13.json": "7d8d8f34c4d015ce4b2ed1e801422322",
+  "electrode_64ch_4shank_wafer/footprint_U8C13_offset.json": "479f6c29ebb57ad3d122c34919e9a965",
+  "electrode_64ch_4shank_wafer/footprint_U8C14.json": "7a156b22685895bca8351e536cebdd41",
+  "electrode_64ch_4shank_wafer/footprint_U8C14_offset.json": "791cdf824a45d7b96c9fbbf3188b6fb0",
+  "electrode_64ch_4shank_wafer/footprint_U8C15.json": "ef48cd70aaea7c172c9ffeaf91054bf0",
+  "electrode_64ch_4shank_wafer/footprint_U8C15_offset.json": "39df6098a6d04fcc8e91038200ccbabb",
+  "electrode_64ch_4shank_wafer/nest_report.json": "3815aee2be2709b57e9e5a8b293d91ef",
+  "electrode_64ch_4shank_wafer/placement.json": "93f1bd1cbfb821f3826fd3c35f548a97",
+  "electrode_64ch_4shank_wafer/poses.json": "c87f01cb28b4c97061953bf3e325593f",
+  "electrode_64ch_4shank_wafer/poses_before_mirror.json": "8f3f26d9c53298e86c8e0da339eb4ac3",
+  "interconnect_wafer4_rev2/placements.json": "2d0e8bda5f0e46f19b755b5c537890b2"
+ },
+ "log_problems": [],
+ "sha": "667ba2dc412de6d1f1baa36115790c1d5c59ce96",
+ "tools": {
+  "ezdxf": "1.4.4",
+  "gdstk": "1.0.1",
+  "klayout": "KLayout 0.29.6",
+  "numpy": "1.26.4",
+  "python": "3.11.7",
+  "shapely": "2.1.2"
+ }
+}

@@ -1,0 +1,16 @@
+# Electrode test suite at 667ba2d (2026-11-12): 230 passed, 10 failed, 808 s.
+#   cd generative_probe_design && python3 -m pytest electrode_bundle/tests -q -p no:cacheprovider
+# The 10 failures are PRE-EXISTING: the tests no longer match the committed code (e.g. a 29.0 um
+# pitch expected vs 29.10 um produced, id_top_margin default, IONP well-count margin). Confirmed with a
+# fresh bytecode cache (PYTHONPYCACHEPREFIX) -- not stale .pyc. During the refactor the bar is: exactly
+# these fail, everything else passes. Fixing them is separate work, after the refactor.
+electrode_bundle/tests/test_electrode_site.py::test_electrode_locs_still_matches_what_reading_the_dxf_back_gives
+electrode_bundle/tests/test_etch_mask.py::test_the_design_id_keeps_off_the_hook_and_the_solder_pads
+electrode_bundle/tests/test_etch_mask.py::test_the_coating_covers_the_opening_and_still_sits_on_gold
+electrode_bundle/tests/test_ionp_id.py::test_data_slots_come_from_the_shared_grid
+electrode_bundle/tests/test_ionp_id.py::test_both_anchors_present_in_all_16
+electrode_bundle/tests/test_ionp_id.py::test_well_counts_clear_the_floor_with_margin[U1.6C00]
+electrode_bundle/tests/test_ionp_id.py::test_well_counts_clear_the_floor_with_margin[U1.6C01]
+electrode_bundle/tests/test_ionp_id.py::test_well_counts_clear_the_floor_with_margin[U1.6C02]
+electrode_bundle/tests/test_ionp_id.py::test_well_counts_clear_the_floor_with_margin[U1.6C03]
+electrode_bundle/tests/test_ionp_id.py::test_config_id_top_margin_default
