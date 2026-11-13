@@ -13,8 +13,9 @@ current working tree (tracked + untracked, never ignored outputs). Both then run
 build commands (produce() below) in that tree, so nothing is ever written into the repo:
 
     interconnect  build_designs.py --rev 2/3/4         -> interconnect/rev<N>/
-    wafer         01d config_rev4 (frozen Rev2 placements) -> wafer/wafer4_rev4/
-    legacy        01d config_rev2 (must end GEOMETRY IDENTICAL) -> wafer/wafer4_rev2/
+    wafer         01d config_rev4 (committed Rev2 placements) -> wafer/wafer4_rev4/
+    legacy        legacy/rev2_repro 01c (placements == frozen) + 01d config_rev2
+                  (must end GEOMETRY IDENTICAL)       -> wafer/wafer4_rev2/
     electrode     electrode_bundle.batch --no-render   -> electrode/64Ch_4Shankdesigns/shanks/
     wafer         electrode 03_export_wafer (frozen poses) -> wafer/e64ch_4shank/
     config        the namespace every interconnect stage sees -> config/<rev>_<design>_<stage>.json
@@ -29,6 +30,9 @@ Logs are scanned (level C): crossings/pad_hits != 0 or a FAIL line fails.
 
 WHEN THE BUILD COMMANDS CHANGE (later phases move to the maskgen CLI), update produce() so it
 writes the same files to the same relative paths; the manifest keys are those paths.
+The build commands write into <out>/_work/ (their $MASKGEN_OUT); produce() copies from there.
+produce() always matches the CURRENT layout: to capture a commit from before refactor Phase 1
+(e.g. 667ba2d) use the golden.py of that time, `git show d188a16:tests/golden/golden.py`.
 """
 import argparse
 import concurrent.futures as cf
@@ -99,12 +103,28 @@ b._run_stage(name, rev, stage, "<mid>", "<final>", band)
 '''
 
 
+def _work(out):
+    """The output root the build commands see ($MASKGEN_OUT): a scratch folder inside `out` that the
+    fingerprint skips (it starts with "_"). The outputs are then copied to fixed relative paths."""
+    w = os.path.join(out, "_work")
+    os.makedirs(w, exist_ok=True)
+    return {"MASKGEN_OUT": w}
+
+
+def _copy_wafer_files(src, dst, also=()):
+    os.makedirs(dst, exist_ok=True)
+    for f in os.listdir(src):
+        if f.startswith("wafer_") and f.endswith((".gds", ".oas", ".lyp")) or f in also:
+            shutil.copy2(os.path.join(src, f), dst)
+
+
 def produce_interconnect(tree, out):
-    ic = os.path.join(tree, "InterconnectGeneration")
+    ic = os.path.join(tree, "mea1k_interconnects")
+    env = _work(out)
     for rev in (2, 3, 4):
         run([PY, "build_designs.py", "--rev", str(rev), "--out-dir",
              os.path.join(out, "interconnect", "rev%d" % rev)],
-            ic, os.path.join(out, "logs", "build_rev%d.log" % rev))
+            ic, os.path.join(out, "logs", "build_rev%d.log" % rev), env=env)
     # config snapshots: what every stage sees after build_designs' overrides
     snap = os.path.join(out, "_snapshot.py")
     open(snap, "w").write(SNAPSHOT)
@@ -118,51 +138,54 @@ def produce_interconnect(tree, out):
                 dst = os.path.join(out, "config", "rev%d_%s_%s.json" % (rev, name, stage))
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 subprocess.run([PY, snap, name, str(rev), stage, dst, tree], cwd=ic, check=True,
-                               stdout=subprocess.DEVNULL)
+                               stdout=subprocess.DEVNULL, env=dict(os.environ, **env))
     os.remove(snap)
     del sys.modules["build_designs"]
-    # wafers: 01d needs the Rev4 designs at designs/rev4 and Rev2's placements
-    rev4 = os.path.join(ic, "designs", "rev4")
-    if not os.path.lexists(rev4):
-        os.symlink(os.path.join(out, "interconnect", "rev4"), rev4)
-    runs2 = os.path.join(ic, "WaferNesting", "runs", "wafer4_rev2")
-    os.makedirs(runs2, exist_ok=True)
-    s = open(os.path.join(FROZEN, "interconnect_wafer4_rev2", "placements.json")).read()
-    open(os.path.join(runs2, "placements.json"), "w").write(s.replace("<ROOT>", tree))
-    for cfg, tag in (("config_rev2", "wafer4_rev2"), ("config_rev4", "wafer4_rev4")):
-        log = run([KL, "-b", "-r", "WaferNesting/01d_rebuild_wafer.py"], ic,
-                  os.path.join(out, "logs", "01d_%s.log" % tag), env={"WAFERNEST_CONFIG": cfg})
-        if not re.search(r"GEOMETRY IDENTICAL|IDENTICAL to .* except the expected", log):
-            raise SystemExit("01d %s did not pass its own check" % cfg)
-        dst = os.path.join(out, "wafer", tag)
-        os.makedirs(dst, exist_ok=True)
-        src = os.path.join(ic, "WaferNesting", "runs", tag)
-        for f in os.listdir(src):
-            if f.startswith("wafer_") and f.endswith((".gds", ".oas", ".lyp")):
-                shutil.copy2(os.path.join(src, f), dst)
+    work = env["MASKGEN_OUT"]
+    # Rev4 wafer: 01d (default config_rev4) reads <root>/interconnect/rev4 = the build above
+    os.makedirs(os.path.join(work, "interconnect"), exist_ok=True)
+    os.symlink(os.path.join(out, "interconnect", "rev4"), os.path.join(work, "interconnect", "rev4"))
+    log = run([KL, "-b", "-r", "wafer_nesting/01d_rebuild_wafer.py"], ic,
+              os.path.join(out, "logs", "01d_wafer4_rev4.log"), env=env)
+    if not re.search(r"IDENTICAL to .* except the expected", log):
+        raise SystemExit("01d config_rev4 did not pass its own check")
+    _copy_wafer_files(os.path.join(work, "wafer", "wafer4_rev4"), os.path.join(out, "wafer", "wafer4_rev4"))
+    # legacy: measure the Rev2 placements off the fabricated wafer again, rebuild it
+    leg = os.path.join(tree, "legacy", "rev2_repro")
+    env2 = dict(env, WAFERNEST_CONFIG="config_rev2")
+    run([KL, "-b", "-r", os.path.join(leg, "01c_extract_exact_placements.py")], tree,
+        os.path.join(out, "logs", "01c_wafer4_rev2.log"), env=env2)
+    pl = os.path.join(work, "wafer", "wafer4_rev2", "placements.json")
+    got = json.loads(open(pl).read().replace(tree, "<ROOT>"))
+    want = json.load(open(os.path.join(FROZEN, "interconnect_wafer4_rev2", "placements.json")))
+    if got != want:
+        raise SystemExit("legacy 01c: placements.json differs from the frozen copy")
+    log = run([KL, "-b", "-r", os.path.join(leg, "01d_rebuild_wafer.py")], tree,
+              os.path.join(out, "logs", "01d_wafer4_rev2.log"), env=env2)
+    if "GEOMETRY IDENTICAL" not in log:
+        raise SystemExit("legacy 01d config_rev2 did not end GEOMETRY IDENTICAL")
+    _copy_wafer_files(os.path.join(work, "wafer", "wafer4_rev2"), os.path.join(out, "wafer", "wafer4_rev2"))
 
 
 def produce_electrode(tree, out):
-    gpd = os.path.join(tree, "generative_probe_design")
+    gpd = os.path.join(tree, "ufte_probes")
+    env = _work(out)
+    work = env["MASKGEN_OUT"]
     run([PY, "-m", "electrode_bundle.batch", "--no-render"], gpd,
-        os.path.join(out, "logs", "electrode_batch.log"))
-    shanks = os.path.join(gpd, "64Ch_4Shankdesigns", "shanks")
+        os.path.join(out, "logs", "electrode_batch.log"), env=env)
+    shanks = os.path.join(work, "electrode", "64Ch_4Shankdesigns", "shanks")
     shutil.copytree(shanks, os.path.join(out, "electrode", "64Ch_4Shankdesigns", "shanks"),
-                    ignore=shutil.ignore_patterns("*.png", ".DS_Store"))
-    wdir = os.path.join(gpd, "64Ch_4Shankdesigns", "wafer")
+                    ignore=shutil.ignore_patterns("*.png", ".DS_Store", "manifest.json"))
+    wdir = os.path.join(work, "wafer", "64Ch_4Shankdesigns")
     os.makedirs(wdir, exist_ok=True)
     fz = os.path.join(FROZEN, "electrode_64ch_4shank_wafer")
     for f in os.listdir(fz):
         if f != "placement.json":                         # an OUTPUT of 03; it must make it again
             shutil.copy2(os.path.join(fz, f), wdir)
-    run([KL, "-b", "-r", "WaferNesting/03_export_wafer.py"], gpd,
+    run([KL, "-b", "-r", "wafer_nesting/03_export_wafer.py"], gpd,
         os.path.join(out, "logs", "electrode_03_export.log"),
-        env={"WAFERNEST_CONFIG": "config_64ch_4shank"})
-    dst = os.path.join(out, "wafer", "e64ch_4shank")
-    os.makedirs(dst, exist_ok=True)
-    for f in os.listdir(wdir):
-        if f.startswith("wafer_") and f.endswith((".gds", ".oas", ".lyp")) or f == "placement.json":
-            shutil.copy2(os.path.join(wdir, f), dst)
+        env=dict(env, WAFERNEST_CONFIG="config_64ch_4shank"))
+    _copy_wafer_files(wdir, os.path.join(out, "wafer", "e64ch_4shank"), also=("placement.json",))
 
 
 def produce(tree, out):
@@ -317,7 +340,7 @@ def fingerprint(out, roots=None):
                 arts[rel] = fp_dxf(p)
             elif ext in (".gds", ".oas"):
                 arts[rel] = fp_gds(p)
-            elif ext == ".json" and not rel.startswith("manifest"):
+            elif ext == ".json" and not f.startswith("manifest"):    # run manifests: timestamps
                 arts[rel] = fp_json(p, roots)
             elif ext in (".lyp", ".csv", ".txt"):
                 arts[rel] = fp_text(p)

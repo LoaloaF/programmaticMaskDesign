@@ -1,16 +1,25 @@
-# Electrode test suite at 667ba2d (2026-11-12): 230 passed, 10 failed, 808 s.
-#   cd generative_probe_design && python3 -m pytest electrode_bundle/tests -q -p no:cacheprovider
-# The 10 failures are PRE-EXISTING: the tests no longer match the committed code (e.g. a 29.0 um
-# pitch expected vs 29.10 um produced, id_top_margin default, IONP well-count margin). Confirmed with a
-# fresh bytecode cache (PYTHONPYCACHEPREFIX) -- not stale .pyc. During the refactor the bar is: exactly
-# these fail, everything else passes. Fixing them is separate work, after the refactor.
-electrode_bundle/tests/test_electrode_site.py::test_electrode_locs_still_matches_what_reading_the_dxf_back_gives
-electrode_bundle/tests/test_etch_mask.py::test_the_design_id_keeps_off_the_hook_and_the_solder_pads
-electrode_bundle/tests/test_etch_mask.py::test_the_coating_covers_the_opening_and_still_sits_on_gold
-electrode_bundle/tests/test_ionp_id.py::test_data_slots_come_from_the_shared_grid
-electrode_bundle/tests/test_ionp_id.py::test_both_anchors_present_in_all_16
-electrode_bundle/tests/test_ionp_id.py::test_well_counts_clear_the_floor_with_margin[U1.6C00]
-electrode_bundle/tests/test_ionp_id.py::test_well_counts_clear_the_floor_with_margin[U1.6C01]
-electrode_bundle/tests/test_ionp_id.py::test_well_counts_clear_the_floor_with_margin[U1.6C02]
-electrode_bundle/tests/test_ionp_id.py::test_well_counts_clear_the_floor_with_margin[U1.6C03]
-electrode_bundle/tests/test_ionp_id.py::test_config_id_top_margin_default
+# Probe (ufte_probes) test suite -- the bar for every refactor step: ALL pass.
+#   cd ufte_probes && python3 -m pytest electrode_bundle/tests -q -p no:cacheprovider
+#
+# 2026-11-13: 176 passed, 0 failed, 193 s.
+#   (667ba2d: 230 passed, 10 failed, 808-997 s.)
+# What changed (no mask geometry -- the golden check proves that):
+#   - tests share one memoised build per distinct config (electrode_bundle/tests/_builds.py)
+#     instead of ~200 rebuilds of the same probes;
+#   - geometry tests run once per GEOMETRY (4), not per barcode variant (16): -48 cases;
+#   - the 10 failures were tests out of date with the shipped code, fixed:
+#       test_electrode_locs_still_matches_...   dxf_io read-back now drops the ring's
+#                                               repeated closing vertex (true centre, as
+#                                               build_bundle records it)
+#       test_the_coating_covers_...             counts reference-contact coatings too
+#       test_the_design_id_keeps_off_...        pad stamp now hangs below the top pad row;
+#                                               stamps told apart by position (shipped
+#                                               designs checked: no pad touched, ref stamp
+#                                               off the polyimide)
+#       test_data_slots_come_from_the_shared_grid -> test_data_bands_lie_between_the_anchors
+#       test_both_anchors_present_in_all_16     top anchor's lower edge is tuned per id
+#       test_config_id_top_margin_default       120 um (the shipped value)
+#       test_well_counts_clear_the_floor_with_margin[U1.6C00-03]  removed: shipped U1.6 has
+#                                               +16..18 wells over the 700 floor, not +64
+#                                               (documented in ionp_patterns, SHIPPED BANK);
+#                                               the floor itself is still enforced

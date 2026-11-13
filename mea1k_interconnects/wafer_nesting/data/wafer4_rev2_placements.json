@@ -1,0 +1,670 @@
+{
+ "target": {
+  "path": "<ROOT>/MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds",
+  "md5": "8bc879686a0a1404d1fb365d226b6fa0",
+  "dbu_um": 0.001,
+  "libname": "WAFER",
+  "units": [
+   0.001,
+   1e-09
+  ],
+  "top": "TOP",
+  "structure_order": [
+   "dummy_35_36_NEW",
+   "dummy_61_10_NEW",
+   "CONN_SMALL_71_15_NEW",
+   "CONN_SMALL_51_35_NEW",
+   "CONN_BIG_NEW",
+   "TOP"
+  ]
+ },
+ "template": {
+  "path": "<ROOT>/mea1k_interconnects/wafer_nesting/new_wafer_actually.GDS",
+  "md5": "cad5267b436b64594f5e21598994804f",
+  "keep_radius_mm": 50.0,
+  "top_layers": {
+   "3/0": [
+    3,
+    0
+   ],
+   "5/0": [
+    5,
+    0
+   ],
+   "6/0": [
+    6,
+    0
+   ],
+   "7/0": [
+    7,
+    0
+   ],
+   "10/0": [
+    10,
+    0
+   ]
+  },
+  "dropped": [
+   "1/0",
+   "8/0"
+  ]
+ },
+ "cells": [
+  {
+   "name": "dummy_35_36_NEW",
+   "source": "<ROOT>/mea1k_interconnects/designs/dummy_new_interconnect_circular_dummy_35_36_padrows.gds",
+   "source_md5": "6f003230f4c1606d4ae502139214d483",
+   "layers": {
+    "(1, 0)": [
+     3,
+     0
+    ],
+    "(3, 0)": [
+     7,
+     0
+    ],
+    "(5, 0)": [
+     5,
+     0
+    ],
+    "(6, 0)": [
+     6,
+     0
+    ]
+   },
+   "offset_dbu": [
+    0,
+    0
+   ],
+   "check": {
+    "3/0": {
+     "wafer_polys": 773,
+     "source_polys": 773,
+     "xor_um2": 0.0
+    },
+    "5/0": {
+     "wafer_polys": 768,
+     "source_polys": 768,
+     "xor_um2": 0.0
+    },
+    "6/0": {
+     "wafer_polys": 768,
+     "source_polys": 768,
+     "xor_um2": 0.0
+    },
+    "7/0": {
+     "wafer_polys": 2250,
+     "source_polys": 2250,
+     "xor_um2": 0.0
+    }
+   }
+  },
+  {
+   "name": "dummy_61_10_NEW",
+   "source": "<ROOT>/mea1k_interconnects/designs/dummy_new_interconnect_circular_dummy_61_10_padrows.gds",
+   "source_md5": "c3669eae524ee50a686fefab260e6891",
+   "layers": {
+    "(1, 0)": [
+     3,
+     0
+    ],
+    "(3, 0)": [
+     7,
+     0
+    ],
+    "(5, 0)": [
+     5,
+     0
+    ],
+    "(6, 0)": [
+     6,
+     0
+    ]
+   },
+   "offset_dbu": [
+    0,
+    0
+   ],
+   "check": {
+    "3/0": {
+     "wafer_polys": 773,
+     "source_polys": 773,
+     "xor_um2": 0.0
+    },
+    "5/0": {
+     "wafer_polys": 768,
+     "source_polys": 768,
+     "xor_um2": 0.0
+    },
+    "6/0": {
+     "wafer_polys": 768,
+     "source_polys": 768,
+     "xor_um2": 0.0
+    },
+    "7/0": {
+     "wafer_polys": 2250,
+     "source_polys": 2250,
+     "xor_um2": 0.0
+    }
+   }
+  },
+  {
+   "name": "CONN_SMALL_71_15_NEW",
+   "source": "<ROOT>/mea1k_interconnects/designs/new_interconnect_with_connector_8blocks_chamfered_1layer_71_15.dxf",
+   "source_md5": "fcef4d97c8617d144f25ae0b2f1288fe",
+   "layers": {
+    "metal1": [
+     7,
+     0
+    ],
+    "polyimide_negative": [
+     3,
+     0
+    ],
+    "etchingpad": [
+     3,
+     0
+    ],
+    "etching": [
+     5,
+     0
+    ],
+    "via": [
+     5,
+     0
+    ],
+    "metal2": [
+     6,
+     0
+    ]
+   },
+   "offset_dbu": [
+    0,
+    -90000
+   ],
+   "check": {
+    "3/0": {
+     "wafer_polys": 1041,
+     "source_polys": 1041,
+     "xor_um2": 0.0
+    },
+    "5/0": {
+     "wafer_polys": 528,
+     "source_polys": 528,
+     "xor_um2": 0.0
+    },
+    "6/0": {
+     "wafer_polys": 528,
+     "source_polys": 528,
+     "xor_um2": 0.0
+    },
+    "7/0": {
+     "wafer_polys": 2064,
+     "source_polys": 2064,
+     "xor_um2": 0.0
+    }
+   }
+  },
+  {
+   "name": "CONN_SMALL_51_35_NEW",
+   "source": "<ROOT>/mea1k_interconnects/designs/new_interconnect_with_connector_8blocks_chamfered_1layer_51_35.dxf",
+   "source_md5": "8804f30301016916ca663c63dacac80d",
+   "layers": {
+    "metal1": [
+     7,
+     0
+    ],
+    "polyimide_negative": [
+     3,
+     0
+    ],
+    "etchingpad": [
+     3,
+     0
+    ],
+    "etching": [
+     5,
+     0
+    ],
+    "via": [
+     5,
+     0
+    ],
+    "metal2": [
+     6,
+     0
+    ]
+   },
+   "offset_dbu": [
+    0,
+    -90000
+   ],
+   "check": {
+    "3/0": {
+     "wafer_polys": 1041,
+     "source_polys": 1041,
+     "xor_um2": 0.0
+    },
+    "5/0": {
+     "wafer_polys": 528,
+     "source_polys": 528,
+     "xor_um2": 0.0
+    },
+    "6/0": {
+     "wafer_polys": 528,
+     "source_polys": 528,
+     "xor_um2": 0.0
+    },
+    "7/0": {
+     "wafer_polys": 2064,
+     "source_polys": 2064,
+     "xor_um2": 0.0
+    }
+   }
+  },
+  {
+   "name": "CONN_BIG_NEW",
+   "source": "<ROOT>/mea1k_interconnects/designs/new_interconnect_with_connector_chamfered_12Block_56_15.dxf",
+   "source_md5": "b337dc6acc28bfb6e9a30bf9de6f6d23",
+   "layers": {
+    "metal1": [
+     7,
+     0
+    ],
+    "polyimide_negative": [
+     3,
+     0
+    ],
+    "etchingpad": [
+     3,
+     0
+    ],
+    "etching": [
+     5,
+     0
+    ],
+    "via": [
+     5,
+     0
+    ],
+    "metal2": [
+     6,
+     0
+    ]
+   },
+   "offset_dbu": [
+    0,
+    -90000
+   ],
+   "check": {
+    "3/0": {
+     "wafer_polys": 1537,
+     "source_polys": 1537,
+     "xor_um2": 0.0
+    },
+    "5/0": {
+     "wafer_polys": 1152,
+     "source_polys": 1152,
+     "xor_um2": 0.0
+    },
+    "6/0": {
+     "wafer_polys": 1920,
+     "source_polys": 1920,
+     "xor_um2": 0.0
+    },
+    "7/0": {
+     "wafer_polys": 2688,
+     "source_polys": 2688,
+     "xor_um2": 0.0
+    }
+   }
+  }
+ ],
+ "instances": [
+  {
+   "cell": "CONN_BIG_NEW",
+   "angle": 94.88563440500003,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -26682945,
+   "y": -36010278,
+   "i": 0
+  },
+  {
+   "cell": "CONN_BIG_NEW",
+   "angle": 276.751004645,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 1135597,
+   "y": -16213807,
+   "i": 1
+  },
+  {
+   "cell": "CONN_BIG_NEW",
+   "angle": 30.003416653,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 16685322,
+   "y": 12400977,
+   "i": 2
+  },
+  {
+   "cell": "CONN_BIG_NEW",
+   "angle": 97.54602790700001,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -35603753,
+   "y": -11500359,
+   "i": 3
+  },
+  {
+   "cell": "CONN_SMALL_51_35_NEW",
+   "angle": 18.618927143000004,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 26621696,
+   "y": 32143653,
+   "i": 4
+  },
+  {
+   "cell": "CONN_SMALL_71_15_NEW",
+   "angle": 209.841842842,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 25125725,
+   "y": -20676627,
+   "i": 5
+  },
+  {
+   "cell": "CONN_SMALL_51_35_NEW",
+   "angle": 102.15294143299998,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -40082684,
+   "y": 13913511,
+   "i": 6
+  },
+  {
+   "cell": "CONN_SMALL_71_15_NEW",
+   "angle": 119.228373822,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -4898413,
+   "y": 19924036,
+   "i": 7
+  },
+  {
+   "cell": "CONN_SMALL_51_35_NEW",
+   "angle": 102.142443322,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -29104398,
+   "y": 30031083,
+   "i": 8
+  },
+  {
+   "cell": "CONN_SMALL_71_15_NEW",
+   "angle": 33.63032025599998,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 7400023,
+   "y": -14851974,
+   "i": 9
+  },
+  {
+   "cell": "CONN_SMALL_51_35_NEW",
+   "angle": 299.80502442799997,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 24242123,
+   "y": 25857799,
+   "i": 10
+  },
+  {
+   "cell": "CONN_SMALL_71_15_NEW",
+   "angle": 281.413361309,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -8670682,
+   "y": 10496969,
+   "i": 11
+  },
+  {
+   "cell": "dummy_61_10_NEW",
+   "angle": 25.000000000000004,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 26161768,
+   "y": 15659694,
+   "i": 12
+  },
+  {
+   "cell": "dummy_61_10_NEW",
+   "angle": 31.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 42778980,
+   "y": -9325155,
+   "i": 13
+  },
+  {
+   "cell": "dummy_61_10_NEW",
+   "angle": 31.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 42778980,
+   "y": -9325155,
+   "i": 14
+  },
+  {
+   "cell": "dummy_61_10_NEW",
+   "angle": 31.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 36706753,
+   "y": -25662337,
+   "i": 15
+  },
+  {
+   "cell": "dummy_61_10_NEW",
+   "angle": 31.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 32716342,
+   "y": -29490681,
+   "i": 16
+  },
+  {
+   "cell": "dummy_61_10_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 21899051,
+   "y": 34210337,
+   "i": 17
+  },
+  {
+   "cell": "dummy_61_10_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 6164704,
+   "y": 41123041,
+   "i": 18
+  },
+  {
+   "cell": "dummy_61_10_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 217172,
+   "y": 41981776,
+   "i": 19
+  },
+  {
+   "cell": "dummy_61_10_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 217027,
+   "y": 37233949,
+   "i": 20
+  },
+  {
+   "cell": "dummy_61_10_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": 41986604,
+   "y": 723675,
+   "i": 21
+  },
+  {
+   "cell": "dummy_61_10_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -9000358,
+   "y": 12151835,
+   "i": 22
+  },
+  {
+   "cell": "dummy_61_10_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -4848383,
+   "y": 4501544,
+   "i": 23
+  },
+  {
+   "cell": "dummy_61_10_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -13868702,
+   "y": -42463451,
+   "i": 24
+  },
+  {
+   "cell": "dummy_35_36_NEW",
+   "angle": 19.999999999999996,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -19186667,
+   "y": 37713965,
+   "i": 25
+  },
+  {
+   "cell": "dummy_35_36_NEW",
+   "angle": 19.999999999999996,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -38260211,
+   "y": 19630966,
+   "i": 26
+  },
+  {
+   "cell": "dummy_35_36_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -35646251,
+   "y": 25339166,
+   "i": 27
+  },
+  {
+   "cell": "dummy_35_36_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -30750549,
+   "y": 22830607,
+   "i": 28
+  },
+  {
+   "cell": "dummy_35_36_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -44506991,
+   "y": 7462877,
+   "i": 29
+  },
+  {
+   "cell": "dummy_35_36_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -44945257,
+   "y": 2523665,
+   "i": 30
+  },
+  {
+   "cell": "dummy_35_36_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -40901519,
+   "y": -6550030,
+   "i": 31
+  },
+  {
+   "cell": "dummy_35_36_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -45880650,
+   "y": -6654983,
+   "i": 32
+  },
+  {
+   "cell": "dummy_35_36_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -41209346,
+   "y": -21620826,
+   "i": 33
+  },
+  {
+   "cell": "dummy_35_36_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -43457522,
+   "y": -12082618,
+   "i": 34
+  },
+  {
+   "cell": "dummy_35_36_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -42183494,
+   "y": -16923967,
+   "i": 35
+  },
+  {
+   "cell": "dummy_35_36_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -14327321,
+   "y": -28642757,
+   "i": 36
+  },
+  {
+   "cell": "dummy_35_36_NEW",
+   "angle": 0.0,
+   "mirror": false,
+   "mag": 1.0,
+   "x": -19987765,
+   "y": -42090387,
+   "i": 37
+  }
+ ],
+ "warnings": [
+  "duplicate placement: dummy_61_10_NEW at (42.779, -9.325) mm, 31.0 deg -- identical to placement #13. Kept, because the wafer has it."
+ ]
+}

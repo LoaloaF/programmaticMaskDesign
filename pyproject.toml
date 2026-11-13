@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "maskgen"
+version = "0.1.0"
+description = "MEA1K interconnect + electrode mask generation"
+requires-python = ">=3.8"
+dependencies = ["ezdxf==1.4.4", "gdstk==1.0.1", "shapely==2.1.2", "numpy==1.26.4", "matplotlib"]
+
+[project.scripts]
+maskgen = "maskgen.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["maskgen*"]
