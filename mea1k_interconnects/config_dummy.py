@@ -92,20 +92,17 @@ DUMMY = {
     "handle_x_frac":   0.62,    # tab centre along the top edge, 0 = left end, 1 = right end
 }
 
+import lib                                     # puts the repo root (maskgen) on sys.path
+from maskgen.core import layers as _layers
+
 # DXF layer -> GDS (layer, datatype) written by 02_make_dummy.py. Only LWPOLYLINEs are read, so
 # Polyimide_Negative contributes the Rev3 etch circles but not its band (a HATCH); Polyimide is
 # dropped. The fabricated wafer renumbers these by hand (1 -> 3, 3 -> 7) -- see HANDOVER §1.1.
-DUMMY_LAYER_MAP = {
-    "EtchingPad": (1, 0),
-    "Polyimide_Negative": (1, 0),
-    "PI_Stab_Via": (2, 0),    # Rev4: the pad-perimeter stabilization vias, own mask (wafer layer 1)
-    "Etching":    (5, 0),
-    "Metal1":     (3, 0),
-    "Metal2":     (6, 0),
-    "Metal3":     (8, 0),
-}
-DUMMY_METAL_LAYER = (3, 0)    # bars, circles, extensions (= Metal1)
-DUMMY_ETCH_LAYER = (1, 0)     # circle etch windows + polyimide ring
+DUMMY_LAYER_MAP = dict(_layers.IC_DUMMY_GDS)   # maskgen/core/layers.py: EtchingPad + Polyimide_Negative
+                                              # -> 1/0, PI_Stab_Via -> 2/0 (Rev4), Etching 5/0,
+                                              # Metal1 3/0, Metal2 6/0, Metal3 8/0
+DUMMY_METAL_LAYER = _layers.IC_DUMMY_METAL    # (3, 0): bars, circles, extensions (= Metal1)
+DUMMY_ETCH_LAYER = _layers.IC_DUMMY_ETCH      # (1, 0): circle etch windows + polyimide ring
 
 
 # =============================================================================

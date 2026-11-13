@@ -383,7 +383,7 @@ itself (into `rev4/ref_rev3/`), so no separate Rev3 build is needed.
 - **Metal3 squares 2 µm smaller per side** (`metal3_inset`; e.g. 12-block 58 µm Metal2 pad -> 54 µm Metal3).
 - **Stabilization vias on their own layer** (`etch_via_layer` = `PI_Stab_Via`): the pad-perimeter circles leave
   Polyimide_Negative, so they are their own mask (wafer layer 1, etched first); the PI outline and the connector-pad
-  openings stay on wafer layer 3. In the dummy GDS they are GDS layer 2 (`config_dummy.DUMMY_LAYER_MAP`).
+  openings stay on wafer layer 3. In the dummy GDS they are GDS layer 2 (`config_dummy.DUMMY_LAYER_MAP` = `maskgen/core/layers.py` `IC_DUMMY_GDS`).
 - **Dummy handle** (dummies only, `REVISIONS[4]["dummy_set"]`): a 300 µm semicircular PI tab, 150 µm blended roots,
   at 62 % along the top edge (`config_dummy.handle_*`). 62 %, not the centre, because the free space above the top edge is
   smallest toward the left; checked on all 26 dummy placements (no overlap with another device's PI body, etch ring

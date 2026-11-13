@@ -15,6 +15,7 @@ import gdstk
 
 import config_dummy as _cfg
 from lib.active import in_designs
+from maskgen.core import layers as _layers   # on sys.path via config_dummy -> lib
 
 CONFIG = _cfg.DUMMY
 LAYER_MAP = _cfg.DUMMY_LAYER_MAP
@@ -23,11 +24,11 @@ RECT_ETCH_LAYER = _cfg.DUMMY_ETCH_LAYER     # circle etch windows + polyimide ri
 CELL_NAME, UNIT, PRECISION = "TOP", 1e-6, 1e-9
 
 # The band carries the wires we short into the rectangle; drives band detection.
-BAND_LAYER = "Metal1"
+BAND_LAYER = _layers.IC.METAL1
 
 # The generator's device outline. Not in LAYER_MAP (so it never reaches the GDS as-is);
 # read only to recover the stepped bottom edge -- see extract_seam_profile().
-POLYIMIDE_LAYER = "Polyimide"
+POLYIMIDE_LAYER = _layers.IC.POLYIMIDE
 
 
 

@@ -18,6 +18,7 @@ import numpy as np
 from . import dxf_io as io
 from . import shapes as sh
 from .config import LOOP_DATUM_VAR, REF_SITES, BundleConfig
+from maskgen.core.layers import PROBE as LY   # the DXF layer names (on sys.path via .config)
 from .geometry import convert_rectangle_to_polyline, create_ellipse_polygon
 from .hooks import etch_wall, get_hook
 
@@ -88,19 +89,19 @@ def build_bundle(cfg: BundleConfig) -> BundleResult:
 
     doc = ezdxf.new('R2010')
     msp = doc.modelspace()
-    io.ensure_layer(doc, 'Metal', color=4)
-    io.ensure_layer(doc, 'Polyimide', color=3)
-    io.ensure_layer(doc, 'Electrodes', color=2)
-    io.ensure_layer(doc, 'PEDOT_SIROF', color=6)
-    io.ensure_layer(doc, 'Etching', color=5)
+    io.ensure_layer(doc, LY.METAL, color=4)
+    io.ensure_layer(doc, LY.POLYIMIDE, color=3)
+    io.ensure_layer(doc, LY.ELECTRODES, color=2)
+    io.ensure_layer(doc, LY.PEDOT_SIROF, color=6)
+    io.ensure_layer(doc, LY.ETCHING, color=5)
     #THE SITE OPENINGS, and only those: the small circle that bares the gold at every
     #recording site and every reference contact. It is its OWN mask, not part of `Etching`:
     #`Etching` cuts the full polyimide stack to free the device, while this one only opens
     #the top layer over a pad, and one mask cannot do both depths. The solder pads at the
     #connector end are NOT here -- see the etch mask below for where they are cut.
-    io.ensure_layer(doc, 'pad_etching', color=1)
+    io.ensure_layer(doc, LY.PAD_ETCHING, color=1)
     #the reference's openings, kept OFF 'Electrodes' -- see the reference contacts below
-    io.ensure_layer(doc, 'Ref_Electrodes', color=1)
+    io.ensure_layer(doc, LY.REF_ELECTRODES, color=1)
 
     render: List[tuple] = []
     l = cfg.l
@@ -443,11 +444,11 @@ def build_bundle(cfg: BundleConfig) -> BundleResult:
             coating = sh.create_circle_outline(ref_x, cy_ref, cfg.l_pedot / 2,
                                                cfg.circle_resolution)
             msp.add_lwpolyline(convert_rectangle_to_polyline(opening), close=True,
-                               dxfattribs={'layer': 'Ref_Electrodes'})
+                               dxfattribs={'layer': LY.REF_ELECTRODES})
             msp.add_lwpolyline(convert_rectangle_to_polyline(opening), close=True,
-                               dxfattribs={'layer': 'pad_etching'})
+                               dxfattribs={'layer': LY.PAD_ETCHING})
             msp.add_lwpolyline(convert_rectangle_to_polyline(coating), close=True,
-                               dxfattribs={'layer': 'PEDOT_SIROF'})
+                               dxfattribs={'layer': LY.PEDOT_SIROF})
             render.append((*_closed(opening), 'r'))
             render.append((*_closed(coating), 'y'))
             ref_contact_rings.append(opening)
@@ -467,21 +468,21 @@ def build_bundle(cfg: BundleConfig) -> BundleResult:
     #continuous flare they are meant to be.
     for _ring in (ref_metal if isinstance(ref_metal, list) else [ref_metal]):
         msp.add_lwpolyline(convert_rectangle_to_polyline(_ring), close=True,
-                           dxfattribs={'layer': 'Metal'})
+                           dxfattribs={'layer': LY.METAL})
         render.append((*_closed(_ring), 'b'))
 
     #Metal pad+wire and etched contact area per channel.
     for i in range(num_channels):
         msp.add_lwpolyline(convert_rectangle_to_polyline(electrode_pads[i]),
-                           close=True, dxfattribs={'layer': 'Metal'})
+                           close=True, dxfattribs={'layer': LY.METAL})
         msp.add_lwpolyline(convert_rectangle_to_polyline(contact_pads[i]),
-                           close=True, dxfattribs={'layer': 'Electrodes'})
+                           close=True, dxfattribs={'layer': LY.ELECTRODES})
         #the same circle as a MASK feature. `Electrodes` is build-only and dropped on save;
         #`pad_etching` is what the fab opens the site with.
         msp.add_lwpolyline(convert_rectangle_to_polyline(contact_pads[i]),
-                           close=True, dxfattribs={'layer': 'pad_etching'})
+                           close=True, dxfattribs={'layer': LY.PAD_ETCHING})
         msp.add_lwpolyline(convert_rectangle_to_polyline(pedot_pads[i]),
-                           close=True, dxfattribs={'layer': 'PEDOT_SIROF'})
+                           close=True, dxfattribs={'layer': LY.PEDOT_SIROF})
 
     #Merge the fanout body + every per-channel trace + the hooks into ONE polygon with rounded
     #trace<->body junctions (band-restricted, radius polyimide_join_r). One Polyimide ring each.
@@ -493,7 +494,7 @@ def build_bundle(cfg: BundleConfig) -> BundleResult:
         R=cfg.polyimide_join_r,
     )
     for ring in polyimide_merged:
-        io.add_ring(msp, ring, 'Polyimide')
+        io.add_ring(msp, ring, LY.POLYIMIDE)
         rx = [p[0] for p in ring]; ry = [p[1] for p in ring]
         render.append((rx + [rx[0]], ry + [ry[0]], 'g'))
 
@@ -543,7 +544,7 @@ def build_bundle(cfg: BundleConfig) -> BundleResult:
         [_negative] + [_Polygon(zip(*opening)) for opening in pad_openings])
     for _g in (_negative.geoms if _negative.geom_type == "MultiPolygon" else [_negative]):
         _coords = sh.polygon_to_seamed_ring(_g)
-        io.add_ring(msp, _coords, 'Etching')
+        io.add_ring(msp, _coords, LY.ETCHING)
         render.append(([p[0] for p in _coords], [p[1] for p in _coords], 'm'))
 
     #Route every electrode wire up into its bond pad: one tapered Metal polygon per channel.
@@ -562,11 +563,11 @@ def build_bundle(cfg: BundleConfig) -> BundleResult:
         ring = route_polys.get(i)
         if ring is None:
             continue
-        io.add_ring(msp, ring, 'Metal')
+        io.add_ring(msp, ring, LY.METAL)
         rx = [p[0] for p in ring]; ry = [p[1] for p in ring]
         render.append((rx + [rx[0]], ry + [ry[0]], 'b'))
     if ref_route is not None:
-        io.add_ring(msp, ref_route, 'Metal')
+        io.add_ring(msp, ref_route, LY.METAL)
         render.append(([p[0] for p in ref_route], [p[1] for p in ref_route], 'b'))
 
     #THE SOLDER PADS, drawn last of the gold at this end because each one is a TEARDROP
@@ -584,7 +585,7 @@ def build_bundle(cfg: BundleConfig) -> BundleResult:
                     cx, cy, pad_r=cfg.pad_diam / 2, wire_hw=cfg.fan_top_tw / 2,
                     R=cfg.pad_teardrop_fillet_radius, tail_dir=_tail)
             msp.add_lwpolyline(convert_rectangle_to_polyline(pad_poly), close=True,
-                               dxfattribs={'layer': 'Metal'})
+                               dxfattribs={'layer': LY.METAL})
             render.append((*_closed(pad_poly), 'k'))
 
     #The design's ID, stamped twice, both upright, both in Metal:
@@ -609,7 +610,7 @@ def build_bundle(cfg: BundleConfig) -> BundleResult:
             (ref_x + cfg.polyimide_pad_r + cfg.label_gap, _hook_y0),
             cfg.label_tip_height, rotation_deg=0.0, align="left", mirror=False)
         for _ring in _hook_rings:
-            io.add_ring(msp, _ring, 'Metal')
+            io.add_ring(msp, _ring, LY.METAL)
             render.append(([q[0] for q in _ring], [q[1] for q in _ring], 'k'))
 
         #above the pads: upright, position by `label_pad_x`/`label_pad_y` when set, else
@@ -624,7 +625,7 @@ def build_bundle(cfg: BundleConfig) -> BundleResult:
             cfg.label_pad_height, rotation_deg=0.0, align="center", valign="top",
             mirror=True)
         for _ring in _pad_rings:
-            io.add_ring(msp, _ring, 'Metal')
+            io.add_ring(msp, _ring, LY.METAL)
             render.append(([q[0] for q in _ring], [q[1] for q in _ring], 'k'))
 
     #Stamp the loop datum into the header so side_by_side can line designs up from a saved

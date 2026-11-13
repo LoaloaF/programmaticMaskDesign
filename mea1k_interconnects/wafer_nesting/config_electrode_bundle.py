@@ -104,6 +104,8 @@ RNG_SEED = 7
 #   pattern_ionp -> 5/0  the IONP wells joined to Etching on the assumption they are
 #                        etched features. NOT a no-op -- this is the one to confirm.
 #   polyimide            dropped; fab uses the negative
+# Pre-renumbering, provisional map for an old single-probe nest; the probe wafer's real map is
+# maskgen/core/layers.py PROBE_64CH. Replaced in refactor Phase 6.
 LAYER_MAP = {
     "polyimide_negative": (1, 0),
     "metal":              (3, 0),

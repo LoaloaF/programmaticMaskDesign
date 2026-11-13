@@ -6,8 +6,9 @@ Nothing on a wafer is drawn by hand, except where noted.
 
 ```
 programmaticMaskDesign/
-  maskgen/                  SHARED code for both projects: output root, run manifests, CLI;
-                            later also layers, wafer nesting/export, review sheets
+  maskgen/                  SHARED code for both projects: output root, run manifests, CLI,
+                            core/layers.py = EVERY mask layer (DXF names, fab numbers, .oas names,
+                            KLayout colours); later also wafer nesting/export, review sheets
   mea1k_interconnects/      MEA1K chip <-> Molex connector interconnects
     HANDOVER.md
     build_designs.py        all five wafer designs of a revision (Rev2, Rev3, Rev4)

@@ -129,7 +129,7 @@ be watched live while the search runs. Useful flags:
      line. Only `03_export_wafer.py`'s count assertion reads it.
    - `IONP_VARIANTS` — the barcoded variants of each geometry. `DESIGNS` is built from
      `SHANK_COUNTS` × these, so the filenames must match what the generator wrote.
-   - `LAYER_MAP` / `LAYER_NAMES` / `MARK_LAYERS_UNUSED` — see the layer map below. These
+   - `LAYER_MAP` / `LAYER_NAMES` (from the `PROBE_64CH` layer set in `maskgen/core/layers.py`) / `MARK_LAYERS_UNUSED` — see the layer map below. These
      depend on which alignment slots your wafer template carries.
 3. `export WAFERNEST_CONFIG=config_<your_set>` and run the pipeline above.
 

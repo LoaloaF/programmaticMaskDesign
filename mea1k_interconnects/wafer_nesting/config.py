@@ -96,6 +96,9 @@ RNG_SEED = 11
 # =============================================================================
 # ANY LAYER NOT LISTED IS SILENTLY DELETED ON EXPORT. Stage 03 prints what it mapped and
 # what it dropped -- read that output. Positive Polyimide is dropped deliberately.
+# NOT the fabricated numbering: this is the map from BEFORE the wafer's layers were renumbered by hand.
+# The fab layers are maskgen/core/layers.py (IC_REV2 / IC_REV4). Kept only for this nesting path,
+# which refactor Phase 6 replaces.
 LAYER_MAP = {
     "polyimide_negative": (1, 0),
     "etchingpad":         (1, 0),

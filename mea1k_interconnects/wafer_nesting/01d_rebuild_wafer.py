@@ -113,11 +113,12 @@ if P["target"].get("libname"):
 L.write(C.WAFER_OUT, opt)
 print("\nwrote %s" % C.WAFER_OUT)
 
-# Named layers (config LAYER_NAMES), as the electrode wafer does (ufte_probes/wafer_nesting/
+# Named layers (config LAYERSET), as the electrode wafer does (ufte_probes/wafer_nesting/
 # 03_export_wafer.py): GDS2 has no layer-name record, so the names go (a) into an .oas twin, whose
 # LAYERNAME records carry them in the file itself, and (b) into a KLayout .lyp next to the GDS.
 # The GDS written above is untouched; the check below reads it back, not these.
-NAMES = getattr(C, "LAYER_NAMES", {})
+LS = getattr(C, "LAYERSET", None)          # maskgen/core/layers.py
+NAMES = LS.names if LS else {}
 if NAMES:
     for ld, li_ in layer_index.items():
         if ld[0] in NAMES:
@@ -125,7 +126,8 @@ if NAMES:
     oas_path = os.path.splitext(C.WAFER_OUT)[0] + ".oas"
     L.write(oas_path)
     lyp_path = os.path.splitext(C.WAFER_OUT)[0] + ".lyp"
-    X.write_lyp(lyp_path, sorted(layer_index), NAMES, getattr(C, "LAYER_STYLE", {}), getattr(C, "LAYER_ORDER", []))
+    from maskgen.core import layers as _layers   # on sys.path via the config
+    _layers.write_lyp(lyp_path, sorted(layer_index), LS)
     print("wrote %s  (same layout, layer names stored in the file)\nwrote %s  (layer names for KLayout / the GDS)"
           % (os.path.basename(oas_path), os.path.basename(lyp_path)))
 

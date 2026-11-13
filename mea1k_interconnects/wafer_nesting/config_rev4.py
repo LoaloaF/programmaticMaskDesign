@@ -8,7 +8,7 @@ Rev4 = Rev3 (PI-etch circles on layer 3, Metal3 on layer 8) plus, on every desig
   * every Metal3 square is pulled 2 um in from each side of Metal2's pad (build_designs metal3_inset)
   * the pad-perimeter stabilization vias leave the PI outline: they get their own mask, wafer layer 1
     (etched first), aligned in the template's free mark slot; the PI outline stays on layer 3 (etched
-    after) -- named layers in the .oas / .lyp, see LAYER_NAMES
+    after) -- named layers in the .oas / .lyp, see maskgen/core/layers.py IC_REV4
 Layers 1, 3, 5, 7 and 8 therefore change against Rev2; Metal2 (layer 6) must not.
 
 The vias moving 2.25 um inward in the pad moves the lane bundle, and with it the band stage 02 reads.
@@ -55,34 +55,18 @@ PLACEMENTS_PATH = os.path.join(HERE, "data", "wafer4_rev2_placements.json")
 WAFER_TEMPLATE = os.path.join(HERE, "new_wafer_actually.GDS")
 TEMPLATE_KEEP_RADIUS_MM = 50.0
 
+# EVERY layer -- fab number, which DXF / dummy-GDS layers go onto it, name, KLayout look -- is the
+# interconnect_rev4 LayerSet in maskgen/core/layers.py. Rev4 vs Rev2's fabricated numbering:
+#   + Metal3 (pad squares, inset 2 um) on 8, as in Rev3;
+#   + the pad-perimeter STABILIZATION VIAS leave the PI outline: own mask on 1 (etched FIRST; DXF layer
+#     PI_Stab_Via, dummy GDS 2/0), the PI outline / connector-pad openings stay on 3 (etched after).
+from maskgen.core import layers as _layers            # noqa: E402
+LAYERSET = _layers.IC_REV4
+DXF_LAYER_MAP = LAYERSET.dxf_map         # mea1k_interconnects DXF layer (lower-cased) -> wafer GDS;
+                                         # dropped: Polyimide (positive), 0, defpoints
+DUMMY_LAYER_MAP = LAYERSET.dummy_map     # 02_make_dummy.py GDS layer -> wafer GDS
 METAL3 = (8, 0)
-
-# The FABRICATED layer numbers (Rev2's maps, see legacy/rev2_repro/config_rev2.py) plus Metal3.
-# The etch circles need no entry: they are on Polyimide_Negative (DXF) / layer 1 (dummy GDS),
-# which map to 3 -- except the stabilization vias, split off below.
-DXF_LAYER_MAP = {                 # mea1k_interconnects DXF layer (lower-cased) -> GDS
-    "metal1":             (7, 0),
-    "polyimide_negative": (3, 0),
-    "etchingpad":         (3, 0),
-    "etching":            (5, 0),
-    "via":                (5, 0),
-    "metal2":             (6, 0),
-    "metal3":             METAL3,
-}                                 # dropped: polyimide (positive), 0, defpoints
-DUMMY_LAYER_MAP = {               # 02_make_dummy.py GDS layer -> wafer GDS
-    (1, 0): (3, 0),
-    (3, 0): (7, 0),
-    (5, 0): (5, 0),
-    (6, 0): (6, 0),
-    (8, 0): METAL3,
-}
-
-# Rev4 splits the pad-perimeter STABILIZATION VIAS off the PI outline: they are etched first, in their
-# own mask (wafer layer 1), then the PI outline / connector-pad openings follow (layer 3). In the DXFs
-# the circles sit on their own layer PI_Stab_Via; in the dummy GDS (02_make_dummy.py) on GDS layer 2.
 STAB_VIA = (1, 0)
-DXF_LAYER_MAP["pi_stab_via"] = STAB_VIA
-DUMMY_LAYER_MAP[(2, 0)] = STAB_VIA
 
 # TOP: Rev2's template layers (from placements.json) plus these, wafer layer -> template layer.
 # Template layer 8 holds the small alignment mark in the third slot of the mark row (between
@@ -97,33 +81,9 @@ MARK_STENCIL = (5, 0)            # an inverted vernier
 MARK_COMPANION = (7, 0)          # Metal1: the datum the copy is registered on
 MARK_SELFTEST_LAYER = (3, 0)     # already inverted in the template -- the transform is proven on it
 
-# Layer names, written into wafer_<tag>.oas (OASIS LAYERNAME) and wafer_<tag>.lyp (GDS2 has no such record).
-LAYER_NAMES = {
-    1: "PI_Stab_Via_Etch",       # stabilization vias around every pad -- etched FIRST
-    3: "PI_Outline_Etch",        # PI outline, connector-pad openings, dummy ring/handle -- etched after
-    5: "Etching_Via",            # routing vias + Metal2 release etching
-    6: "Metal2",
-    7: "Metal1",
-    8: "Metal3",
-    10: "WaferOutline",
-}
-
-# Look in KLayout (the .lyp written next to the GDS / OAS -- OASIS itself stores no colours).
-#   metals  -> reds / orange / purple     etch masks -> blues / greens
-#   small features (vias) solid; big areas (pads, PI outline) hatched so what lies beneath shows through.
-# LAYER_ORDER is the layer panel top -> bottom. KLayout draws the entries further DOWN the list in front, so
-# Metal1 (first) is the back of the stack: solid with a heavier frame so it stands out, and everything
-# else -- hatched pads, vias, PI -- is drawn over it instead of being hidden by the wires.
-LAYER_ORDER = [7, 10, 6, 8, 3, 5, 1]
-LAYER_STYLE = {
-    1:  dict(color="#00c060", pattern="I0",  width=1),   # PI_Stab_Via_Etch  -- 5 um circles: solid green
-    5:  dict(color="#1060e0", pattern="I0",  width=1),   # Etching_Via       -- vias: solid blue
-    3:  dict(color="#00b8c8", pattern="I5",  width=1),   # PI_Outline_Etch   -- rings / openings: teal hatch
-    8:  dict(color="#8020d0", pattern="I9",  width=2),   # Metal3            -- purple hatch, heavier frame
-    6:  dict(color="#ff9020", pattern="I5",  width=1),   # Metal2            -- orange hatch
-    10: dict(color="#808080", pattern="I1",  width=2),   # WaferOutline      -- grey, hollow
-    7:  dict(color="#e01818", pattern="I0",  width=2),   # Metal1            -- red, solid, heavy frame
-}
+# Layer names (.oas LAYERNAME records, .lyp) and the KLayout look (.lyp only -- OASIS stores no colours)
+# come from LAYERSET: metals red / orange / purple, etch masks blue / green, vias solid, large areas
+# hatched; Metal1 at the back of the stack (KLayout draws entries further down the list in front).
 
 _REV4 = {
     "CONN_BIG_NEW": "new_interconnect_with_connector_chamfered_12Block_56_15_rev4.dxf",

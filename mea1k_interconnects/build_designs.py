@@ -31,7 +31,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))             # the repo root: the maskgen package
-from maskgen.core import manifest, paths as out_paths  # noqa: E402
+from maskgen.core import layers, manifest, paths as out_paths  # noqa: E402
 
 # name -> config module, stage scripts, file stems (stage-01 output, final output), overrides.
 _8B_71_15 = {"GEN_CONFIG": {"pad_side": 73.0, "pad_side_extra": 71.0, "gap": 13.0},
@@ -83,7 +83,7 @@ REVISIONS = {
     # (etch_via_layer; wafer layer 1 = its own mask, etched BEFORE the PI outline) and pulls every
     # Metal3 square 2 um in from each side of Metal2's pad (metal3_inset).
     4: dict(set={"GEN_CONFIG": {"pad_etch": "vias", "metal3": True, "etch_via_spacing": (9.5, 21.0),
-                                "etch_via_layer": "PI_Stab_Via", "metal3_inset": 2.0},
+                                "etch_via_layer": layers.IC.PI_STAB_VIA, "metal3_inset": 2.0},
                  "GEN_ROUTING": {"m1_pad": True},
                  "GEN_POLYIMIDE": {"trim_xmax": 2.25}},     # polyimide outline stays where Rev3 had it
             per_design={n: {"GEN_ROUTING": {"via_k0_radius": 1.75, "via_k0_dx": -0.25, "via_rest_dx": 0.5}}

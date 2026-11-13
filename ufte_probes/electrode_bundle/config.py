@@ -31,7 +31,8 @@ TARGET_SET = "64Ch_4Shankdesigns"
 
 _REPO = str(Path(__file__).resolve().parents[2])
 if _REPO not in sys.path:
-    sys.path.insert(0, _REPO)            # the maskgen package (output root)
+    sys.path.insert(0, _REPO)            # the maskgen package (output root, layer names)
+from maskgen.core import layers as _LY   # noqa: E402  -- every layer name: maskgen/core/layers.py
 
 
 def out_dir(create: bool = False) -> str:
@@ -72,7 +73,7 @@ LOOP_DATUM_VAR = "LOOP_Y_UM"
 #are a second, unversioned copy of the mask that some tool downstream will eventually
 #believe. `wafer_nesting`'s LAYER_MAP omits them too -- belt and braces, since a DXF from an
 #older build may still carry them.
-EXPORT_DROP_LAYERS = ('Electrodes', 'Ref_Electrodes', 'Polyimide')
+EXPORT_DROP_LAYERS = _LY.PROBE_BUILD_ONLY      # ('Electrodes', 'Ref_Electrodes', 'Polyimide')
 
 
 def bundle_dxf_path(tag: str) -> str:
@@ -632,8 +633,8 @@ class BundleConfig:
 class IonpConfig:
     """IONP well pattern knobs (gen_ionp_bundle CONFIG + PATTERN + design rules)."""
     dxf_file: Optional[str] = None   # None -> per-ID f"{out_dir()}/electrode_bundle_C{NN}.dxf"
-    el_layer: str = 'Electrodes'                          # where the 64 contacts live
-    ionp_layer: str = 'IONP'                      # layer the wells are written to
+    el_layer: str = _LY.PROBE.ELECTRODES                  # where the 64 contacts live
+    ionp_layer: str = _LY.PROBE.IONP              # layer the wells are written to
     # vertical extent of the well region (straight-shank only; fanout starts ~4990)
     y_bottom: float = 0.0
     y_top: float = 4990.0

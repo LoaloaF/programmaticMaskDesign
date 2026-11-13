@@ -9,12 +9,16 @@ into its GEN_CONFIG / GEN_ROUTING / GEN_POLYIMIDE (its "Derived" section), so th
 """
 
 # ---- Layers (the interconnect's own 2-metal + via stack) --------------------------
-WIRE_LAYER = "Metal1"       # even wires stay here; wire ends arrive here
-LIFT_LAYER = "Metal2"       # odd wires lifted here (12-block only)
-VIA_LAYER = "Via"           # via cuts
-CONN_PAD_LAYER = "Polyimide_Negative"   # marker layer for the connector contact pads
-POLYIMIDE_LAYER = "Polyimide"
-POLYIMIDE_NEG_LAYER = "Polyimide_Negative"
+# The names themselves are defined ONCE, in maskgen/core/layers.py (IC), next to the wafer layer each
+# one ends up on; these are the roles the routers use them in.
+from maskgen.core import layers as _layers      # (a module: invisible to the config snapshots)
+
+WIRE_LAYER = _layers.IC.METAL1          # even wires stay here; wire ends arrive here
+LIFT_LAYER = _layers.IC.METAL2          # odd wires lifted here (12-block only)
+VIA_LAYER = _layers.IC.VIA              # via cuts
+CONN_PAD_LAYER = _layers.IC.POLYIMIDE_NEG   # marker layer for the connector contact pads
+POLYIMIDE_LAYER = _layers.IC.POLYIMIDE
+POLYIMIDE_NEG_LAYER = _layers.IC.POLYIMIDE_NEG
 
 N_WIRES_PER_BLOCK = 64      # Molex 227044: 64 signal contacts per connector block
 
@@ -28,9 +32,9 @@ POLY_FAN_TAPER_RES = 48     # vertices per tapering polyimide neck wall (12-bloc
 
 # ---- Stage-01 generator entries that are not design knobs ----------------------------
 GEN_CONFIG_FIXED = {
-    "layer": "Metal2",                    # pad squares
-    "pad_layers_extra": ["EtchingPad"],   # pad_etch="square": the PI etch square is drawn here
-    "layer_top": "Metal3",                # pad squares again, when metal3 is on (Rev3)
+    "layer": _layers.IC.METAL2,                    # pad squares
+    "pad_layers_extra": [_layers.IC.ETCHING_PAD],  # pad_etch="square": the PI etch square is drawn here
+    "layer_top": _layers.IC.METAL3,                # pad squares again, when metal3 is on (Rev3)
     "out_path": None,                     # set from --out by the generator's CLI
     # Defaults for the pad-stack knobs = Rev2; every config sets its own (see config_<design>.py)
     "pad_etch": "square",
@@ -56,8 +60,8 @@ GEN_ROUTING_FIXED = {
     "via_arc": 48,           # segments per circular via
     "via_w": 5.5,            # rect vias only (um)
     "via_h": 43.0,           # rect vias only (um)
-    "layer_wire": "Metal1",
-    "layer_via": "Etching",
+    "layer_wire": _layers.IC.METAL1,
+    "layer_via": _layers.IC.ETCHING,
     # Rev4: each Metal1 wire ends in a round landing pad centred on its routing via, blended into the
     # wire by a tangent-fillet teardrop. Off = Rev2/Rev3 (the wire stops at the via centre).
     "m1_pad": False,
@@ -73,9 +77,9 @@ GEN_ROUTING_FIXED = {
                               # per wire so the tip stays on the last straight run
 }
 GEN_POLYIMIDE_FIXED = {
-    "layer": "Polyimide",
+    "layer": _layers.IC.POLYIMIDE,
     "color": 7,
-    "neg_layer": "Polyimide_Negative",
+    "neg_layer": _layers.IC.POLYIMIDE_NEG,
     "neg_color": 5,
     "n_arc": 48,             # segments per jigsaw bulb
     # Rev4: the outline is sized to the wire bbox, whose far lane moved 2.25 um outward with the vias.

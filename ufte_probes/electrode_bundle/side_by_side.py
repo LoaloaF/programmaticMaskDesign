@@ -28,11 +28,12 @@ from ezdxf.addons import importer
 from ezdxf.enums import TextEntityAlignment
 
 from .config import LOOP_DATUM_VAR, bundle_dxf_path, ensure_out_dir, variant_tag
+from maskgen.core import layers as _LY
 from .design_sets import DESIGNS
 
 GAP_UM = 1000.0          # clear space between neighbouring designs
 LABEL_HEIGHT_UM = 700.0
-LABEL_LAYER = "Labels"
+LABEL_LAYER = _LY.PROBE.LABELS
 
 
 def select_specs(filters):

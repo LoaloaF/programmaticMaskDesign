@@ -124,17 +124,17 @@ MARK_BUF  = 0.7
 # which is why metal -- the first mask -- goes there.
 #
 # !!! PROVISIONAL -- NOT CONFIRMED FOR FABRICATION, see README.md !!!
-LAYER_MAP = {
-    "metal":              (7, 0),   # first mask; carries the alignment reference
-    "etching":            (6, 0),   # device release: outline, loop hole, solder pads
-    "pad_etching":        (3, 0),   # the site openings, 13.5 um circles onto the gold
-    "pedot_sirof":        (8, 0),   # coating, 15 um circles in the 13.5 um openings
-    "ionp":               (1, 0),   # IONP wells -- CONFIRM these are etched features
-}
-
-# GDS layer names, taken from the DXF layer names so the mask set reads like its source.
-LAYER_NAMES = {7: "Metal", 6: "Etching", 3: "pad_etching", 8: "PEDOT_SIROF", 1: "IONP",
-               10: "WaferOutline"}
+# The map and the names are maskgen/core/layers.py PROBE_64CH:
+#     metal -> 7/0        first mask; carries the alignment reference
+#     etching -> 6/0      device release: outline, loop hole, solder pads
+#     pad_etching -> 3/0  the site openings, 13.5 um circles onto the gold
+#     pedot_sirof -> 8/0  coating, 15 um circles in the 13.5 um openings
+#     ionp -> 1/0         IONP wells -- CONFIRM these are etched features
+# GDS layer names = the DXF layer names, so the mask set reads like its source (+ 10 WaferOutline).
+from maskgen.core import layers as _layers   # noqa: E402
+LAYERSET = _layers.PROBE_64CH
+LAYER_MAP = LAYERSET.dxf_map
+LAYER_NAMES = LAYERSET.names
 
 # Template mark layers no mask uses -- the one spare left after `pad_etching` took 3/0.
 # Dropped on export so the mask set contains exactly the layers that get made. It donates

@@ -195,33 +195,6 @@ def invert_marks(tmpl, layers, stencil, companion, selftest, keep_radius_mm, dbu
                   % (ld[0], ld[1], old.count(), new.count(), new.bbox().center().x * dbu / 1000))
 
 
-def write_lyp(path, layers, names, style, order):
-    """KLayout layer-properties file: `layers` = [(layer, datatype)], `names` {layer: name},
-    `style` {layer: dict(color, pattern, width)}, `order` = layers top -> bottom of the panel.
-
-    KLayout draws entries further DOWN the list in front of those above (verified by rendering), so
-    the first entry in `order` is the back of the stack. Layers not in `order` go below it, in
-    layer-number order (so in front)."""
-    rank = {ln: i for i, ln in enumerate(order)}
-    ordered = sorted(layers, key=lambda ld: (rank.get(ld[0], len(order)), ld))
-    out = ['<?xml version="1.0" encoding="utf-8"?>', "<layer-properties>"]
-    for ld in ordered:
-        st = style.get(ld[0], dict(color="#808080", pattern="I1", width=1))
-        out += ["  <properties>",
-                "    <frame-color>%s</frame-color>" % st["color"],
-                "    <fill-color>%s</fill-color>" % st["color"],
-                "    <frame-brightness>0</frame-brightness>",
-                "    <fill-brightness>0</fill-brightness>",
-                "    <dither-pattern>%s</dither-pattern>" % st["pattern"],
-                "    <visible>true</visible>", "    <transparent>false</transparent>",
-                "    <width>%d</width>" % st["width"], "    <marked>false</marked>",
-                "    <name>%s (%d/%d)</name>" % (names.get(ld[0], "unnamed"), ld[0], ld[1]),
-                "    <source>%d/%d@1</source>" % ld,
-                "  </properties>"]
-    out.append("</layer-properties>")
-    open(path, "w").write("\n".join(out) + "\n")
-
-
 def region(polys):
     r = pya.Region()
     for p in polys:

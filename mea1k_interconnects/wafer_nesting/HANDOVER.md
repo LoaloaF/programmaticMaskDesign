@@ -357,8 +357,8 @@ $KL -b -r wafer_nesting/01d_rebuild_wafer.py         # config_rev4 (default) -> 
   self-tested on 3/0 on every run.
 - **Named layers.** 01d writes `wafer_<tag>.gds`, `.oas` (OASIS `LAYERNAME` records) and `.lyp`. GDS and OAS geometry are
   identical. Colours/stipples live only in the `.lyp` (OASIS has no colour record) and are NOT loaded automatically:
-  `klayout wafer_wafer4_rev4.oas -l wafer_wafer4_rev4.lyp`, or File -> Load Layer Properties. Style: `LAYER_STYLE` /
-  `LAYER_ORDER` in `config_rev4.py` (KLayout draws entries lower in the list in front, so Metal1 is first = at the back).
+  `klayout wafer_wafer4_rev4.oas -l wafer_wafer4_rev4.lyp`, or File -> Load Layer Properties. Names, style and order: the `IC_REV4`
+  layer set in `maskgen/core/layers.py` (KLayout draws entries lower in the list in front, so Metal1 is first = at the back).
 
 ## 5. Adapting it
 
