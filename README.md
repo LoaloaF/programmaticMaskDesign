@@ -13,12 +13,12 @@ programmaticMaskDesign/
     HANDOVER.md
     build_designs.py        all five wafer designs of a revision (Rev2, Rev3, Rev4)
     review/                 Rev3-vs-Rev4 comparison figures
-    wafer_nesting/          interconnect wafers: Rev4 at the Rev2 placements, nesting
+    wafer_nesting/          the interconnect wafer config (Rev4 at the Rev2 placements)
       HANDOVER.md
   ufte_probes/              flexible 64-channel electrode probes (UFTE)
     README.md
     electrode_bundle/       the generator (+ HANDOVER.md, tests/)
-    wafer_nesting/          probe wafers: count-maximising nest, mark inversion, wafer map
+    wafer_nesting/          the probe wafer config
   legacy/rev2_repro/        FROZEN: reproduces the fabricated Rev2 wafer (README.md there)
   tests/golden/             regression harness: every refactor step must keep the geometry identical
   MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds   the fabricated interconnect wafer (Rev2)
@@ -27,7 +27,7 @@ programmaticMaskDesign/
 | Project | Makes | Start with |
 |---|---|---|
 | `mea1k_interconnects/` | the 12-block / 8-block interconnect DXFs and the dummy test structures | [`mea1k_interconnects/HANDOVER.md`](mea1k_interconnects/HANDOVER.md) |
-| `mea1k_interconnects/wafer_nesting/` | interconnect wafers | [`mea1k_interconnects/wafer_nesting/HANDOVER.md`](mea1k_interconnects/wafer_nesting/HANDOVER.md) |
+| `maskgen/wafer/` | wafer layout for both projects: nesters, export, marks, verify, rebuild | `maskgen/wafer/__init__.py`, [`ufte_probes/wafer_nesting/README.md`](ufte_probes/wafer_nesting/README.md), [`mea1k_interconnects/wafer_nesting/README.md`](mea1k_interconnects/wafer_nesting/README.md) |
 | `ufte_probes/` | electrode-probe DXFs from design specs, and their wafers | [`ufte_probes/README.md`](ufte_probes/README.md) |
 
 ## Where outputs go
@@ -44,7 +44,7 @@ echo /path/outside/the/repo > .maskgen_out            # (git-ignored; KLayout st
 |---|---|---|
 | interconnect designs | `<root>/interconnect/rev<N>/` (+ `logs/`, `ref_rev3/`, `draft/` for `--stage01`) | `build_designs.py --rev N` |
 | electrode designs | `<root>/electrode/<set>/shanks/` | `python3 -m electrode_bundle.batch` |
-| wafers | `<root>/wafer/<run tag>/` (e.g. `wafer4_rev4`, `64Ch_4Shankdesigns`) | `01d_rebuild_wafer.py`, electrode `nest_tiler.py` / `03_export_wafer.py` |
+| wafers | `<root>/wafer/<run tag>/` (e.g. `wafer4_rev4`, `64Ch_4Shankdesigns`) | `python3 -m maskgen wafer <tag>` |
 | comparison figures | `<root>/review/<name>/` | `mea1k_interconnects/review/*.py` |
 
 - Every run folder gets a `manifest.json` recording the git commit, the settings, and the md5 of
@@ -85,7 +85,7 @@ Rev4 is Rev3 plus the following:
   mark in the template's free slot.
 
 The connector side stays identical to Rev3 / Rev2. Details:
-`mea1k_interconnects/HANDOVER.md` §4.6 and `mea1k_interconnects/wafer_nesting/HANDOVER.md` §4.4.
+`mea1k_interconnects/HANDOVER.md` §4.6 and `mea1k_interconnects/wafer_nesting/README.md`.
 
 Every design and every revision is defined in `mea1k_interconnects/catalog.py`. Each revision
 lists only what it changes against its parent (Rev4 = Rev3 + its list). To see a revision or one
@@ -97,10 +97,8 @@ python3 -m maskgen show --rev 4 --design 12block --changed   # what the design +
 ```
 
 ```bash
-cd mea1k_interconnects
-python3 build_designs.py --rev 4                 # <root>/interconnect/rev4/
-KL=/Applications/KLayout/klayout.app/Contents/MacOS/klayout
-$KL -b -r wafer_nesting/01d_rebuild_wafer.py      # config_rev4 (default); checked against Rev2
+python3 -m maskgen wafer wafer4_rev4        # Rev4 designs if missing, then the wafer; checked against Rev2
+python3 -m maskgen wafer 64Ch_4Shankdesigns # probe wafer: shanks if missing, nest if none yet, export, verify, map
 ```
 
 `build_designs.py --rev 4` regenerates the Rev3 band reference it needs into `rev4/ref_rev3/`
@@ -125,7 +123,7 @@ recovered from the wafer. Rev3 (perimeter etch vias + Metal3) and the Rev2/Rev3 
 too.
 
 The GDS layer numbers on the wafer are the hand-renumbered ones: Metal1 7, Polyimide_Negative +
-EtchingPad 3, Etching + Via 5, Metal2 6. See `mea1k_interconnects/wafer_nesting/HANDOVER.md` §4.2.
+EtchingPad 3, Etching + Via 5, Metal2 6. See `legacy/interconnect_nest_2026-07/HANDOVER.md` §4.2.
 
 ## Status: being merged into one package
 
@@ -134,9 +132,9 @@ A refactor into one `maskgen` package is under way, phase by phase. Each phase m
 against commit 667ba2d.
 
 The overlaps it removes:
-- **Two wafer_nesting forks.** Their setup and footprint stages are near-identical. The interconnect
-  fork has the seeded annealer and the exact-reproduce path; the probe fork has the count-maximising
-  nester, mark inversion and the wafer map.
+- **Two wafer_nesting forks.** Merged in Phase 6 into `maskgen/wafer/`: one template, one mark
+  inversion, one export / verify / map, and two placement backends (skyline, simulated annealing)
+  plus the fixed-placement rebuild.
 - **Duplicated geometry helpers, and two teardrop implementations.**
 - **Two config styles:** dataclasses in `ufte_probes`, module globals loaded by
   `lib/active.select()` in `mea1k_interconnects`.

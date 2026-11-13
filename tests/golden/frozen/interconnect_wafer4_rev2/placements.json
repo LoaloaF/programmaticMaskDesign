@@ -19,7 +19,7 @@
   ]
  },
  "template": {
-  "path": "<ROOT>/mea1k_interconnects/wafer_nesting/new_wafer_actually.GDS",
+  "path": "<ROOT>/maskgen/wafer/data/new_wafer_actually.GDS",
   "md5": "cad5267b436b64594f5e21598994804f",
   "keep_radius_mm": 50.0,
   "top_layers": {

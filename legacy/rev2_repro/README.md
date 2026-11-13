@@ -10,7 +10,7 @@ The main workflow no longer depends on it:
 - Rev4 builds from the placements this folder measured once. They are committed as
   `mea1k_interconnects/wafer_nesting/data/wafer4_rev2_placements.json`, with `<ROOT>` written for
   the repo root.
-- That data file is what `01d_rebuild_wafer.py` there reads, and its default config is `config_rev4`.
+- That data file is what `maskgen/wafer/rebuild.py` reads (config `config_rev4`, `python3 -m maskgen wafer wafer4_rev4`).
 
 ## Run
 

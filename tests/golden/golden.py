@@ -17,11 +17,11 @@ current working tree (tracked + untracked, never ignored outputs). Both then run
 build commands (produce() below) in that tree, so nothing is ever written into the repo:
 
     interconnect  build_designs.py --rev 2/3/4         -> interconnect/rev<N>/
-    wafer         01d config_rev4 (committed Rev2 placements) -> wafer/wafer4_rev4/
+    wafer         maskgen/wafer/rebuild.py config_rev4 (committed Rev2 placements) -> wafer/wafer4_rev4/
     legacy        legacy/rev2_repro 01c (placements == frozen) + 01d config_rev2
                   (must end GEOMETRY IDENTICAL)       -> wafer/wafer4_rev2/
     electrode     electrode_bundle.batch --no-render   -> electrode/64Ch_4Shankdesigns/shanks/
-    wafer         electrode 03_export_wafer (frozen poses) -> wafer/e64ch_4shank/
+    wafer         maskgen/wafer/export.py config_64ch_4shank (frozen poses) -> wafer/e64ch_4shank/
     config        the namespace every interconnect stage sees -> config/<rev>_<design>_<stage>.json
 
 Each output is FINGERPRINTED (level A): DXF per layer as a sorted multiset of canonical
@@ -162,7 +162,7 @@ def produce_interconnect(tree, out, self_check=False):
     # the fingerprint comparison proves this one is the same wafer.
     os.makedirs(os.path.join(work, "interconnect"), exist_ok=True)
     os.symlink(os.path.join(out, "interconnect", "rev4"), os.path.join(work, "interconnect", "rev4"))
-    log = run([KL, "-b", "-r", "wafer_nesting/01d_rebuild_wafer.py"], ic,
+    log = run([KL, "-b", "-r", os.path.join(tree, "maskgen", "wafer", "rebuild.py")], ic,
               os.path.join(out, "logs", "01d_wafer4_rev4.log"), env=dict(env, WAFER_CHECK="1" if self_check else "0"))
     if self_check and not re.search(r"IDENTICAL to .* except the expected", log):
         raise SystemExit("01d config_rev4 did not pass its own check")
@@ -203,7 +203,7 @@ def produce_electrode(tree, out, self_check=False):
     for f in os.listdir(fz):
         if f != "placement.json":                         # an OUTPUT of 03; it must make it again
             shutil.copy2(os.path.join(fz, f), wdir)
-    run([KL, "-b", "-r", "wafer_nesting/03_export_wafer.py"], gpd,
+    run([KL, "-b", "-r", os.path.join(tree, "maskgen", "wafer", "export.py")], gpd,
         os.path.join(out, "logs", "electrode_03_export.log"),
         env=dict(env, WAFERNEST_CONFIG="config_64ch_4shank"))
     _copy_wafer_files(wdir, os.path.join(out, "wafer", "e64ch_4shank"), also=("placement.json",))

@@ -1,6 +1,6 @@
 """Stage 01d -- placements.json + sources + template  ->  wafer GDS, then check it.
 
-Builds the wafer 01c_extract_exact_placements.py recorded, from the source designs: each
+Builds the wafer legacy/rev2_repro/01c_extract_exact_placements.py recorded, from the source designs: each
 cell is its source, layer-mapped and shifted by the offset 01c measured; TOP's own shapes
 are the template layers 01c matched; every placement is the exact transform 01c read off.
 
@@ -29,7 +29,7 @@ that the source no longer matches what 01c recorded and builds with the new file
 then reports the difference, which is the point.
 
 RUN WITH KLAYOUT (WAFERNEST_CONFIG defaults to config_rev4):
-    /Applications/KLayout/klayout.app/Contents/MacOS/klayout -b -r wafer_nesting/01d_rebuild_wafer.py
+    /Applications/KLayout/klayout.app/Contents/MacOS/klayout -b -r maskgen/wafer/rebuild.py
 
 Overwrites its own output (<out root>/wafer/<RUN_TAG>/wafer_<RUN_TAG>.gds, + manifest.json): it is
 fully determined by the placements and the sources, so there is nothing in it to lose.
@@ -40,12 +40,13 @@ import importlib, json, os, sys
 
 import pya
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-C = importlib.import_module(os.environ.get("WAFERNEST_CONFIG", "config_rev4"))
-import exact_io as X
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))   # repo root: maskgen
+from maskgen.wafer.configs import load as _load_config   # noqa: E402
+C = _load_config('config_rev4')
+from maskgen.wafer import exact_io as X
 
 if not os.path.exists(C.PLACEMENTS_PATH):
-    raise SystemExit("missing %s -- run 01c_extract_exact_placements.py first" % C.PLACEMENTS_PATH)
+    raise SystemExit("missing %s -- run legacy/rev2_repro/01c_extract_exact_placements.py first" % C.PLACEMENTS_PATH)
 _REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 P = json.loads(open(C.PLACEMENTS_PATH).read().replace("<ROOT>", _REPO))   # committed: repo-relative
 dbu = P["target"]["dbu_um"]
@@ -114,7 +115,7 @@ L.write(C.WAFER_OUT, opt)
 print("\nwrote %s" % C.WAFER_OUT)
 
 # Named layers (config LAYERSET), as the electrode wafer does (ufte_probes/wafer_nesting/
-# 03_export_wafer.py): GDS2 has no layer-name record, so the names go (a) into an .oas twin, whose
+# export.py): GDS2 has no layer-name record, so the names go (a) into an .oas twin, whose
 # LAYERNAME records carry them in the file itself, and (b) into a KLayout .lyp next to the GDS.
 # The GDS written above is untouched; the check below reads it back, not these.
 LS = getattr(C, "LAYERSET", None)          # maskgen/core/layers.py

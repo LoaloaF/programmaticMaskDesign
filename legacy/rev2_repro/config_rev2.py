@@ -57,7 +57,7 @@ TARGET_GDS = os.path.join(os.path.dirname(ROOT), "MEA1K_wafer4_12x_8x_8x_breakou
 # Wafer outline + alignment marks. Shapes whose bounding-box centre lies further than
 # TEMPLATE_KEEP_RADIUS_MM from the wafer centre are discarded: the template carries a third
 # copy of the mark cluster near x = +96 mm, outside the 100 mm wafer.
-WAFER_TEMPLATE = os.path.join(ROOT, "wafer_nesting", "new_wafer_actually.GDS")
+WAFER_TEMPLATE = os.path.join(REPO, "maskgen", "wafer", "data", "new_wafer_actually.GDS")   # the one shared copy
 TEMPLATE_KEEP_RADIUS_MM = 50.0
 
 # =============================================================================

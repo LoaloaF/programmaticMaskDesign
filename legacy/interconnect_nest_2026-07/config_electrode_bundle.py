@@ -13,8 +13,8 @@ import os, sys
 # =============================================================================
 # PATHS -- the only lines that depend on where the folders live
 # =============================================================================
-HERE = os.path.dirname(os.path.abspath(__file__))     # .../wafer_nesting
-ROOT = os.path.dirname(HERE)                          # the common folder above it
+HERE = os.path.dirname(os.path.abspath(__file__))     # .../legacy/interconnect_nest_2026-07
+ROOT = os.path.join(os.path.dirname(os.path.dirname(HERE)), "ufte_probes")
 
 # Expected layout (both folders side by side in one common folder):
 #
@@ -27,10 +27,10 @@ ROOT = os.path.dirname(HERE)                          # the common folder above 
 # an absolute path is fine.
 DESIGN_DIR = os.path.join(ROOT, "electrode_bundle", "designs")
 
-# The base wafer GDS (wafer outline + alignment marks). A copy ships inside this folder,
-# so this normally needs no editing.
-WAFER_TEMPLATE = os.path.join(HERE, "new_wafer_actually.GDS")
-MARKS_WKT      = os.path.join(HERE, "marks_union.wkt")
+REPO = os.path.dirname(os.path.dirname(HERE))         # LEGACY (refactor Phase 6): frozen in legacy/
+# The base wafer GDS (wafer outline + alignment marks): the one shared copy, maskgen/wafer/data/.
+WAFER_TEMPLATE = os.path.join(REPO, "maskgen", "wafer", "data", "new_wafer_actually.GDS")
+MARKS_WKT      = os.path.join(REPO, "maskgen", "wafer", "data", "marks_union.wkt")
 
 
 # =============================================================================

@@ -3,14 +3,14 @@
 Resolves every path the selected config depends on and reports what is missing and which
 line to edit. Also checks the Python packages and looks for KLayout.
 
-    python3 wafer_nesting/00_check_setup.py
-    WAFERNEST_CONFIG=config_64ch_4shank python3 wafer_nesting/00_check_setup.py
+    python3 maskgen/wafer/check_setup.py
+    WAFERNEST_CONFIG=config_64ch_4shank python3 maskgen/wafer/check_setup.py
 
 Exits non-zero if anything required is missing.
 """
 import importlib, os, shutil, sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))   # repo root: maskgen
 CFG_NAME = os.environ.get("WAFERNEST_CONFIG", "config_64ch_4shank")
 
 KLAYOUT_CANDIDATES = [
@@ -32,7 +32,8 @@ def bad(label, detail, fix):
 
 print("config          : %s" % CFG_NAME)
 try:
-    C = importlib.import_module(CFG_NAME)
+    from maskgen.wafer.configs import load as _load_config
+    C = _load_config(CFG_NAME)
 except Exception as e:
     print("\nFAILED to import config %r: %s" % (CFG_NAME, e))
     sys.exit(1)
@@ -93,7 +94,7 @@ if os.path.isdir(C.DESIGN_DIR):
           % (", ".join(dxfs) if dxfs else "(none)"))
 
 # --- verdict ------------------------------------------------------------------
-# SHANK_COUNTS is what 03_export_wafer.py will assert against; nest_tiler.py reads only
+# SHANK_COUNTS is what export.py will assert against; nest_skyline.py reads only
 # the ratio, so this is the export-side number, not a nesting target.
 print("\nSHANK_COUNTS in %s.py: %d piece(s) -- %s"
       % (CFG_NAME, sum(d["count"] for d in C.DESIGNS),
@@ -104,4 +105,4 @@ if problems:
     for label, fix in problems:
         print("  - %-20s -> %s" % (label, fix))
     sys.exit(1)
-print("\nSETUP OK -- run 01_extract_footprints.py next")
+print("\nSETUP OK -- run extract_footprints.py next")

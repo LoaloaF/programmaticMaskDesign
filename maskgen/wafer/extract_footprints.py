@@ -8,7 +8,7 @@ Nothing here touches the wafer. The footprint is only a collision proxy for stag
 the real geometry is placed from the original DXF in stage 03.
 
 RUN WITH SYSTEM PYTHON (ezdxf + shapely + matplotlib):
-    python3 wafer_nesting/01_extract_footprints.py
+    python3 maskgen/wafer/extract_footprints.py
 
 CHECK BEFORE MOVING ON: the printed area and bbox must match the design you expect,
 and the overlay PNG must show a single closed outline with no spurious lobes.
@@ -20,9 +20,10 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 import sys, importlib
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-C = importlib.import_module(os.environ.get("WAFERNEST_CONFIG", "config_64ch_4shank"))
-from footprint_extract import extract
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))   # repo root: maskgen
+from maskgen.wafer.configs import load as _load_config   # noqa: E402
+C = _load_config('config_64ch_4shank')
+from maskgen.wafer.footprints import extract
 
 os.makedirs(C.OUT_DIR, exist_ok=True)
 

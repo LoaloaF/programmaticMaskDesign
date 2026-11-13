@@ -133,12 +133,12 @@ WAFERNEST_CONFIG=config_rev3 $KL -b -r legacy/rev2_repro/01d_rebuild_wafer.py   
 WAFERNEST_CONFIG=config_rev3 $KL -b -r legacy/rev2_repro/01e_overlay_wafers.py  # Rev2 + Rev3 in one GDS
 ```
 
-**Build the Rev4 wafer** — `wafer_nesting/config_rev4.py` (01d's default), from the committed Rev2
-placements; §4.6 and `wafer_nesting/HANDOVER.md` §4.4:
+**Build the Rev4 wafer** — `wafer_nesting/config_rev4.py`, from the committed Rev2 placements; §4.6 and
+`wafer_nesting/README.md`:
 
 ```bash
-python3 build_designs.py --rev 4                    # <root>/interconnect/rev4/
-$KL -b -r wafer_nesting/01d_rebuild_wafer.py         # -> <root>/wafer/wafer4_rev4/
+python3 -m maskgen wafer wafer4_rev4        # builds the Rev4 designs if missing, then maskgen/wafer/rebuild.py
+                                            # -> <root>/wafer/wafer4_rev4/
 ```
 
 01d checks the Rev3 wafer against Rev2 and passes only if layers 3 and 8 are the only ones

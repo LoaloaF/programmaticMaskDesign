@@ -20,19 +20,20 @@ This stage also strips the template's third, out-of-wafer copy of the mark clust
 mark layers no mask uses.
 
 RUN WITH KLAYOUT:
-    /Applications/klayout.app/Contents/MacOS/klayout -b -r wafer_nesting/03_export_wafer.py
+    /Applications/klayout.app/Contents/MacOS/klayout -b -r maskgen/wafer/export.py
 
 WARNING: any DXF layer missing from config.LAYER_MAP is silently DELETED. This script
 prints every layer it maps and every layer it drops -- read that output.
 """
 import pya, json, os, sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))   # repo root: maskgen
 import importlib
-C = importlib.import_module(os.environ.get("WAFERNEST_CONFIG", "config_64ch_4shank"))
+from maskgen.wafer.configs import load as _load_config   # noqa: E402
+C = _load_config('config_64ch_4shank')
 
 if not os.path.exists(C.POSES_PATH):
-    raise SystemExit("missing %s -- run nest_tiler.py first" % C.POSES_PATH)
+    raise SystemExit("missing %s -- run nest_skyline.py first" % C.POSES_PATH)
 if os.path.exists(C.WAFER_OUT):
     raise SystemExit("refusing to overwrite %s -- bump RUN_TAG in config.py or delete it"
                      % C.WAFER_OUT)
@@ -85,83 +86,22 @@ for li in wafer.layer_indexes():
 #    polygon with those bars as holes -- comes out as a clear window with the scale in
 #    chrome, and the metal mark below stays visible. See config.MARK_* for the full story.
 DBU = wafer.dbu                                     # um per database unit
+from maskgen.wafer import marks   # noqa: E402  -- the one implementation (also used by rebuild.py)
 
-def _verniers(lay, dt, xlo_um, xhi_um):
-    """Every vernier-sized cluster of a layer inside one mark band, as (bbox, Region)."""
-    li = wafer.find_layer(lay, dt)
-    if li is None:
-        return []
-    band = pya.Region(pya.Box(int(xlo_um / DBU), int(-C.MARK_BAND_Y_UM / DBU),
-                              int(xhi_um / DBU), int(C.MARK_BAND_Y_UM / DBU)))
-    reg = (pya.Region(wtop.shapes(li)) & band).merged()
-    grouped = reg.dup(); grouped.size(int(40.0 / DBU)); grouped.merge()
-    wlo, whi = C.MARK_VERNIER_W_UM
-    out = [(c.bbox(), reg & pya.Region(c.bbox()))
-           for c in grouped.each() if wlo < c.bbox().width() * DBU < whi]
-    return sorted(out, key=lambda t: t[0].center().x)
 
-def _nearest(companions, bbox):
-    """The metal companion this mark belongs to -- slots are 700 um apart, so nearest wins."""
-    return min(companions, key=lambda t: abs(t[0].center().x - bbox.center().x))[0]
+def _get(ld):
+    li = wafer.find_layer(*ld)
+    return pya.Region(wtop.shapes(li)) if li is not None else pya.Region()
 
-#The two bands, left and right of the wafer centre. They are handled SEPARATELY: a band's
-#stencil serves that band's slots, so whatever the two ends do differently (they are not
-#mirror images of each other, and the mark sits a fraction off its companion by a different
-#amount on each side) never enters the transform.
-_bands = [(-C.TEMPLATE_KEEP_RADIUS_MM * 1000.0, 0.0), (0.0, C.TEMPLATE_KEEP_RADIUS_MM * 1000.0)]
-for _xlo, _xhi in _bands:
-    _comps = _verniers(C.MARK_COMPANION[0], C.MARK_COMPANION[1], _xlo, _xhi)
-    _stencils = _verniers(C.MARK_STENCIL[0], C.MARK_STENCIL[1], _xlo, _xhi)
-    assert len(_stencils) == 1 and _comps, (
-        "band [%.1f, %.1f] mm: found %d stencil marks on %d/%d and %d companions on %d/%d"
-        % (_xlo / 1000, _xhi / 1000, len(_stencils), C.MARK_STENCIL[0], C.MARK_STENCIL[1],
-           len(_comps), C.MARK_COMPANION[0], C.MARK_COMPANION[1]))
-    _sbb, _sten = _stencils[0]
-    _scomp = _nearest(_comps, _sbb)
 
-    def _stencil_on(lay, dt):
-        """The stencil translated onto `lay`'s slot, companion to companion.
+def _put(ld, reg):
+    li = wafer.find_layer(*ld)
+    wtop.shapes(li).clear()
+    wtop.shapes(li).insert(reg)
 
-        Returns (slot bbox, the mark that is there now, the inverted mark for it). Nothing
-        is written -- the caller decides, which is what lets the self-test below compare
-        against a slot it must not touch.
-        """
-        found = _verniers(lay, dt, _xlo, _xhi)
-        assert len(found) == 1, ("expected exactly one vernier on %d/%d in band "
-                                 "[%.1f, %.1f] mm, found %d"
-                                 % (lay, dt, _xlo / 1000, _xhi / 1000, len(found)))
-        bbox, present = found[0]
-        comp = _nearest(_comps, bbox)
-        made = _sten.dup()
-        made.transform(pya.Trans(comp.center().x - _scomp.center().x,
-                                 comp.center().y - _scomp.center().y))
-        return bbox, present, made
 
-    #PROVE THE TRANSFORM BEFORE USING IT. 3/0 is a slot whose inverted mark the template
-    #already carries, so rebuilding it from the stencil must reproduce it exactly. If this
-    #ever fails, every copied mark below is in the wrong place and the wafer is scrap.
-    _tbb, _real, _rebuilt = _stencil_on(*C.MARK_SELFTEST_LAYER)
-    _xor = _rebuilt ^ _real
-    assert _xor.is_empty(), (
-        "mark self-test FAILED in band [%.1f, %.1f] mm: rebuilding %d/%d's inverted vernier "
-        "from the %d/%d stencil differs from the template's own by %.4f um^2 -- the "
-        "companion registration is wrong, do NOT ship this wafer"
-        % (_xlo / 1000, _xhi / 1000, C.MARK_SELFTEST_LAYER[0], C.MARK_SELFTEST_LAYER[1],
-           C.MARK_STENCIL[0], C.MARK_STENCIL[1], _xor.area() * DBU * DBU))
-    print("  marks [%+.1f, %+.1f] mm: self-test OK (%d/%d rebuilt from %d/%d exactly)"
-          % (_xlo / 1000, _xhi / 1000, C.MARK_SELFTEST_LAYER[0], C.MARK_SELFTEST_LAYER[1],
-             C.MARK_STENCIL[0], C.MARK_STENCIL[1]))
-
-    for _lay, _dt in C.MARK_INVERT_LAYERS:
-        _bbox, _old, _new = _stencil_on(_lay, _dt)
-        _li = wafer.find_layer(_lay, _dt)
-        _rest = pya.Region(wtop.shapes(_li)) - pya.Region(_bbox)    # everything but that mark
-        wtop.shapes(_li).clear()
-        wtop.shapes(_li).insert(_rest + _new)
-        print("    %d/%d: positive vernier (%d polys, %.0f um^2) -> inverted "
-              "(%d polys, %.0f um^2) at x = %+.4f mm"
-              % (_lay, _dt, _old.size(), _old.area() * DBU * DBU, _new.size(),
-                 _new.area() * DBU * DBU, _new.bbox().center().x * DBU / 1000))
+marks.invert_marks(_get, _put, C.MARK_INVERT_LAYERS, C.MARK_STENCIL, C.MARK_COMPANION, C.MARK_SELFTEST_LAYER,
+                   C.TEMPLATE_KEEP_RADIUS_MM, DBU, C.MARK_VERNIER_W_UM, C.MARK_BAND_Y_UM)
 
 # 3. mark layers no mask uses -- AFTER the stencil above has been copied off 5/0
 for lay, dt in C.MARK_LAYERS_UNUSED:
@@ -267,7 +207,7 @@ for li in sorted(wafer.layer_indexes(), key=lambda i: wafer.get_info(i).layer):
 opt = pya.SaveLayoutOptions()
 opt.gds2_max_vertex_count = 4000
 opt.gds2_multi_xy_records = False
-# Which variant ended up where, for 05_map_wafer.py and for anyone reading the wafer back.
+# Which variant ended up where, for wafer_map.py and for anyone reading the wafer back.
 # The deal above is a seeded shuffle; writing the result means nothing downstream has to
 # reproduce it and risk disagreeing with the GDS that actually shipped.
 json.dump([{"i": i, "key": key, "kind": kind, "angle_deg": theta,
@@ -294,4 +234,4 @@ _m = manifest.write(C.OUT_DIR, "wafer", C.RUN_TAG,
                     inputs=[C.POSES_PATH, C.WAFER_TEMPLATE] + [C.design_dxf(d) for d in C.DESIGNS],
                     outputs=[C.WAFER_OUT, oas_path, lyp_path, C.PLACEMENT_PATH])
 manifest.report(_m)
-print("\nnow verify:  klayout -b -r wafer_nesting/04_verify_wafer.py")
+print("\nnow verify:  klayout -b -r maskgen/wafer/verify.py")

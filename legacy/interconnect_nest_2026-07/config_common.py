@@ -18,12 +18,15 @@ import sys
 
 
 def _wafer_dir(run_tag):
-    """<out root>/wafer/<run_tag>/ -- maskgen.core.paths (pure stdlib, so KLayout's Python can import it)."""
+    """<out root>/wafer/<run_tag>/. LEGACY: the rule of maskgen/core/paths.py, without importing it
+    ($MASKGEN_OUT, else <repo>/.maskgen_out) -- nothing in legacy/ imports maskgen."""
     repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    if repo not in sys.path:
-        sys.path.insert(0, repo)
-    from maskgen.core import paths
-    return paths.wafer_dir(run_tag, create=False)
+    root = os.environ.get("MASKGEN_OUT")
+    if not root and os.path.exists(os.path.join(repo, ".maskgen_out")):
+        root = open(os.path.join(repo, ".maskgen_out")).read().strip()
+    if not root:
+        raise SystemExit("set MASKGEN_OUT (or write the path into %s/.maskgen_out)" % repo)
+    return os.path.join(os.path.abspath(os.path.expanduser(root)), "wafer", run_tag)
 
 
 def derive(mod):

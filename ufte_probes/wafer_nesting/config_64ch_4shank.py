@@ -5,9 +5,9 @@ each, nested at the ratio below. See README.md for how to run this and how to ma
 config for a different design set.
 
     export WAFERNEST_CONFIG=config_64ch_4shank
-    python3 wafer_nesting/00_check_setup.py
-    python3 wafer_nesting/01_extract_footprints.py
-    python3 wafer_nesting/nest_tiler.py --time 900
+    python3 ../maskgen/wafer/check_setup.py
+    python3 ../maskgen/wafer/extract_footprints.py
+    python3 ../maskgen/wafer/nest_skyline.py --time 900
 """
 import os, sys
 
@@ -30,19 +30,20 @@ from maskgen.core import paths as _paths              # noqa: E402
 DESIGN_DIR = _paths.electrode_dir(TARGET_SET, create=False)
 OUT_DIR    = _paths.wafer_dir(TARGET_SET, create=False)
 
-# Wafer outline + alignment marks. Both ship inside wafer_nesting/, so these never change.
-WAFER_TEMPLATE = os.path.join(HERE, "new_wafer_actually.GDS")
-MARKS_WKT      = os.path.join(HERE, "marks_union.wkt")
+# Wafer outline + alignment marks: the one shared copy in maskgen/wafer/data/.
+from maskgen import wafer as _wafer                   # noqa: E402  -- maskgen/wafer/data/, shared
+WAFER_TEMPLATE = _wafer.TEMPLATE_GDS
+MARKS_WKT      = _wafer.MARKS_WKT
 
 
 # =============================================================================
 # WHAT TO NEST
 # =============================================================================
-# THE MIX nest_tiler.py aims for. Only the proportions matter -- it fills the wafer and
+# THE MIX nest_skyline.py aims for. Only the proportions matter -- it fills the wafer and
 # reports how many fit. This is the number to edit when you want a different mix.
 SHANK_RATIO = {"U4": 6, "U1.6": 4, "U2.5": 4, "U8": 2}
 
-# THE RESULT of the last nest, pasted from nest_tiler.py's printed line. 03_export_wafer.py
+# THE RESULT of the last nest, pasted from nest_skyline.py's printed line. export.py
 # asserts len(poses) == sum of these, so it must match the nest you intend to export.
 # Nothing else reads it -- in particular the nester does NOT take its mix from here, or the
 # ratio would drift a little every time a result was pasted back.
@@ -50,7 +51,7 @@ SHANK_COUNTS = {"U4": 22, "U1.6": 15, "U2.5": 14, "U8": 8}
 
 # Each geometry exists as FOUR magnetic-ID variants (the IONP barcode). The plain
 # electrode_bundle_<kind>.dxf carries no IONP layer at all, so it must not be used here --
-# nest the barcoded ones and spread the four evenly, which 03_export_wafer.py does by
+# nest the barcoded ones and spread the four evenly, which export.py does by
 # dealing them out across that kind's poses.
 IONP_VARIANTS = {
     "U1.6": ["C00", "C01", "C02", "C03"],
@@ -92,7 +93,7 @@ WAFER_FLAT_Y = -47.285  # mm, y of the primary flat
 
 # Measurements off the fabricated 2026-07 wafer, not preferences -- see README.md.
 EDGE_EXCL = 3.0
-GAP       = 0.05        # nest_tiler.py defaults to 0 (devices may touch); --gap overrides
+GAP       = 0.05        # nest_skyline.py defaults to 0 (devices may touch); --gap overrides
 MARK_BUF  = 0.7
 
 
@@ -185,4 +186,5 @@ TEMPLATE_KEEP_RADIUS_MM = 50.0
 # Which design variant lands on which pose. Seeded so a re-run reproduces the same wafer.
 VARIANT_SEED = 12345
 
-import config_common; config_common.derive(sys.modules[__name__])
+from maskgen.wafer import config_common   # noqa: E402
+config_common.derive(sys.modules[__name__])

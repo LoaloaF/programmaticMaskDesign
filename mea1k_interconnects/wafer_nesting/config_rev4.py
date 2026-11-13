@@ -29,7 +29,7 @@ committed as data/wafer4_rev2_placements.json; this config needs nothing from le
     cd mea1k_interconnects
     python3 build_designs.py --rev 4                    # -> <out root>/interconnect/rev4/
     KL=/Applications/KLayout/klayout.app/Contents/MacOS/klayout
-    $KL -b -r wafer_nesting/01d_rebuild_wafer.py         # (config_rev4 is 01d's default)
+    $KL -b -r ../maskgen/wafer/rebuild.py         # (config_rev4 is 01d's default)
                                                         # -> <out root>/wafer/wafer4_rev4/
 
 Pure standard library: KLayout's Python runs this.
@@ -52,7 +52,8 @@ WAFER_OUT = os.path.join(OUT_DIR, "wafer_%s.gds" % RUN_TAG)
 # in its paths stands for the repo root (01d substitutes it). It also names the wafer 01d checks
 # against: the fabricated Rev2 wafer.
 PLACEMENTS_PATH = os.path.join(HERE, "data", "wafer4_rev2_placements.json")
-WAFER_TEMPLATE = os.path.join(HERE, "new_wafer_actually.GDS")
+from maskgen import wafer as _wafer                   # noqa: E402
+WAFER_TEMPLATE = _wafer.TEMPLATE_GDS                  # maskgen/wafer/data/ (shared by every wafer)
 TEMPLATE_KEEP_RADIUS_MM = 50.0
 
 # EVERY layer -- fab number, which DXF / dummy-GDS layers go onto it, name, KLayout look -- is the
@@ -76,7 +77,7 @@ STAB_VIA = (1, 0)
 # Etching's and PI's inverted marks) and the coarse marks every layer has; Rev2 dropped it.
 # Layer 1/0 is the template's one free mark slot (|x| = 43.3 mm, second from the outside): the stabilization-
 # via mask is aligned there. Its slot ships the POSITIVE vernier, but this is a dark-field etch mask like
-# 3/0 and 5/0, so MARK_INVERT_LAYERS swaps in the inverted vernier (exact_io.invert_marks, the electrode
+# 3/0 and 5/0, so MARK_INVERT_LAYERS swaps in the inverted vernier (maskgen/wafer/marks.py, the electrode
 # wafer's procedure; the transform is self-tested on 3/0 whose inverted mark the template already has).
 EXTRA_TOP_LAYERS = {"8/0": list(METAL3), "1/0": list(STAB_VIA)}
 MARK_INVERT_LAYERS = [STAB_VIA]

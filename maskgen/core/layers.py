@@ -177,7 +177,7 @@ IC_REV4 = LayerSet("interconnect_rev4", [
 # --- the UFTE probe wafer -----------------------------------------------------------------
 # Metal is the first mask (7/0 carries the alignment reference); every later mask is dark field.
 # !!! PROVISIONAL -- NOT CONFIRMED FOR FABRICATION (ufte_probes/wafer_nesting/README.md) !!!
-# The probe .lyp is still written by ufte_probes/wafer_nesting/03_export_wafer.py's own colour cycle
+# The probe .lyp is still written by ufte_probes/../maskgen/wafer/export.py's own colour cycle
 # (no style here yet: the shipped .lyp is part of the golden reference); refactor Phase 6 moves it here.
 PROBE_64CH = LayerSet("probe_64ch", [
     FabLayer(7, "Metal", (PROBE.METAL,), (), None, None, None),
@@ -192,7 +192,7 @@ LAYERSETS = {s.key: s for s in (IC_REV2, IC_REV3, IC_REV4, PROBE_64CH)}
 
 # --- the wafer template's alignment-mark slots (new_wafer_actually.GDS) --------------------
 # Mark row slots at |x| (mm), and the vernier polarity the template ships in each. Dark-field masks
-# need the INVERTED vernier (exact_io.invert_marks copies the 5/0 stencil, registered on 7/0).
+# need the INVERTED vernier (maskgen/wafer/marks.py copies the 5/0 stencil, registered on 7/0).
 TEMPLATE_MARK_SLOTS = {6: 41.2, 3: 41.9, 8: 42.6, 1: 43.3, 5: 44.0}
 TEMPLATE_MARK_POLARITY = {6: "positive", 8: "positive", 1: "positive", 3: "inverted", 5: "inverted"}
 TEMPLATE_MARK_COMPANION = 7          # every slot has an identical 7/0 companion: the datum

@@ -20,15 +20,16 @@ footprints, and nothing downstream re-tests the true shapes against each other -
 is why an under-covering footprint in stage 01 is a real risk, not a cosmetic one.
 
 RUN WITH KLAYOUT:
-    /Applications/klayout.app/Contents/MacOS/klayout -b -r wafer_nesting/04_verify_wafer.py
+    /Applications/klayout.app/Contents/MacOS/klayout -b -r maskgen/wafer/verify.py
 
 Override the target with CHECK_GDS=<path> to verify some other wafer file.
 """
 import pya, os, sys, json
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))   # repo root: maskgen
 import importlib
-C = importlib.import_module(os.environ.get("WAFERNEST_CONFIG", "config_64ch_4shank"))
+from maskgen.wafer.configs import load as _load_config   # noqa: E402
+C = _load_config('config_64ch_4shank')
 
 GDS = os.environ.get("CHECK_GDS", C.WAFER_OUT)
 if not os.path.isabs(GDS):
@@ -243,7 +244,7 @@ if _ref:
                          % (C.MARK_COMPANION[0], C.MARK_COMPANION[1], x))
 
 # --- 4. the map's record agrees with the GDS ----------------------------------
-# `placement.json` is what 05_map_wafer.py draws from, and a map that disagrees with the
+# `placement.json` is what wafer_map.py draws from, and a map that disagrees with the
 # mask is worse than no map -- it is a document that says a device is something it is not.
 # Both come out of stage 03, so they agree unless one was edited or the GDS was rebuilt
 # without the other; this check is what makes that detectable rather than silent.

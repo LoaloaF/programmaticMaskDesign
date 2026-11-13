@@ -1,7 +1,7 @@
 """Nest as many devices as possible onto the wafer.
 
-Reads the silhouettes 01_extract_footprints.py produced and writes poses.json for
-03_export_wafer.py. The piece count is the OBJECTIVE, not an input: the config's counts
+Reads the silhouettes extract_footprints.py produced and writes poses.json for
+export.py. The piece count is the OBJECTIVE, not an input: the config's counts
 are read only as a RATIO, and this fills the wafer and reports how many fit.
 
 The tiling principle
@@ -30,7 +30,7 @@ it if it is no worse).
 
 Run:
     export WAFERNEST_CONFIG=config_64ch_4shank
-    python3 wafer_nesting/nest_tiler.py --time 900
+    python3 maskgen/wafer/nest_skyline.py --time 900
 
 Writes poses.json + nest_report.json and refreshes nest_preview.png every time the record
 improves, so the PNG can be watched live. Nothing is written that has not passed a full
@@ -48,8 +48,9 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon as MplPoly
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-C = importlib.import_module(os.environ.get("WAFERNEST_CONFIG", "config_64ch_4shank"))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))   # repo root: maskgen
+from maskgen.wafer.configs import load as _load_config   # noqa: E402
+C = _load_config('config_64ch_4shank')
 
 # Grid step for the skyline and for the piece profiles. Everything the packer PROPOSES is
 # quantised to this; everything it ACCEPTS is re-checked against the true polygons, so
@@ -101,7 +102,7 @@ FP = {}
 for _k in KINDS:
     _p = C.kind_footprint_path(_k)
     if not os.path.exists(_p):
-        raise SystemExit("missing %s -- run 01_extract_footprints.py first" % _p)
+        raise SystemExit("missing %s -- run extract_footprints.py first" % _p)
     FP[_k] = Polygon(json.load(open(_p)))
 
 # Desired mix. SHANK_RATIO is the authority when the config states one, because
@@ -270,7 +271,7 @@ def place_poly(kind, theta, x, y):
 
 
 class Placement:
-    """A seated piece: the pose 03_export_wafer.py needs, plus its world polygon."""
+    """A seated piece: the pose export.py needs, plus its world polygon."""
     __slots__ = ("kind", "theta", "x", "y", "geom")
 
     def __init__(self, kind, theta, x, y, geom):
@@ -712,7 +713,7 @@ def main():
         }, open(os.path.join(C.OUT_DIR, "nest_report.json"), "w"), indent=1)
         write_preview(placed, C.PREVIEW_PATH, sub)
         print("  *** %s" % sub)
-        print("      SHANK_COUNTS = %s   <- put this in %s so 03_export_wafer.py's "
+        print("      SHANK_COUNTS = %s   <- put this in %s so export.py's "
               "count assertion matches" % (repr(counts), C.__name__ + ".py"))
         print("      min edge %.3f mm, min mark %.3f mm, min piece sep %.3f mm -> %s"
               % (m["min_edge"], m["min_mark"], m["min_sep"],

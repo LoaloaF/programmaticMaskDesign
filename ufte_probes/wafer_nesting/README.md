@@ -19,6 +19,27 @@
 > - Text below that still names an old path means the new one.
 > - `python3 -m maskgen where` prints the folders.
 
+> **Refactor Phase 6 (2026-11): the stage scripts are shared.** They live in `maskgen/wafer/`
+> and serve both projects; this folder keeps only the probe wafer's config. Renames:
+> `00_check_setup` → `check_setup`, `01_extract_footprints` → `extract_footprints`,
+> `nest_tiler` → `nest_skyline`, `03_export_wafer` → `export`, `04_verify_wafer` → `verify`,
+> `05_map_wafer` → `wafer_map`. The template GDS and the marks file are in `maskgen/wafer/data/`.
+>
+> **One command runs everything:** `python3 -m maskgen wafer 64Ch_4Shankdesigns`. It builds the
+> shanks if they are missing and nests only if there is no nest yet (`--nest` forces it); then it
+> exports, verifies and draws the map (`--force` replaces an existing export).
+>
+> **The shipped nest is verified.** `poses.json` is a left–right mirror of the nest that was
+> originally checked (`poses_before_mirror.json`), and no script did the mirroring. It was
+> re-checked (2026-11-13) against the same rules the nester enforces:
+> - all 59 pieces lie inside the usable radius, flat included;
+> - none touches the 0.7 mm alignment-mark keep-out;
+> - the real device footprints do not overlap (0 pairs above 1e-6 mm²).
+>
+> The conservative per-kind envelopes the nester packs do touch in 4 places, by up to a 6.6 µm
+> sliver. `verify.py` also passes on the exported wafer: per-layer contents match the sources,
+> and all four dark-field masks carry the inverted vernier on both sides.
+
 Takes design DXFs, finds the densest legal arrangement on a 100 mm wafer, and writes the
 combined GDS for fabrication. **One config file drives the whole run** — the stage scripts
 hold no paths, clearances or layer names of their own.
@@ -59,35 +80,38 @@ that live somewhere else.
 
 ## Running it
 
+`python3 -m maskgen wafer 64Ch_4Shankdesigns [--nest] [--force]` runs the stages below in order.
+By hand:
+
 ```bash
 cd ufte_probes
 export WAFERNEST_CONFIG=config_64ch_4shank
 KL=/Applications/KLayout/klayout.app/Contents/MacOS/klayout
 
 python3 -m electrode_bundle.batch            # 1. shanks  -> <root>/electrode/64Ch_4Shankdesigns/shanks/
-python3 wafer_nesting/00_check_setup.py       # 2. resolve every path, check packages
-python3 wafer_nesting/01_extract_footprints.py#    DXF -> collision silhouette
-python3 wafer_nesting/nest_tiler.py --time 900#    silhouettes -> poses.json  (the nest)
+python3 ../maskgen/wafer/check_setup.py       # 2. resolve every path, check packages
+python3 ../maskgen/wafer/extract_footprints.py   #    DXF -> collision silhouette
+python3 ../maskgen/wafer/nest_skyline.py --time 900   #    silhouettes -> poses.json  (the nest)
 # paste the SHANK_COUNTS line it prints into the config, then:
-$KL -b -r wafer_nesting/03_export_wafer.py    # 3. poses + DXFs -> wafer GDS
-$KL -b -r wafer_nesting/04_verify_wafer.py    #    re-check the GDS against the sources
-python3 wafer_nesting/05_map_wafer.py         # 4. the wafer map: what is where
+$KL -b -r ../maskgen/wafer/export.py    # 3. poses + DXFs -> wafer GDS
+$KL -b -r ../maskgen/wafer/verify.py    #    re-check the GDS against the sources
+python3 ../maskgen/wafer/wafer_map.py         # 4. the wafer map: what is where
 ```
 
-**Start with `00_check_setup.py`.** It resolves every path the config depends on, checks
+**Start with `check_setup.py`.** It resolves every path the config depends on, checks
 the Python packages and KLayout, lists the DXFs actually present, and on failure names the
 exact setting to edit. It changes nothing.
 
 | Stage | Does | Needs |
 |---|---|---|
-| `00_check_setup.py` | verifies the install and every input path | python3 |
-| `01_extract_footprints.py` | design DXF → silhouette + centroid offset | python3 + shapely |
-| `nest_tiler.py` | silhouettes → poses `[kind, angle, x, y]`, maximising the count | python3 + shapely |
-| `03_export_wafer.py` | poses + **original DXFs** → wafer GDS | KLayout |
-| `04_verify_wafer.py` | re-checks the wafer against the sources | KLayout |
-| `05_map_wafer.py` | `placement.json` → labelled map PNG | python3 + matplotlib |
+| `check_setup.py` | verifies the install and every input path | python3 |
+| `extract_footprints.py` | design DXF → silhouette + centroid offset | python3 + shapely |
+| `nest_skyline.py` | silhouettes → poses `[kind, angle, x, y]`, maximising the count | python3 + shapely |
+| `export.py` | poses + **original DXFs** → wafer GDS | KLayout |
+| `verify.py` | re-checks the wafer against the sources | KLayout |
+| `wafer_map.py` | `placement.json` → labelled map PNG | python3 + matplotlib |
 
-### Outputs — all land in `<TARGET_SET>/wafer/`
+### Outputs — all land in `<root>/wafer/<TARGET_SET>/`
 
 | File | What |
 |---|---|
@@ -103,7 +127,7 @@ exact setting to edit. It changes nothing.
 | `placement.json` | which design variant stage 03 put at which pose |
 | `wafer_map_<TARGET_SET>.png` | **the map** — every device coloured, numbered and named |
 
-`nest_tiler.py` refreshes `nest_preview.png` **every time the record improves**, so it can
+`nest_skyline.py` refreshes `nest_preview.png` **every time the record improves**, so it can
 be watched live while the search runs. Useful flags:
 
 ```
@@ -126,7 +150,7 @@ be watched live while the search runs. Useful flags:
    - `SHANK_RATIO` — one entry per design, keyed by the DXF's name. **This is the mix the
      nester aims for**; only the proportions matter.
    - `SHANK_COUNTS` — the *result* of the last nest, pasted from the nester's printed
-     line. Only `03_export_wafer.py`'s count assertion reads it.
+     line. Only `export.py`'s count assertion reads it.
    - `IONP_VARIANTS` — the barcoded variants of each geometry. `DESIGNS` is built from
      `SHANK_COUNTS` × these, so the filenames must match what the generator wrote.
    - `LAYER_MAP` / `LAYER_NAMES` (from the `PROBE_64CH` layer set in `maskgen/core/layers.py`) / `MARK_LAYERS_UNUSED` — see the layer map below. These
@@ -134,7 +158,7 @@ be watched live while the search runs. Useful flags:
 3. `export WAFERNEST_CONFIG=config_<your_set>` and run the pipeline above.
 
 Nothing is searched for. Each config states its input locations explicitly in its `PATHS`
-block, and `00_check_setup.py` names the line to edit when something is missing.
+block, and `check_setup.py` names the line to edit when something is missing.
 
 ---
 
@@ -163,7 +187,7 @@ the usable radius, clear of the alignment marks.
 
 ## The wafer map
 
-`05_map_wafer.py` draws the wafer with every device coloured by geometry, shaded by barcode
+`wafer_map.py` draws the wafer with every device coloured by geometry, shaded by barcode
 variant, and labelled with its number and variant code. The legend lists each variant's
 device numbers, so it reads in both directions: point at a device to find out what it is,
 or look up a variant to find where its copies are.
@@ -188,7 +212,7 @@ anchoring there spreads the labels apart.
    least visible failure, and it is how `EtchingPad` was nearly lost on the 2026-07 wafer.
    Stage 03 prints the mapped and dropped lists per design; **read them.** Stage 04's
    per-layer count check is the backstop.
-2. **`03_export_wafer.py` asserts `len(poses) == sum(SHANK_COUNTS.values())`.** The nester
+2. **`export.py` asserts `len(poses) == sum(SHANK_COUNTS.values())`.** The nester
    does not know your config's counts, so paste the `SHANK_COUNTS = {...}` line it prints
    into the config before exporting. `SHANK_RATIO` is what it aims for and is deliberately
    separate — if the nester took its mix from `SHANK_COUNTS`, pasting each result back
@@ -211,9 +235,9 @@ anchoring there spreads the labels apart.
    not a fab spec* — relaxing it packs more (2.0 mm → 62, 1.0 mm → 64), but that is a yield
    question for the fab, not a geometry one, and the electrodes sit 0–4 mm from the tapered
    tip with the bond pads at the far end, so no part of a shank is sacrificial.
-   Note that `nest_tiler.py` does **not** read `GAP`: it defaults to 0 (pieces may touch)
+   Note that `nest_skyline.py` does **not** read `GAP`: it defaults to 0 (pieces may touch)
    and takes `--gap` on the command line.
-8. **`03_export_wafer.py` refuses to overwrite an existing wafer GDS.** Delete
+8. **`export.py` refuses to overwrite an existing wafer GDS.** Delete
    `wafer_<TARGET_SET>.gds` (or change `RUN_TAG` in the config) before re-exporting — and
    then re-run 04 and 05, since both read what 03 wrote.
 

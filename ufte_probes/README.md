@@ -62,9 +62,9 @@ ufte_probes/      <- run everything from HERE
     tests/
   wafer_nesting/               <- the nester (code)
     README.md
-    00_check_setup.py, 01_extract_footprints.py, nest_tiler.py,
-    03_export_wafer.py, 04_verify_wafer.py, 05_map_wafer.py
-    config_64ch_4shank.py, config_common.py, footprint_extract.py
+    check_setup.py, extract_footprints.py, nest_skyline.py,
+    export.py, verify.py, wafer_map.py
+    config_64ch_4shank.py, config_common.py, maskgen/wafer/footprints.py
     new_wafer_actually.GDS    <- wafer template, included
     marks_union.wkt           <- alignment marks, included
   changes_plan/               <- the design change list and the per-session briefs
@@ -75,7 +75,8 @@ ufte_probes/      <- run everything from HERE
 
 **Run every command from this folder**, not from inside either subfolder. Both tools
 depend on it: `python3 -m electrode_bundle.batch` needs the package's parent on the path,
-and the stage scripts are invoked as `wafer_nesting/<stage>.py`.
+and the wafer stage scripts are invoked as `../maskgen/wafer/<stage>.py` (or all at once:
+`python3 -m maskgen wafer 64Ch_4Shankdesigns`, from anywhere).
 
 ---
 
@@ -88,7 +89,7 @@ pip install ezdxf shapely numpy matplotlib pytest
 (On the dev machine these live in the `dxf` conda env:
 `source /opt/anaconda3/etc/profile.d/conda.sh && conda activate dxf`.)
 
-Plus **KLayout** for nesting stages 03 and 04 (GDS work). `00_check_setup.py` looks for it
+Plus **KLayout** for nesting stages 03 and 04 (GDS work). `check_setup.py` looks for it
 at `/Applications/klayout.app/Contents/MacOS/klayout` and
 `/Applications/KLayout/klayout.app/Contents/MacOS/klayout`.
 
@@ -97,10 +98,10 @@ Check both halves before starting:
 ```bash
 python3 -m pytest electrode_bundle/tests -q                       # 240 tests; slow, minutes
 WAFERNEST_CONFIG=config_64ch_4shank \
-  python3 wafer_nesting/00_check_setup.py                          # resolves every path
+  python3 ../maskgen/wafer/check_setup.py                          # resolves every path
 ```
 
-`00_check_setup.py` changes nothing. If an input is missing it names the exact setting in
+`check_setup.py` changes nothing. If an input is missing it names the exact setting in
 the exact file to edit, and lists the DXFs it can actually see.
 
 ---
@@ -155,13 +156,13 @@ Writes `<root>/electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_C11.dxf` plu
 export WAFERNEST_CONFIG=config_64ch_4shank
 KL=/Applications/KLayout/klayout.app/Contents/MacOS/klayout
 
-python3 wafer_nesting/00_check_setup.py
-python3 wafer_nesting/01_extract_footprints.py
-python3 wafer_nesting/nest_tiler.py --time 900
+python3 ../maskgen/wafer/check_setup.py
+python3 ../maskgen/wafer/extract_footprints.py
+python3 ../maskgen/wafer/nest_skyline.py --time 900
 # paste the SHANK_COUNTS line it prints into the config, then:
-$KL -b -r wafer_nesting/03_export_wafer.py
-$KL -b -r wafer_nesting/04_verify_wafer.py
-python3 wafer_nesting/05_map_wafer.py
+$KL -b -r ../maskgen/wafer/export.py
+$KL -b -r ../maskgen/wafer/verify.py
+python3 ../maskgen/wafer/wafer_map.py
 ```
 
 Which designs and in what ratio is set at the top of
@@ -178,7 +179,7 @@ wafer GDS — delete it (or change `RUN_TAG`) to re-export.
 ## Two things worth knowing up front
 
 **The piece count is an output, not an input.** The config's `SHANK_RATIO` is read only as
-a *ratio*; `nest_tiler.py` fills the wafer and reports how many fit — 59 at 74 % density
+a *ratio*; `nest_skyline.py` fills the wafer and reports how many fit — 59 at 74 % density
 for the current 64-channel set. Because of that, `SHANK_COUNTS` in the config has to be
 updated from the nester's printed line before exporting, or stage 03's count assertion
 trips.

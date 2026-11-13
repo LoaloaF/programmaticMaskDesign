@@ -1,6 +1,6 @@
 """Stage 05 -- the wafer map: which device is where, and which barcode it carries.
 
-    python3 wafer_nesting/05_map_wafer.py
+    python3 maskgen/wafer/wafer_map.py
 
 Reads `placement.json`, which STAGE 03 WROTE. That matters: the variant -> pose deal is a
 seeded shuffle, and recomputing it here would be a second implementation of it, free to
@@ -25,11 +25,12 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon as MplPolygon, Circle
 from matplotlib.lines import Line2D
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-C = importlib.import_module(os.environ.get("WAFERNEST_CONFIG", "config_64ch_4shank"))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))   # repo root: maskgen
+from maskgen.wafer.configs import load as _load_config   # noqa: E402
+C = _load_config('config_64ch_4shank')
 
 if not os.path.exists(C.PLACEMENT_PATH):
-    raise SystemExit("missing %s -- run 03_export_wafer.py first (it writes the "
+    raise SystemExit("missing %s -- run export.py first (it writes the "
                      "variant->pose record this map describes)" % C.PLACEMENT_PATH)
 
 placement = json.load(open(C.PLACEMENT_PATH))
@@ -192,7 +193,7 @@ for kind, label, n, w in rows:
                  "Grey blobs are the template's alignment marks.\n"
                  "Nothing may be placed on them.\n\n"
                  "Device numbers match placement.json, written\n"
-                 "by 03_export_wafer.py from the same deal that\n"
+                 "by export.py from the same deal that\n"
                  "built the GDS.",
                  fontsize=8, va="top", color="#333333")
     y -= dy * w
