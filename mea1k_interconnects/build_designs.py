@@ -10,10 +10,12 @@ paths.py); `python3 -m maskgen where interconnect 4` prints the folder and what 
 The committed Rev2 reference DXFs in designs/ are INPUTS (the wafer rebuild reads them) -- nothing
 writes there any more.
 
-A design is a config plus a few overrides (VARIANTS -- the HANDOVER §4.4 table as data), and a
-revision is a few more (REVISIONS). Nothing is edited on disk: each stage runs in its own
-process, imports its config, applies the overrides in memory and runs the stage script, so
-the configs keep their defaults and one design never leaks into the next.
+WHAT gets built is catalog.py: the designs (a base config plus a few overrides) and the revisions
+(each its parent plus a list of changes). HOW a (design, revision) becomes settings is resolve.py;
+`python3 -m maskgen show --rev 4 --design 12block` prints the result, setting by setting. This file
+only drives the builds. Nothing is edited on disk: each stage runs in its own process, imports its
+config, applies the overrides in memory and runs the stage script, so the configs keep their defaults
+and one design never leaks into the next.
 
 Stages per design: stage 01 (pad grid -> DXF), then stage 02 (route into the connector ->
 DXF, or cap the dummy -> GDS). Logs go to <out-dir>/logs/, a manifest.json (git commit, settings,
@@ -24,127 +26,21 @@ themselves only print.
 import argparse
 import os
 import re
-import runpy
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))             # the repo root: the maskgen package
-from maskgen.core import layers, manifest, paths as out_paths  # noqa: E402
+from maskgen.core import manifest, paths as out_paths  # noqa: E402
 
-# name -> config module, stage scripts, file stems (stage-01 output, final output), overrides.
-_8B_71_15 = {"GEN_CONFIG": {"pad_side": 73.0, "pad_side_extra": 71.0, "gap": 13.0},
-             "GEN_ROUTING": {"via_offset_y": 33.75}, "N_RIGHT_BULBS": 1}
-_DUMMY_35_36 = {"GEN_CONFIG": {"pad_side": 37.0, "pad_side_extra": 35.0, "gap": 34.0},
-                "GEN_ROUTING": {"via_offset_y": 15.75}}
-VARIANTS = {
-    "12block": dict(config="12block", gen="01_generate_12block.py", route="02_route_12block.py",
-                    mid="new_interconnect_circular_12Block_56_15",
-                    final="new_interconnect_with_connector_chamfered_12Block_56_15.dxf", set={}),
-    "8block_51_35": dict(config="8block", gen="01_generate_8block.py", route="02_route_8block.py",
-                         mid="new_interconnect_circular_8block_51_35",
-                         final="new_interconnect_with_connector_8blocks_chamfered_1layer_51_35.dxf",
-                         set={}),
-    "8block_71_15": dict(config="8block", gen="01_generate_8block.py", route="02_route_8block.py",
-                         mid="new_interconnect_circular_8block_71_15",
-                         final="new_interconnect_with_connector_8blocks_chamfered_1layer_71_15.dxf",
-                         set=_8B_71_15),
-    "dummy_61_10": dict(config="dummy", gen="01_generate_12block.py", route="02_make_dummy.py",
-                        mid="new_interconnect_circular_dummy_61_10",
-                        final="dummy_new_interconnect_circular_dummy_61_10_padrows.gds", set={}),
-    "dummy_35_36": dict(config="dummy", gen="01_generate_12block.py", route="02_make_dummy.py",
-                        mid="new_interconnect_circular_dummy_35_36",
-                        final="dummy_new_interconnect_circular_dummy_35_36_padrows.gds",
-                        set=_DUMMY_35_36),
-}
-
-# revision -> pad-stack overrides (applied to every design), file-name suffix.
-# Output folder: <out root>/interconnect/rev<N>/ (maskgen.core.paths.interconnect_dir).
-REVISIONS = {
-    2: dict(set={"GEN_CONFIG": {"pad_etch": "square", "metal3": False}},
-            suffix=""),
-    3: dict(set={"GEN_CONFIG": {"pad_etch": "vias", "metal3": True}},
-            suffix="_rev3"),
-    # Rev4: Rev3 with EVERY via -- the routing via (Etching) and the PI-etch circles -- having its
-    # EDGE `via_edge_gap` um from the pad edge (centre = gap + via radius = 5 um in). The routing via
-    # stays in the top-left corner, now inset the same way in x and y, so via_offset_y follows
-    # pad_side (see _apply_via_edge_gap); the etch circles lose their extra inset and
-    # etch_via_layout moves the corner neighbours out as far as the 3 um gaps need.
-    # The 5 um inset leaves less room between corner neighbours, so the spacing range's lower bound
-    # drops to 10.5 um: 51_35 gets 13.5 um (1 between its neighbours), dummy 35_36 gets 11 um (none).
-    # It also gives every Metal1 wire a round 7 um landing pad on its routing via, blended in by a
-    # teardrop (GEN_ROUTING m1_pad*).
-    # The 12-block lanes (and the dummies') leave only 12.5 um between the two lanes beside a column's top
-    # pad, so there the top pad gets a 3.5 um via on a 5.5 um Metal1 pad, centred between the lanes
-    # (0.25 um left), and the lower pads' vias move 0.5 um right, away from the previous column's last
-    # lane -- Metal1 then holds the 2.5 um wire gap everywhere (REV4_LANES, applied per design).
-    # Rev4 also splits the pad-perimeter stabilization vias off the PI outline onto their own DXF layer
-    # (etch_via_layer; wafer layer 1 = its own mask, etched BEFORE the PI outline) and pulls every
-    # Metal3 square 2 um in from each side of Metal2's pad (metal3_inset).
-    4: dict(set={"GEN_CONFIG": {"pad_etch": "vias", "metal3": True, "etch_via_spacing": (9.5, 21.0),
-                                "etch_via_layer": layers.IC.PI_STAB_VIA, "metal3_inset": 2.0},
-                 "GEN_ROUTING": {"m1_pad": True},
-                 "GEN_POLYIMIDE": {"trim_xmax": 2.25}},     # polyimide outline stays where Rev3 had it
-            per_design={n: {"GEN_ROUTING": {"via_k0_radius": 1.75, "via_k0_dx": -0.25, "via_rest_dx": 0.5}}
-                        for n in ("12block", "dummy_61_10", "dummy_35_36")},
-            via_edge_gap=2.5,
-            # dummies also get a small polyimide handle on the top edge (02_make_dummy.py)
-            dummy_set={"DUMMY": {"handle_radius": 300.0, "handle_fillet": 150.0, "handle_x_frac": 0.62}},
-            band_ref_rev=3,       # stage 02 keeps Rev3's band: Metal2 / vias / connector stay put
-            suffix="_rev4"),
-}
-
-
-def _with_suffix(fname, suffix):
-    stem, ext = os.path.splitext(fname)
-    return stem + suffix + ext
+import catalog            # noqa: E402  -- DESIGNS, REVISIONS
+import resolve            # noqa: E402  -- how a (design, revision) becomes settings
 
 
 def paths(name, rev, out_dir):
     """(stage-01 DXF, final file) for design `name` at revision `rev`."""
-    v, r = VARIANTS[name], REVISIONS[rev]
-    return (os.path.join(out_dir, v["mid"] + r["suffix"] + ".dxf"),
-            os.path.join(out_dir, _with_suffix(v["final"], r["suffix"])))
-
-
-def _apply(mod, overrides):
-    for key, val in overrides.items():
-        if isinstance(val, dict):
-            getattr(mod, key).update(val)
-        else:
-            setattr(mod, key, val)
-
-
-def _apply_via_edge_gap(cfg, gap):
-    """Every via's edge `gap` um from the pad edge; the routing via stays in the top-left corner."""
-    inset = gap + cfg.GEN_ROUTING["via_radius"]
-    cfg.GEN_ROUTING["via_offset_x"] = inset
-    cfg.GEN_ROUTING["via_offset_y"] = cfg.GEN_CONFIG["pad_side"] / 2.0 - inset
-    cfg.GEN_CONFIG["etch_via_inset_extra"] = 0.0
-
-
-def _run_stage(name, rev, stage, mid, final, band_ref=None):
-    """In a fresh process: import the config, apply the overrides, run one stage script."""
-    import importlib
-    os.chdir(HERE)
-    sys.path.insert(0, HERE)
-    v = VARIANTS[name]
-    cfg = importlib.import_module("config_" + v["config"])
-    _apply(cfg, v["set"])
-    _apply(cfg, REVISIONS[rev]["set"])
-    _apply(cfg, REVISIONS[rev].get("per_design", {}).get(name, {}))
-    if v["config"] == "dummy":
-        _apply(cfg, REVISIONS[rev].get("dummy_set", {}))
-    if "via_edge_gap" in REVISIONS[rev]:
-        _apply_via_edge_gap(cfg, REVISIONS[rev]["via_edge_gap"])
-    if band_ref and stage == "route":
-        cfg.BAND_REF_DXF = band_ref
-    script = v[stage]
-    argv = ["--config", v["config"]] if script == "01_generate_12block.py" else []
-    argv += ["--out", mid] if stage == "gen" else ["--in", mid, "--out", final]
-    sys.argv = [script] + argv
-    runpy.run_path(script, run_name="__main__")
+    return tuple(os.path.join(out_dir, f) for f in catalog.file_names(name, rev))
 
 
 def _check_log(text):
@@ -162,8 +58,8 @@ def build(name, rev, out_dir, stages=("gen", "route")):
     logs = os.path.join(out_dir, "logs")
     os.makedirs(logs, exist_ok=True)
     ref = None
-    ref_rev = REVISIONS[rev].get("band_ref_rev")
-    if ref_rev and "route" in stages and VARIANTS[name]["route"] != "02_make_dummy.py":
+    ref_rev = resolve.needs_band_ref(name, rev)
+    if ref_rev and "route" in stages:
         # the earlier revision's stage-01 DXF, regenerated here so the reference always matches the code
         ref_dir = os.path.join(out_dir, "ref_rev%d" % ref_rev)
         os.makedirs(ref_dir, exist_ok=True)
@@ -189,11 +85,11 @@ def build(name, rev, out_dir, stages=("gen", "route")):
 def main():
     if len(sys.argv) > 1 and sys.argv[1] == "--_stage":
         name, rev, stage, mid, final = sys.argv[2:7]
-        _run_stage(name, int(rev), stage, mid, final, sys.argv[7] if len(sys.argv) > 7 else None)
+        resolve.run_stage(name, int(rev), stage, mid, final, sys.argv[7] if len(sys.argv) > 7 else None)
         return
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--rev", type=int, required=True, choices=sorted(REVISIONS))
-    ap.add_argument("--only", nargs="+", choices=sorted(VARIANTS), default=sorted(VARIANTS))
+    ap.add_argument("--rev", type=int, required=True, choices=sorted(catalog.REVISIONS))
+    ap.add_argument("--only", nargs="+", choices=sorted(catalog.DESIGNS), default=sorted(catalog.DESIGNS))
     ap.add_argument("--out", default=None,
                     help="output root (default: $MASKGEN_OUT, then <repo>/.maskgen_out)")
     ap.add_argument("--out-dir", default=None,
@@ -232,10 +128,11 @@ def _write_manifest(a, out_dir, stages, results):
     for name in a.only:
         mid, final = paths(name, a.rev, out_dir)
         outs += [mid] if a.stage01 else [mid, final]
-    cfgs = sorted({"config_%s.py" % VARIANTS[n]["config"] for n in a.only})
-    ins = [os.path.join(HERE, f) for f in cfgs + ["config_common.py", os.path.join("lib", "constants.py")]]
-    spec = {"rev": a.rev, "stages": list(stages), "designs": {n: VARIANTS[n] for n in a.only},
-            "revision": REVISIONS[a.rev]}
+    cfgs = sorted({"config_%s.py" % catalog.DESIGNS[n].base for n in a.only})
+    ins = [os.path.join(HERE, f) for f in cfgs + ["config_common.py", "catalog.py", os.path.join("lib", "constants.py")]]
+    spec = {"rev": a.rev, "stages": list(stages),
+            "designs": {n: catalog.DESIGNS[n]._asdict() for n in a.only},
+            "revisions": [r._asdict() for r in catalog.chain(a.rev)]}
     m = manifest.write(out_dir, "interconnect", "rev%d" % a.rev, spec=spec, inputs=ins, outputs=outs,
                        extra={"failed": [n for n, pr in results if pr]}, root=a.out)
     manifest.report(m)

@@ -80,7 +80,8 @@ def run(cmd, cwd, log, env=None):
 SNAPSHOT = r'''
 import json, os, re, runpy, sys
 sys.path.insert(0, os.getcwd())
-import build_designs as b
+import catalog as c
+import resolve as r
 name, rev, stage, out, root = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4], sys.argv[5]
 
 def clean(mod):
@@ -88,7 +89,7 @@ def clean(mod):
             if not k.startswith("__") and not callable(v) and type(v).__name__ != "module"}
 
 def dump(script, run_name=None):
-    cfg = sys.modules["config_" + b.VARIANTS[name]["config"]]
+    cfg = sys.modules["config_" + c.DESIGNS[name].base]
     snap = {"script": script, "argv": sys.argv[1:], "config": clean(cfg)}
     if "lib.constants" in sys.modules:
         snap["lib.constants"] = clean(sys.modules["lib.constants"])
@@ -96,10 +97,9 @@ def dump(script, run_name=None):
     s = re.sub(r" at 0x[0-9a-f]+", "", s.replace(root, "<ROOT>"))
     open(out, "w").write(s)
 
-b.runpy.run_path = dump
-band = "<band_ref>" if (stage == "route" and b.REVISIONS[rev].get("band_ref_rev")
-                        and b.VARIANTS[name]["route"] != "02_make_dummy.py") else None
-b._run_stage(name, rev, stage, "<mid>", "<final>", band)
+r.runpy.run_path = dump
+band = "<band_ref>" if (stage == "route" and r.needs_band_ref(name, rev)) else None
+r.run_stage(name, rev, stage, "<mid>", "<final>", band)
 '''
 
 
@@ -128,19 +128,17 @@ def produce_interconnect(tree, out):
     # config snapshots: what every stage sees after build_designs' overrides
     snap = os.path.join(out, "_snapshot.py")
     open(snap, "w").write(SNAPSHOT)
-    sys.path.insert(0, ic)
-    import importlib
-    bd = importlib.import_module("build_designs")          # only for the design/revision lists
-    sys.path.pop(0)
-    for rev in sorted(bd.REVISIONS):
-        for name in sorted(bd.VARIANTS):
+    lists = json.loads(subprocess.run(
+        [PY, "-c", "import json, catalog; print(json.dumps([sorted(catalog.REVISIONS), sorted(catalog.DESIGNS)]))"],
+        cwd=ic, capture_output=True, text=True, check=True).stdout)
+    for rev in lists[0]:
+        for name in lists[1]:
             for stage in ("gen", "route"):
                 dst = os.path.join(out, "config", "rev%d_%s_%s.json" % (rev, name, stage))
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 subprocess.run([PY, snap, name, str(rev), stage, dst, tree], cwd=ic, check=True,
                                stdout=subprocess.DEVNULL, env=dict(os.environ, **env))
     os.remove(snap)
-    del sys.modules["build_designs"]
     work = env["MASKGEN_OUT"]
     # Rev4 wafer: 01d (default config_rev4) reads <root>/interconnect/rev4 = the build above
     os.makedirs(os.path.join(work, "interconnect"), exist_ok=True)

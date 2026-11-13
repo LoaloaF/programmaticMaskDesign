@@ -72,11 +72,14 @@ python3 old_interconnect/02_route_old_12block.py         # minutes; no CLI; ~99 
 python3 old_interconnect/02_route_old_8block_doubled.py
 ```
 
-- `build_designs.py` is the way to build a wafer's designs. Each design is its config plus
-  the overrides in `VARIANTS` (§4.4); each revision adds those in `REVISIONS` (§4.5). Every
+- `build_designs.py` is the way to build a wafer's designs. WHAT it builds is `catalog.py`:
+  each design is its base config plus the overrides in `DESIGNS` (§4.4); each revision is its
+  parent revision plus the changes in `REVISIONS` (§4.5, §4.6). HOW they combine is
+  `resolve.py`, and `python3 -m maskgen show --rev 4 --design 12block [--changed]` prints every
+  resolved setting with the step that set it (`python3 -m maskgen show` lists the revisions). Every
   stage runs in its own process with the overrides applied in memory, so no config is edited
-  and nothing leaks between designs. Output: `designs/` (Rev2, same names as shipped) or
-  `designs/rev3/` (`*_rev3.*`), logs in `<out-dir>/logs/`. It **fails** (exit 1) when a stage
+  and nothing leaks between designs. Output: `<root>/interconnect/rev<N>/` (`*_rev<N>.*`; Rev2
+  keeps the shipped names), logs in `<out-dir>/logs/`. It **fails** (exit 1) when a stage
   errors or a router prints `crossings`/`pad_hits` ≠ 0 or a `FAIL` line — the routers
   themselves only print those.
 - Pad parameters are changed in the config file. Pad size, gap and via position depend on
@@ -184,8 +187,9 @@ config_12block.py, config_8block.py   all design knobs of one design, in physica
                                         4 Phase 2, 5 teardrops, 6 polyimide, 7 derived
 config_dummy.py                       dummy: 1 pad grid (GEN_*), 2 cap (DUMMY), layer map
 config_common.py                      derived values shared by both designs
-build_designs.py                      builds all five designs of a revision; VARIANTS (§4.4)
-                                        and REVISIONS (§4.5) as data
+catalog.py                            DESIGNS (§4.4) and REVISIONS (§4.5, §4.6): what is built
+resolve.py                            (design, revision) -> settings; `maskgen show` prints them
+build_designs.py                      builds all five designs of a revision
 00_preflight.py                       checks §4.2 against the configs
 01_generate_{12block,8block}.py       stage 01 (the 12-block one also builds the dummy grid)
 02_route_{12block,8block}.py          stage 02: design-specific functions + main()
@@ -305,7 +309,7 @@ The two 8-block variants also differ in the extraction-tab bulbs on the neck's r
 the fabricated `51_35` carries two, `71_15` one. Until 2026-10-07 the config had 1 for both,
 so the shipped `51_35` DXF was missing a bulb against the wafer (found by 01c, §1.1).
 
-This table is `VARIANTS` in `build_designs.py`: each variant is its config plus those
+This table is `DESIGNS` in `catalog.py`: each design is its base config plus those
 overrides, applied in memory, so the configs keep their defaults and nothing has to be edited
 and reverted. `python3 build_designs.py --rev 2 --out-dir <dir>` rebuilds all five with Rev2
 settings, geometry-identical to the files shipped in `designs/` (checked 2026-10-07), and
@@ -317,7 +321,8 @@ layer remap (§1.1). Forgetting `via_offset_y` leaves the via off its corner: 23
 
 ### 4.5 Pad stack per revision
 
-`REVISIONS` in `build_designs.py` sets the pad-stack knobs of `GEN_CONFIG` for every design:
+`REVISIONS` in `catalog.py` sets the pad-stack knobs of `GEN_CONFIG` for every design (each revision
+lists only what it changes against its parent: Rev3 = Rev2 + its list, Rev4 = Rev3 + its list):
 
 | | Rev2 (fabricated) | Rev3 |
 |---|---|---|
@@ -366,7 +371,7 @@ The design names (§4.3) still describe the Rev2 etch squares.
 
 ### 4.6 Rev4
 
-`REVISIONS[4]` in `build_designs.py` (output `<root>/interconnect/rev4/*_rev4.*`). Rev4 is Rev3 plus the changes below.
+`REVISIONS[4]` in `catalog.py` (output `<root>/interconnect/rev4/*_rev4.*`). Rev4 is Rev3 plus the changes below.
 Stage 02 builds around Rev3's wire band (`band_ref_rev=3`); `build_designs.py` regenerates that Rev3 stage-01 reference
 itself (into `rev4/ref_rev3/`), so no separate Rev3 build is needed.
 

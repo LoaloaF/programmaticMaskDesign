@@ -87,6 +87,15 @@ Rev4 is Rev3 plus the following:
 The connector side stays identical to Rev3 / Rev2. Details:
 `mea1k_interconnects/HANDOVER.md` §4.6 and `mea1k_interconnects/wafer_nesting/HANDOVER.md` §4.4.
 
+Every design and every revision is defined in `mea1k_interconnects/catalog.py`. Each revision
+lists only what it changes against its parent (Rev4 = Rev3 + its list). To see a revision or one
+design's resolved settings:
+
+```bash
+python3 -m maskgen show                                   # Rev2 / Rev3 / Rev4: chain, status, changes
+python3 -m maskgen show --rev 4 --design 12block --changed   # what the design + revisions change, and who
+```
+
 ```bash
 cd mea1k_interconnects
 python3 build_designs.py --rev 4                 # <root>/interconnect/rev4/

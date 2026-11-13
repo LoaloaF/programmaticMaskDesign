@@ -5,6 +5,8 @@
     python3 -m maskgen where electrode 64Ch_4Shankdesigns
     python3 -m maskgen where wafer wafer4_rev4
     python3 -m maskgen runs [-n 20]             # the run index, newest last
+    python3 -m maskgen show                     # interconnect revisions: chain, status, changes
+    python3 -m maskgen show --rev 4 --design 12block [--changed]   # every resolved setting + source
 
 The build commands still live in their folders for now (refactor phases 2-6 move them here):
     mea1k_interconnects/build_designs.py --rev 4
@@ -82,6 +84,29 @@ def cmd_runs(a):
         print("%s  %-12s %-20s %-14s %s" % (r["time"], r["kind"], r["name"], r["git"], r["folder"]))
 
 
+def cmd_show(a):
+    """mea1k_interconnects/resolve.py, one process per design (a config is mutated when resolved)."""
+    import subprocess
+    import sys
+    ic = os.path.join(paths.REPO, "mea1k_interconnects")
+    designs = [a.design] if a.design or a.rev is None else None
+    if designs is None:                      # --rev without --design: every design
+        designs = json.loads(subprocess.run(
+            [sys.executable, "-c", "import json, catalog; print(json.dumps(list(catalog.DESIGNS)))"],
+            cwd=ic, capture_output=True, text=True, check=True).stdout)
+    for d in designs:
+        cmd = [sys.executable, "resolve.py", "--stage", a.stage]
+        if a.rev is not None:
+            cmd += ["--rev", str(a.rev)]
+        if d:
+            cmd += ["--design", d]
+        if a.changed:
+            cmd.append("--changed")
+        subprocess.run(cmd, cwd=ic, check=True)
+        if len(designs) > 1:
+            print()
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="maskgen", description=__doc__.split("\n")[0])
     ap.add_argument("--out", help="output root (default: $MASKGEN_OUT, then <repo>/.maskgen_out)")
@@ -90,8 +115,13 @@ def main(argv=None):
     w.add_argument("what", nargs="*")
     r = sub.add_parser("runs", help="the run index")
     r.add_argument("-n", type=int, default=20)
+    s = sub.add_parser("show", help="interconnect revisions / one design's resolved settings")
+    s.add_argument("--rev", type=int)
+    s.add_argument("--design")
+    s.add_argument("--stage", default="route", choices=("gen", "route"))
+    s.add_argument("--changed", action="store_true", help="only settings the design / revisions change")
     a = ap.parse_args(argv)
-    {"where": cmd_where, "runs": cmd_runs}[a.cmd](a)
+    {"where": cmd_where, "runs": cmd_runs, "show": cmd_show}[a.cmd](a)
 
 
 if __name__ == "__main__":

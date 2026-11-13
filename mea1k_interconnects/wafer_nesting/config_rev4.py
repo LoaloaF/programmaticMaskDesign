@@ -61,7 +61,10 @@ TEMPLATE_KEEP_RADIUS_MM = 50.0
 #   + the pad-perimeter STABILIZATION VIAS leave the PI outline: own mask on 1 (etched FIRST; DXF layer
 #     PI_Stab_Via, dummy GDS 2/0), the PI outline / connector-pad openings stay on 3 (etched after).
 from maskgen.core import layers as _layers            # noqa: E402
-LAYERSET = _layers.IC_REV4
+sys.path.insert(0, ROOT)                              # mea1k_interconnects: catalog.py (designs, revisions)
+import catalog as _catalog                            # noqa: E402
+REV = 4
+LAYERSET = _layers.LAYERSETS[_catalog.REVISIONS[REV].layerset]      # interconnect_rev4
 DXF_LAYER_MAP = LAYERSET.dxf_map         # mea1k_interconnects DXF layer (lower-cased) -> wafer GDS;
                                          # dropped: Polyimide (positive), 0, defpoints
 DUMMY_LAYER_MAP = LAYERSET.dummy_map     # 02_make_dummy.py GDS layer -> wafer GDS
@@ -85,16 +88,18 @@ MARK_SELFTEST_LAYER = (3, 0)     # already inverted in the template -- the trans
 # come from LAYERSET: metals red / orange / purple, etch masks blue / green, vias solid, large areas
 # hatched; Metal1 at the back of the stack (KLayout draws entries further down the list in front).
 
-_REV4 = {
-    "CONN_BIG_NEW": "new_interconnect_with_connector_chamfered_12Block_56_15_rev4.dxf",
-    "CONN_SMALL_51_35_NEW": "new_interconnect_with_connector_8blocks_chamfered_1layer_51_35_rev4.dxf",
-    "CONN_SMALL_71_15_NEW": "new_interconnect_with_connector_8blocks_chamfered_1layer_71_15_rev4.dxf",
-    "dummy_61_10_NEW": "dummy_new_interconnect_circular_dummy_61_10_padrows_rev4.gds",
-    "dummy_35_36_NEW": "dummy_new_interconnect_circular_dummy_35_36_padrows_rev4.gds",
+# The wafer's cells (named on the fabricated Rev2 wafer) -> the catalog design each one holds. File names
+# are the design's final output at REV (catalog.file_names), in REV4_DIR.
+CELLS = {
+    "CONN_BIG_NEW": "12block",
+    "CONN_SMALL_51_35_NEW": "8block_51_35",
+    "CONN_SMALL_71_15_NEW": "8block_71_15",
+    "dummy_61_10_NEW": "dummy_61_10",
+    "dummy_35_36_NEW": "dummy_35_36",
 }
-SOURCES = {cell: {"file": os.path.join(REV4_DIR, f),
-                  "layers": DUMMY_LAYER_MAP if f.endswith(".gds") else DXF_LAYER_MAP}
-           for cell, f in _REV4.items()}
+SOURCES = {cell: {"file": os.path.join(REV4_DIR, _catalog.file_names(d, REV)[1]),
+                  "layers": DUMMY_LAYER_MAP if _catalog.file_names(d, REV)[1].endswith(".gds") else DXF_LAYER_MAP}
+           for cell, d in CELLS.items()}
 
 # What 01d may find changed against Rev2, and where each change must lie (per device cell).
 EXPECTED_CHANGED_LAYERS = [STAB_VIA, (3, 0), (5, 0), (7, 0), METAL3]
