@@ -195,7 +195,7 @@ build_designs.py                      builds all five designs of a revision
 02_route_{12block,8block}.py          stage 02: design-specific functions + main()
 02_make_dummy.py                      stage 02 for the dummy: band cap + DXF -> GDS
 03_inspect.py                         layer census
-lib/active.py                         loads the selected design's config
+lib/active.py                         select() -> the design's settings as a Design object
 lib/constants.py                      layer names, sampling resolutions
 lib/teardrop.py                       teardrops, pad approach, angled entry, clearance clamp
 lib/connector.py                      connector pads (CSV) and routing ranks
@@ -210,12 +210,18 @@ electrode_bundle_U4C08.dxf            reference for the teardrop profile (§5); 
 reference/WaferWith12_ALLNEW.gds      the fabricated wafer the defaults match; not read
 ```
 
-**Config mechanism.** `lib` functions read knobs as module globals (`PADR`,
-`TEARDROP_CLEAR`, …). Each router calls `lib.active.select(design, in, out)` before
-importing from `lib`; `select` loads `config_<design>.py`, `lib/constants.py` and the paths
-into `lib.active`, which every `lib` module star-imports. Importing `lib` before `select`
-raises. One design per process — the connector-pad cache in `lib/connector.py` is
-module-level, and default arguments bind config values at import.
+**Config mechanism.** Each router calls `DSG = lib.active.select(design, in, out)`. `select`
+loads `config_<design>.py`, `lib/constants.py` and the paths, and returns them as a read-only
+`Design` object.
+- **`lib` functions** take that object explicitly as their first argument and read
+  `dsg.PADR`, `dsg.TEARDROP_CLEAR`, …. Fixed constants (resolutions, layer names) they import
+  from `lib/constants.py`.
+- **Caches** live on the design (`dsg.cache`, e.g. the connector pads).
+- **Imports:** `lib` modules can be imported before `select`, and no `lib` module holds design
+  state (refactor Phase 4).
+- **Routers:** their own top-level code still reads the settings as globals through
+  `from lib.active import *` (same values); Phase 5 replaces that. Until then a process still
+  routes one design.
 
 **Router split.** `lib/` holds everything common to both designs. The routers keep only what
 differs (a banner under the imports lists it):

@@ -3,28 +3,23 @@
 NOTE these see centrelines only -- no edge-to-edge copper spacing (HANDOVER §6).
 """
 
-from lib import active
-
-active.require()
-from lib.active import *  # noqa: F401,F403  -- this design's knobs (see lib/active.py)
-
 
 def _seg_int(a, b, c, d):
     def cc(p, q, r): return (r[1]-p[1])*(q[0]-p[0]) - (q[1]-p[1])*(r[0]-p[0])
     return (cc(c, d, a) > 0) != (cc(c, d, b) > 0) and (cc(a, b, c) > 0) != (cc(a, b, d) > 0)
 
 
-def _seg_pad(a, b, pad):
+def _seg_pad(dsg, a, b, pad):
     (x1, y1), (x2, y2) = a, b
     cx, cy = pad
     dx, dy = x2 - x1, y2 - y1
     L2 = dx * dx + dy * dy
     t = 0 if L2 == 0 else max(0, min(1, ((cx - x1) * dx + (cy - y1) * dy) / L2))
     qx, qy = x1 + t * dx, y1 + t * dy
-    return (qx - cx) ** 2 + (qy - cy) ** 2 < (PADR + max(IC_TW, CONNECTOR_TW) / 2) ** 2
+    return (qx - cx) ** 2 + (qy - cy) ** 2 < (dsg.PADR + max(dsg.IC_TW, dsg.CONNECTOR_TW) / 2) ** 2
 
 
-def _check_fast(seglist, pads, own_pad=None):
+def _check_fast(dsg, seglist, pads, own_pad=None):
     items = sorted((min(a[0], b[0]), max(a[0], b[0]), min(a[1], b[1]), max(a[1], b[1]), i, a, b)
                    for i, a, b in seglist)
     xings = 0
@@ -48,10 +43,10 @@ def _check_fast(seglist, pads, own_pad=None):
         for pad in pads:
             if opad is not None and abs(pad[0]-opad[0]) < 1e-9 and abs(pad[1]-opad[1]) < 1e-9:
                 continue                                     # a trace may touch its own pad
-            if not (x0 - PADR <= pad[0] <= x1 + PADR and y0 - PADR <= pad[1] <= y1 + PADR):
+            if not (x0 - dsg.PADR <= pad[0] <= x1 + dsg.PADR and y0 - dsg.PADR <= pad[1] <= y1 + dsg.PADR):
                 continue
             if (a[0]-pad[0])**2 + (a[1]-pad[1])**2 < own or (b[0]-pad[0])**2 + (b[1]-pad[1])**2 < own:
                 continue
-            if _seg_pad(a, b, pad):
+            if _seg_pad(dsg, a, b, pad):
                 hits += 1
     return xings, hits

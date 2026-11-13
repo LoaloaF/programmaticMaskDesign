@@ -1,21 +1,19 @@
-"""The ONE design this process is routing -- its knobs, as plain module globals.
-
-Every lib module starts with `from lib.active import *`, so the functions in it read
-`PADR`, `TEARDROP_CLEAR`, `TOTAL_WIRES`, ... exactly as they did when everything lived in one
-2600-line script. That is deliberate: the function bodies were moved without a single edit,
-which is what lets the output stay geometrically identical.
-
-The price is an ORDER rule. A router script must call select() BEFORE it imports anything
-else from lib/:
+"""The ONE design this process is routing: its resolved settings, as a `Design` object.
 
     from lib import active
-    active.select("12block", in_dxf, out_dxf)     # loads config_12block.py
-    from lib.active import *                       # now the knobs exist
-    from lib.teardrop import teardrop_ring, ...    # and lib modules can see them
+    DSG = active.select("12block", in_dxf, out_dxf)   # loads config_12block.py (+ lib/constants.py)
+    from lib.active import *                          # the ROUTER's own code still reads PADR, ...
+    from lib.teardrop import teardrop_ring, ...       # lib functions take the design explicitly:
+    teardrop_len_for(DSG, row, col)                   #   def teardrop_len_for(dsg, ...): dsg.PADR
 
-Importing a lib module first raises a clear error rather than silently using no config.
-A process routes exactly one design; select() refuses to switch (module-level caches such as
-the connector-pad cache in lib/connector.py would otherwise leak between designs).
+The lib modules no longer read the design from globals (refactor Phase 4): every lib function that
+needs a setting takes `dsg` as its first argument, and their caches live on it (`dsg.cache`). They can
+be imported before select(), and two designs cannot leak into each other through them. The routers'
+own top-level code (02_route_*.py) still uses the star import; refactor Phase 5 replaces that.
+
+Values are the same objects the star import exposes, so `dsg.X` and the router's `X` agree. The
+arithmetic in the lib functions is unchanged -- only where a name is looked up moved.
+A process still routes exactly one design; select() refuses to switch.
 """
 import importlib
 import os
@@ -29,6 +27,23 @@ if os.path.dirname(HERE) not in sys.path:
 
 __all__ = []          # filled by select(); `from lib.active import *` exports exactly these
 DESIGN = None
+DSG = None            # the Design select() built
+
+
+class Design(object):
+    """The resolved settings of one design. Read-only attributes (dsg.PADR, dsg.GEN_ROUTING, ...);
+    `key` = the design ("12block" | "8block"), `cache` = a dict for per-design memoised data."""
+
+    def __init__(self, key, ns):
+        self.__dict__.update(ns)
+        self.__dict__["key"] = key
+        self.__dict__["cache"] = {}
+
+    def __setattr__(self, k, v):
+        raise AttributeError("Design settings are read-only (%s.%s)" % (self.key, k))
+
+    def __repr__(self):
+        return "Design(%s, %d settings)" % (self.key, len(self.__dict__) - 2)
 
 
 def in_designs(p):
@@ -41,12 +56,13 @@ def in_designs(p):
 
 
 def select(design, in_dxf=None, out_dxf=None):
-    """Load config_<design>.py (+ lib/constants.py + derived paths) into this module."""
-    global DESIGN
+    """Load config_<design>.py (+ lib/constants.py + derived paths); return it as a Design (and expose
+    the same values as this module's globals, for the routers' star import)."""
+    global DESIGN, DSG
     if DESIGN is not None:
         if DESIGN != design:
             raise RuntimeError(f"design already selected as {DESIGN!r}; one design per process")
-        return
+        return DSG
     if HERE not in sys.path:
         sys.path.insert(0, HERE)
     from lib import constants
@@ -71,13 +87,8 @@ def select(design, in_dxf=None, out_dxf=None):
     globals().update(ns)
     __all__[:] = sorted(ns)
     DESIGN = design
-
-
-def require():
-    """Called at the top of every lib module: fail loudly if no design was selected yet."""
-    if DESIGN is None:
-        raise RuntimeError("no design selected. Call lib.active.select('12block' | '8block') "
-                           "before importing lib modules.")
+    DSG = Design(design, ns)
+    return DSG
 
 
 def __getattr__(name):

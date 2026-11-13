@@ -50,7 +50,7 @@ def _cli():
 
 # Select the design BEFORE importing anything else from lib/ -- see lib/active.py.
 _ARGS = _cli()
-active.select("12block", _ARGS.in_dxf, _ARGS.out_dxf)
+DSG = active.select("12block", _ARGS.in_dxf, _ARGS.out_dxf)
 from lib.active import *  # noqa: E402,F401,F403  -- this design's knobs
 from lib.fanmath import band_runs, eased_fan_profile, min_adjacent_fan_gap
 from lib.geometry import (create_polygon_circle, ensure_layer, entity_xy_points,
@@ -290,7 +290,7 @@ def build_columns_staged(spine_x_left, y_top_left, spine_x_right, y_top_right,
     x_center = spine_x_left + (TOTAL_WIRES - 1) / 2.0 * BAND_PITCH_MM
 
     for b in range(N_BLOCKS_PER_COLUMN):
-        chan = translate_chan(load_connector("left", b), connector_dx, connector_dy)
+        chan = translate_chan(load_connector(DSG, "left", b), connector_dx, connector_dy)
         all_pads += list(chan.values())
         routes_local = route_single_left(chan)
         rank = conn_rank_mixed(routes_local)
@@ -306,7 +306,7 @@ def build_columns_staged(spine_x_left, y_top_left, spine_x_right, y_top_right,
             spine_routes_all[("left", b, k)] = poly
 
     for b in range(N_BLOCKS_PER_COLUMN):
-        chan = translate_chan(load_connector("right", N_BLOCKS_PER_COLUMN - 1 - b),
+        chan = translate_chan(load_connector(DSG, "right", N_BLOCKS_PER_COLUMN - 1 - b),
                               connector_dx, connector_dy)
         all_pads += list(chan.values())
         routes_local = route_single_right(chan)
@@ -431,7 +431,7 @@ def emit_connector_routes(doc, msp, connected_routes, sig, band_y_mm):
         centerline = [(x * um, y * um) for (x, y) in taper_pts]
         widths = [w * um for w in taper_w]
         if d2[best] <= (PITCH * 0.6) ** 2:              # only traces that land on a pad
-            _tw, _rl, _hf = pad_approach_for(row_of.get(best, 0), col_of.get(best, "L"))
+            _tw, _rl, _hf = pad_approach_for(DSG, row_of.get(best, 0), col_of.get(best, "L"))
             if _rl is None and len(poly) >= 2:
                 # Auto: ramp from where the CHAMFER BEGINS down to the pad. After chamfering
                 # the tail reads a -> b -> pad, with a->b the bevel itself, so the ramp spans
@@ -450,7 +450,7 @@ def emit_connector_routes(doc, msp, connected_routes, sig, band_y_mm):
             # condition U4C08 has for free (its trace is a uniform 10 um through the tear).
             # Sized off the tear before clearance shrinking, so a shrunk tear is covered too.
             if TEARDROP and _rl:
-                _L = teardrop_len_for(row_of.get(best, 0), col_of.get(best, "L"))
+                _L = teardrop_len_for(DSG, row_of.get(best, 0), col_of.get(best, "L"))
                 if _L is not None:
                     _L = min(_L, pad_run.get(best, _L))
                     _hf = min(1.0, max(_hf, _L / _rl))
@@ -467,12 +467,12 @@ def emit_connector_routes(doc, msp, connected_routes, sig, band_y_mm):
                                 best if d2[best] <= (PITCH * 0.6) ** 2 else -1))
 
     conn_pad_r = CONN_PAD_R if CONN_PAD_R is not None else PADR
-    tear_f = (clamp_teardrop_fillets(sig_arr, pad_feed, pad_run, route_metal,
+    tear_f = (clamp_teardrop_fillets(DSG, sig_arr, pad_feed, pad_run, route_metal,
                                      TEARDROP_CLEAR, PADR, row_of, col_of)
               if TEARDROP else {})
     for i, (x, y) in enumerate(sig_arr):
         u, F = pad_feed.get(i), tear_f.get(i)
-        tip_w = teardrop_tip_width(row_of.get(i, 0), col_of.get(i, "L"))
+        tip_w = teardrop_tip_width(DSG, row_of.get(i, 0), col_of.get(i, "L"))
         def _ring(r):
             """Tear when this pad has a known feed direction and a cleared fillet, else circle."""
             if TEARDROP and u is not None and F:
@@ -633,7 +633,7 @@ def emit_polyimide(doc, msp, sig, info, ic_pads_bbox=None):
         print(f"neck flare: none needed -- the graft ({graft_w_um:.1f} um) already clears the "
               f"fanned bundle by >= {POLY_FAN_MARGIN_UM:.1f} um")
 
-    down_pts = build_downward_polyimide(sig, conn_cx_um / 1000.0, graft_w_um / 1000.0, top_y_mm,
+    down_pts = build_downward_polyimide(DSG, sig, conn_cx_um / 1000.0, graft_w_um / 1000.0, top_y_mm,
                                         neck_l_mm=jig_left_x_um / 1000.0,
                                         neck_r_mm=jig_right_x_um / 1000.0,
                                         flare_l_mm=flare_l_um / 1000.0 if flared else None,
@@ -650,12 +650,12 @@ def emit_polyimide(doc, msp, sig, info, ic_pads_bbox=None):
     neck_right_x = flare_r_um if flared else jig_right_x_um
     bulb_flare_y = flare_y_um if flared else None
     merged = unary_union([merged,
-                          *edge_bulbs(sig, neck_left_x, ymin, side="left", n_bulbs=N_LEFT_BULBS,
+                          *edge_bulbs(DSG, sig, neck_left_x, ymin, side="left", n_bulbs=N_LEFT_BULBS,
                                       flare_y_um=bulb_flare_y),
-                          *edge_bulbs(sig, neck_right_x, ymin, side="right", n_bulbs=N_RIGHT_BULBS,
+                          *edge_bulbs(DSG, sig, neck_right_x, ymin, side="right", n_bulbs=N_RIGHT_BULBS,
                                       flare_y_um=bulb_flare_y)])
 
-    corners, _r_outer, r_inner = load_board_corner_features(sig)
+    corners, _r_outer, r_inner = load_board_corner_features(DSG, sig)
     holes = []
     for (mcx, mcy) in corners:
         c = create_polygon_circle(mcx * 1000.0, mcy * 1000.0, r_inner * 1000.0, resolution=48)
@@ -734,13 +734,13 @@ def interconnect_pad_bbox(msp, pad_um=(20.0, 100.0)):
 
 def main():
     print("=== Phase 1: rotate + fan + via transition ===")
-    doc, msp, _center = load_and_rotate_interconnect()
+    doc, msp, _center = load_and_rotate_interconnect(DSG)
     endpoints = extract_band_endpoints(msp)
     actual_endpoints = None
     if BAND_REF_DXF:
         print(f"building around the band of {os.path.basename(BAND_REF_DXF)}; real band joins it by a "
               f"{BAND_JOG_LEN:.0f} um jog")
-        _rd, ref_msp, _rc = load_and_rotate_interconnect(BAND_REF_DXF)
+        _rd, ref_msp, _rc = load_and_rotate_interconnect(DSG, BAND_REF_DXF)
         ref_endpoints = extract_band_endpoints(ref_msp)
         check_band_pairing(endpoints, ref_endpoints)
         actual_endpoints, endpoints = endpoints, ref_endpoints
@@ -764,11 +764,11 @@ def main():
     n_m1 = sum(l == WIRE_LAYER for l in info["layer_of"])
     n_m2 = sum(l == LIFT_LAYER for l in info["layer_of"])
     print(f"split: Metal1(even)={n_m1}, Metal2(odd)={n_m2}; via row y={info['y_via']:.1f} um")
-    ok1, msgs = check_transition(info, lanes, FAN_TARGET_PITCH, fan_target_gap)
+    ok1, msgs = check_transition(DSG, info, lanes, FAN_TARGET_PITCH, fan_target_gap)
     print("DRC (via transition):")
     for m in msgs:
         print("  " + m)
-    emit_transition(msp, info)
+    emit_transition(DSG, msp, info)
 
     print("\n=== Phase 2: route the two-layer bundle into the connector ===")
     sl_floor_um = (_FAN2_SL_TIGHT - IC_TW) * 1000.0     # untilted connector same-layer floor
@@ -783,7 +783,7 @@ def main():
 
     # Place the connector: centre it in x on the bundle centre, and set its top row
     # CONN_TOP_BELOW_VIA_MM below the via row so the spine runs downward without inverting.
-    sig_original = _load_extended_sig()
+    sig_original = _load_extended_sig(DSG)
     conn_cx = 0.5 * (sig_original[:, 0].min() + sig_original[:, 0].max())
     conn_ymax = sig_original[:, 1].max()
     connector_dx = (x_center_um / 1000.0) - conn_cx
@@ -816,9 +816,9 @@ def main():
               f"{'OK' if ok2 else 'FAIL'}")
         if not ok2:
             print("  FAIL: raise FAN_LEN_SLACK / lower FAN2_TILT_CAP_DEG for a gentler Phase-2 fan.")
-    connected, angled_stats, angled_orig = angled_pad_entry(connected, sig)
+    connected, angled_stats, angled_orig = angled_pad_entry(DSG, connected, sig)
     if angled_stats:
-        d_req = angled_entry_len()
+        d_req = angled_entry_len(DSG)
         n_tot = sum(len(v) for v in angled_stats.values())
         print(f"angled pad entry: {n_tot} routes at 45 deg "
               f"(L {ANGLED_ENTRY_SIDE} / R {ANGLED_ENTRY_SIDE_RIGHT}), "
@@ -834,7 +834,7 @@ def main():
             if none_:
                 msg += f"; {none_} left perpendicular"
             print(msg)
-    connected, n_rev = repair_angled_crossings(connected, angled_orig)
+    connected, n_rev = repair_angled_crossings(DSG, connected, angled_orig)
     print(f"chamfered corners: cap {CHAMFER_MAX_MM*1000:.0f} um, frac {CHAMFER_FRAC}"
           + (f"; angled tails {ANGLED_ENTRY_CHAMFER*1000:.0f} um"
              if ANGLED_ENTRY_CHAMFER is not None else "")
@@ -848,7 +848,7 @@ def main():
         d2 = (sig_arr[:, 0] - poly[-1][0]) ** 2 + (sig_arr[:, 1] - poly[-1][1]) ** 2
         best = int(np.argmin(d2))
         end_pads.append(tuple(sig_arr[best]) if d2[best] <= (PITCH * 0.6) ** 2 else None)
-    xings, hits = _check_fast(to_seglist(connected), [tuple(p) for p in sig], own_pad=end_pads)
+    xings, hits = _check_fast(DSG, to_seglist(connected), [tuple(p) for p in sig], own_pad=end_pads)
     # NOTE what this pair does NOT cover. _check_fast works on centreline segments and pad
     # CENTRES only -- it carries no trace width at all -- so crossings/pad_hits is not an
     # edge-to-edge check of anything. In particular nothing here sees the teardrops or the

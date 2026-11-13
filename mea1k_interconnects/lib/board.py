@@ -6,10 +6,7 @@ import math
 import numpy as np
 import ezdxf
 
-from lib import active
-
-active.require()
-from lib.active import *  # noqa: F401,F403  -- this design's knobs (see lib/active.py)
+from lib.constants import CIRCLE_RES, POLY_FAN_TAPER_RES
 
 from lib.geometry import filleted_bulb
 
@@ -23,8 +20,10 @@ def _bottom_block_centroid_y_mm(sig):
     return float(bottom_block[:, 1].mean())
 
 
-def board_outline_dims(path=BOARD_OUTLINE_DXF):
+def board_outline_dims(dsg, path=None):
     """(width_mm, height_mm) of Simon's board outline bbox (lines + spline ctrl points)."""
+    if path is None:
+        path = dsg.BOARD_OUTLINE_DXF
     doc = ezdxf.readfile(path)
     msp = doc.modelspace()
     bx, by = [], []
@@ -39,19 +38,23 @@ def board_outline_dims(path=BOARD_OUTLINE_DXF):
     return max(bx) - min(bx), max(by) - min(by)
 
 
-def board_placement(sig, path=BOARD_OUTLINE_DXF):
+def board_placement(dsg, sig, path=None):
     """Board centre y (mm), from the bottom-gap constraint. The board's x is not set here: the
     callers centre it on the connector bundle."""
+    if path is None:
+        path = dsg.BOARD_OUTLINE_DXF
     sig = np.asarray(sig)
-    _bw, bh = board_outline_dims(path)
-    bot_y = _bottom_block_centroid_y_mm(sig) - BOARD_BOTTOM_GAP_MM
+    _bw, bh = board_outline_dims(dsg, path)
+    bot_y = _bottom_block_centroid_y_mm(sig) - dsg.BOARD_BOTTOM_GAP_MM
     board_cy = bot_y + bh / 2.0
     return board_cy
 
 
-def load_board_corner_features(sig, path=BOARD_OUTLINE_DXF):
+def load_board_corner_features(dsg, sig, path=None):
     """Return (corners, r_outer, r_inner) — the 4 corner circle centers (mm), translated
     with the board. r_outer reaches the edge (wall notch); r_inner is the mounting hole."""
+    if path is None:
+        path = dsg.BOARD_OUTLINE_DXF
     doc = ezdxf.readfile(path)
     msp = doc.modelspace()
     circles = [(float(e.dxf.center.x), float(e.dxf.center.y), float(e.dxf.radius))
@@ -71,7 +74,7 @@ def load_board_corner_features(sig, path=BOARD_OUTLINE_DXF):
     # X: track the CONNECTOR/bundle center (matches the board walls in build_downward_polyimide).
     # Y: keep board_placement's bottom-gap placement.
     conn_cx = 0.5 * (np.asarray(sig)[:, 0].min() + np.asarray(sig)[:, 0].max())
-    board_cy = board_placement(sig, path)
+    board_cy = board_placement(dsg, sig, path)
     tx, ty = conn_cx - simon_cx, board_cy - simon_cy
     corners = [(x + tx, y + ty) for x, y, r in circles if abs(r - r_outer) < 1e-3]
     return corners, r_outer, r_inner
@@ -116,7 +119,7 @@ def _taper_wall_pts(x_top, x_bot, y_top, y_bot, res=None):
              y_top + (y_bot - y_top) * (k / n)) for k in range(n + 1)]
 
 
-def build_downward_polyimide(sig, center_x_mm, top_w_mm, top_y_mm,
+def build_downward_polyimide(dsg, sig, center_x_mm, top_w_mm, top_y_mm,
                              neck_l_mm=None, neck_r_mm=None,
                              flare_l_mm=None, flare_r_mm=None, flare_y_mm=None,
                              flare_y0_mm=None):
@@ -140,22 +143,22 @@ def build_downward_polyimide(sig, center_x_mm, top_w_mm, top_y_mm,
     meet it, which only makes sense because that stretch is inside the jigsaw and the two are
     unioned -- the caller is responsible for keeping it clear of the bond pads."""
     sig = np.asarray(sig)
-    bw, bh = board_outline_dims()
-    board_cy = board_placement(sig)
+    bw, bh = board_outline_dims(dsg)
+    board_cy = board_placement(dsg, sig)
 
     cx = center_x_mm
     top_y = top_y_mm
     top_w = top_w_mm
-    r = POLYIMIDE["fillet_r_mm"]
-    rb = BOARD_CORNER_R
-    n_arc = POLYIMIDE["arc_segments"]
+    r = dsg.POLYIMIDE["fillet_r_mm"]
+    rb = dsg.BOARD_CORNER_R
+    n_arc = dsg.POLYIMIDE["arc_segments"]
 
     half_t = top_w / 2.0
     half_b = bw / 2.0
     neck_l = neck_l_mm if neck_l_mm is not None else cx - half_t
     neck_r = neck_r_mm if neck_r_mm is not None else cx + half_t
     board_top_y = board_cy + bh / 2.0
-    bot_y = board_cy - bh / 2.0 - BOARD_BOTTOM_EXTEND_MM   # extend the bottom edge down only
+    bot_y = board_cy - bh / 2.0 - dsg.BOARD_BOTTOM_EXTEND_MM   # extend the bottom edge down only
 
     # Below the fanout taper the walls sit at flare_l/flare_r; without a taper they stay at the
     # graft corners. wall_l/wall_r are what the board flare fillets and the bulbs hang off.
@@ -189,7 +192,7 @@ def build_downward_polyimide(sig, center_x_mm, top_w_mm, top_y_mm,
         ts = np.linspace(t0, t1, n + 1)[1:]
         return [(cxc + rad * np.cos(t), cyc + rad * np.sin(t)) for t in ts]
 
-    cut_centers, cut_r, _r_inner = load_board_corner_features(sig)
+    cut_centers, cut_r, _r_inner = load_board_corner_features(dsg, sig)
     right_cuts = sorted((c for c in cut_centers if c[0] > cx), key=lambda c: -c[1])
     left_cuts = sorted((c for c in cut_centers if c[0] < cx), key=lambda c: c[1])
 
@@ -229,7 +232,7 @@ def build_downward_polyimide(sig, center_x_mm, top_w_mm, top_y_mm,
     return [(x * UM, y * UM) for x, y in pts]
 
 
-def edge_bulbs(sig, neck_edge_x_um, neck_top_y_um, side="left", n_bulbs=N_LEFT_BULBS,
+def edge_bulbs(dsg, sig, neck_edge_x_um, neck_top_y_um, side="left", n_bulbs=None,
                flare_y_um=None):
     """Convex 'bulb' extraction tabs on one straight vertical neck edge. Each bulb is centred ON
     the edge line and its roots blend into the wall via a BULB_FILLET_R_UM fillet (see
@@ -239,20 +242,22 @@ def edge_bulbs(sig, neck_edge_x_um, neck_top_y_um, side="left", n_bulbs=N_LEFT_B
     neck_edge_x_um is the x of the STRAIGHT part of the wall (i.e. the flared wall when the
     fanout taper is on); flare_y_um keeps the topmost bulb below the taper, so no bulb can
     straddle the sloped stretch and come out lopsided."""
-    bw, bh = board_outline_dims()
-    bcy = board_placement(sig)
+    if n_bulbs is None:
+        n_bulbs = dsg.N_LEFT_BULBS
+    bw, bh = board_outline_dims(dsg)
+    bcy = board_placement(dsg, sig)
     board_top_y_um = (bcy + bh / 2.0) * 1000.0
-    neck_bottom_y = board_top_y_um + POLYIMIDE["fillet_r_mm"] * 1000.0   # flare start
-    y_hi = neck_top_y_um - LEFT_BULB_MARGIN_UM - 5000.0
+    neck_bottom_y = board_top_y_um + dsg.POLYIMIDE["fillet_r_mm"] * 1000.0   # flare start
+    y_hi = neck_top_y_um - dsg.LEFT_BULB_MARGIN_UM - 5000.0
     if flare_y_um is not None:
-        y_hi = min(y_hi, flare_y_um - LEFT_BULB_MARGIN_UM)
-    y_lo = neck_bottom_y + LEFT_BULB_MARGIN_UM
+        y_hi = min(y_hi, flare_y_um - dsg.LEFT_BULB_MARGIN_UM)
+    y_lo = neck_bottom_y + dsg.LEFT_BULB_MARGIN_UM
     ys = np.linspace(y_hi, y_lo, n_bulbs)
-    bulbs = [filleted_bulb(neck_edge_x_um, float(y), LEFT_BULB_R_UM, BULB_FILLET_R_UM, side, CIRCLE_RES)
+    bulbs = [filleted_bulb(neck_edge_x_um, float(y), dsg.LEFT_BULB_R_UM, dsg.BULB_FILLET_R_UM, side, CIRCLE_RES)
              for y in ys]
-    base_h = 2.0 * math.sqrt(LEFT_BULB_R_UM**2 + 2.0 * LEFT_BULB_R_UM * BULB_FILLET_R_UM)
+    base_h = 2.0 * math.sqrt(dsg.LEFT_BULB_R_UM**2 + 2.0 * dsg.LEFT_BULB_R_UM * dsg.BULB_FILLET_R_UM)
     pitch = abs(ys[1] - ys[0]) if len(ys) >= 2 else 0.0   # pitch undefined for a single bulb
-    print(f"{side} bulbs: {n_bulbs} x r={LEFT_BULB_R_UM:.0f} um (fillet {BULB_FILLET_R_UM:.0f} um, "
+    print(f"{side} bulbs: {n_bulbs} x r={dsg.LEFT_BULB_R_UM:.0f} um (fillet {dsg.BULB_FILLET_R_UM:.0f} um, "
           f"base {base_h:.0f} um) at x={neck_edge_x_um:.0f}, "
           f"y {ys[0]:.0f}..{ys[-1]:.0f} um (pitch {pitch:.0f} um)")
     return bulbs

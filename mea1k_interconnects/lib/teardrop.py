@@ -9,10 +9,7 @@ import numpy as np
 from shapely.strtree import STRtree
 from shapely.geometry import Polygon, Point, LineString
 
-from lib import active
-
-active.require()
-from lib.active import *  # noqa: F401,F403  -- this design's knobs (see lib/active.py)
+from lib.constants import TEARDROP_CLAMP_ITERS
 
 from lib.geometry import _arc_pts, chamfer_polyline, create_polygon_circle, to_seglist
 from lib.checks import _seg_int
@@ -129,44 +126,44 @@ def pad_cols_by_index(sig):
     return {i: ("L" if x < split else "R") for i, (x, _y) in enumerate(sig)}
 
 
-def angled_side_for(col):
+def angled_side_for(dsg, col):
     """Which way the diagonal leans in this column (see ANGLED_ENTRY_SIDE / ..._RIGHT)."""
-    return ANGLED_ENTRY_SIDE if col == "L" else ANGLED_ENTRY_SIDE_RIGHT
+    return dsg.ANGLED_ENTRY_SIDE if col == "L" else dsg.ANGLED_ENTRY_SIDE_RIGHT
 
 
-def angled_rows_for(col):
+def angled_rows_for(dsg, col):
     """The flanked rows in this column (see ANGLED_ENTRY_ROWS / ..._RIGHT)."""
-    return ANGLED_ENTRY_ROWS if col == "L" else ANGLED_ENTRY_ROWS_RIGHT
+    return dsg.ANGLED_ENTRY_ROWS if col == "L" else dsg.ANGLED_ENTRY_ROWS_RIGHT
 
 
-def teardrop_tip_width(row, col):
+def teardrop_tip_width(dsg, row, col):
     """Trace width the tear's flanks are built tangent to. That is the WIDENED approach width
     when one is set for this kind of row, not the bare connector width: widen_pad_approach has
     already ramped the trace up by the time it reaches the pad, and a tear tangent to the
     narrower edges would meet the trace at a kink instead of flush."""
-    tw = pad_approach_for(row, col)[0]
-    return float(tw) if tw is not None else float(CONNECTOR_TW)
+    tw = pad_approach_for(dsg, row, col)[0]
+    return float(tw) if tw is not None else float(dsg.CONNECTOR_TW)
 
 
-def teardrop_fillet_for(row, col):
+def teardrop_fillet_for(dsg, row, col):
     """Nominal fillet radius for a pad, by whether its row is angled or vertical IN ITS
     COLUMN. Mirrors teardrop_tip_width, so the two always agree on what counts as angled."""
-    return (TEARDROP_FILLET_R_ANGLED if row in angled_rows_for(col)
-            else TEARDROP_FILLET_R_VERTICAL)
+    return (dsg.TEARDROP_FILLET_R_ANGLED if row in angled_rows_for(dsg, col)
+            else dsg.TEARDROP_FILLET_R_VERTICAL)
 
 
-def teardrop_len_for(row, col, r=None, fillet_r=None):
+def teardrop_len_for(dsg, row, col, r=None, fillet_r=None):
     """Tip distance from the pad centre for a pad, by whether its row is angled or vertical IN
     ITS COLUMN. Derived from the fillet radius rather than set directly, so it also tracks the
     row's approach width. None when no tear fits (see teardrop_tip_dist)."""
-    return teardrop_tip_dist(PADR if r is None else r,
-                             teardrop_fillet_for(row, col) if fillet_r is None else fillet_r,
-                             teardrop_tip_width(row, col))
+    return teardrop_tip_dist(dsg.PADR if r is None else r,
+                             teardrop_fillet_for(dsg, row, col) if fillet_r is None else fillet_r,
+                             teardrop_tip_width(dsg, row, col))
 
 
-def teardrop_kind_rows(col):
+def teardrop_kind_rows(dsg, col):
     """One representative (angled row, vertical row) number in this column, for reporting."""
-    a = angled_rows_for(col)
+    a = angled_rows_for(dsg, col)
     return a[0], next(r for r in (1, 2, 3, 4) if r not in a)
 
 
@@ -186,12 +183,12 @@ def _min_foreign_pad_dist(a, b, P, own):
     return float(d.min())
 
 
-def pad_approach_for(row, col):
+def pad_approach_for(dsg, row, col):
     """(tip width, ramp length, hold fraction) for a pad, by whether its row is angled or vertical in its
     column. Mirrors teardrop_len_for, so the two always agree on what counts as angled."""
-    if row in angled_rows_for(col):
-        return PAD_APPROACH_TW_ANGLED, PAD_APPROACH_LEN_ANGLED, PAD_APPROACH_HOLD_ANGLED
-    return (PAD_APPROACH_TW_VERTICAL, PAD_APPROACH_LEN_VERTICAL, PAD_APPROACH_HOLD_VERTICAL)
+    if row in angled_rows_for(dsg, col):
+        return dsg.PAD_APPROACH_TW_ANGLED, dsg.PAD_APPROACH_LEN_ANGLED, dsg.PAD_APPROACH_HOLD_ANGLED
+    return (dsg.PAD_APPROACH_TW_VERTICAL, dsg.PAD_APPROACH_LEN_VERTICAL, dsg.PAD_APPROACH_HOLD_VERTICAL)
 
 
 def widen_pad_approach(centerline, widths, tip_w, ramp_len, hold_frac=0.0):
@@ -239,19 +236,19 @@ def widen_pad_approach(centerline, widths, tip_w, ramp_len, hold_frac=0.0):
     return out_pts, out_ws
 
 
-def angled_entry_len():
+def angled_entry_len(dsg):
     """Diagonal displacement, mm. `None` auto-derives the value that puts the trace's
     straight run all the way into the tear's tip: the run must reach the tear's tip distance
     plus whatever the corner bevel sets back, and a 45 deg leg of displacement d is d*sqrt(2).
     Both columns give the same tip distance (same PADR, same PAD_APPROACH_TW_ANGLED), so the
     left column stands in for both."""
-    if ANGLED_ENTRY_LEN is not None:
-        return float(ANGLED_ENTRY_LEN)
-    tip = teardrop_len_for(angled_rows_for("L")[0], "L")
-    return ((PADR if tip is None else tip) + CHAMFER_MAX_MM) / np.sqrt(2.0)
+    if dsg.ANGLED_ENTRY_LEN is not None:
+        return float(dsg.ANGLED_ENTRY_LEN)
+    tip = teardrop_len_for(dsg, angled_rows_for(dsg, "L")[0], "L")
+    return ((dsg.PADR if tip is None else tip) + dsg.CHAMFER_MAX_MM) / np.sqrt(2.0)
 
 
-def angled_pad_entry(routes, sig, rows=None, d=None):
+def angled_pad_entry(dsg, routes, sig, rows=None, d=None):
     """Enter the flanked pad rows on a 45 deg diagonal instead of perpendicular.
 
     Rewrites ONLY the final approach: the feed lane and its y stay where they are, and the
@@ -265,14 +262,14 @@ def angled_pad_entry(routes, sig, rows=None, d=None):
 
     Runs BEFORE chamfer_polyline, so the new corners get the usual bevel, and before
     _check_fast, so anything this clamp misses still shows up as crossings / pad_hits."""
-    d_req = angled_entry_len() if d is None else float(d)
-    if not ANGLED_ENTRY or d_req <= 0:
+    d_req = angled_entry_len(dsg) if d is None else float(d)
+    if not dsg.ANGLED_ENTRY or d_req <= 0:
         return routes, {}, {}
     sig_arr = np.asarray(sig)
     P = sig_arr[:, :2]
     row_of = pad_rows_by_index(sig_arr)
     col_of = pad_cols_by_index(sig_arr)
-    need = PADR + ANGLED_ENTRY_MARGIN
+    need = dsg.PADR + dsg.ANGLED_ENTRY_MARGIN
     floor = 0.2 * d_req                       # below this the diagonal is not worth having
 
     # index of every route's full geometry, so a candidate can be tested against the traces it
@@ -299,7 +296,7 @@ def angled_pad_entry(routes, sig, rows=None, d=None):
         j = int(np.argmin((P[:, 0] - px) ** 2 + (P[:, 1] - py) ** 2))
         row = row_of.get(j, 0)
         col = col_of.get(j, "L")
-        rows_here = angled_rows_for(col) if rows is None else rows
+        rows_here = angled_rows_for(dsg, col) if rows is None else rows
         # NOTE: do NOT require the lane to be at least d_req away. With the single-segment
         # tail, d is simply clamped to the lane height, giving a 45 deg run -- so a close
         # lane is routable, just at a shallower displacement. Requiring d_req would skip the
@@ -308,7 +305,7 @@ def angled_pad_entry(routes, sig, rows=None, d=None):
             out[key] = poly
             continue
 
-        side = angled_side_for(col)
+        side = angled_side_for(dsg, col)
         s = 1.0 if side == "right" else -1.0    # "auto" would tie here, so treat it as left
         ydir = 1.0 if qy > py else -1.0
 
@@ -336,7 +333,7 @@ def angled_pad_entry(routes, sig, rows=None, d=None):
                         for a, b in zip(tail[:-1], tail[1:]))
             if clear <= need:
                 continue
-            probe = LineString(tail).buffer(ANGLED_ENTRY_TRACE_GAP, resolution=4)
+            probe = LineString(tail).buffer(dsg.ANGLED_ENTRY_TRACE_GAP, resolution=4)
             if any(tr_geom[int(i)].intersects(probe)
                    for i in tr_tree.query(probe) if tr_key[int(i)] != key):
                 continue                                     # would cross/crowd another trace
@@ -356,7 +353,7 @@ def angled_pad_entry(routes, sig, rows=None, d=None):
         originals[key] = poly                       # so a crossing can be repaired later
         out[key] = pts[:-2] + newtail
         g = LineString(([pts[-3]] if len(pts) >= 3 else []) + newtail) \
-            .buffer(ANGLED_ENTRY_TRACE_GAP, resolution=4)
+            .buffer(dsg.ANGLED_ENTRY_TRACE_GAP, resolution=4)
         done.append((g, g.bounds))
         stats.setdefault((col, row), []).append((d_use, float(np.degrees(np.arctan2(h, d_use)))))
     return out, stats, originals
@@ -385,7 +382,7 @@ def crossing_route_keys(routes_dict):
     return bad
 
 
-def repair_angled_crossings(routes, originals, rounds=4):
+def repair_angled_crossings(dsg, routes, originals, rounds=4):
     """Chamfer, look for crossings, put the offending re-shaped tails back, repeat.
 
     The chamfer runs AFTER the angled pass and its bevel juts out far enough to clip a
@@ -397,14 +394,14 @@ def repair_angled_crossings(routes, originals, rounds=4):
         keeps CHAMFER_MAX_MM. Applying the knob to the whole route instead un-chamfers the fan
         and spine corners too, which makes them clip their neighbours (nearly every tail then
         gets reverted)."""
-        if ANGLED_ENTRY_CHAMFER is None or k not in originals:
-            return chamfer_polyline(p, CHAMFER_MAX_MM, CHAMFER_FRAC, keep_tail=0)
-        base = chamfer_polyline(p, CHAMFER_MAX_MM, CHAMFER_FRAC, keep_tail=1)
+        if dsg.ANGLED_ENTRY_CHAMFER is None or k not in originals:
+            return chamfer_polyline(p, dsg.CHAMFER_MAX_MM, dsg.CHAMFER_FRAC, keep_tail=0)
+        base = chamfer_polyline(p, dsg.CHAMFER_MAX_MM, dsg.CHAMFER_FRAC, keep_tail=1)
         if len(base) < 3:
             return base
         # chamfer_polyline never moves endpoints, so the last corner can be done separately
-        return list(base[:-3]) + list(chamfer_polyline(base[-3:], ANGLED_ENTRY_CHAMFER,
-                                                       CHAMFER_FRAC, keep_tail=0))
+        return list(base[:-3]) + list(chamfer_polyline(base[-3:], dsg.ANGLED_ENTRY_CHAMFER,
+                                                       dsg.CHAMFER_FRAC, keep_tail=0))
 
     cur = dict(routes)
     reverted = 0
@@ -419,7 +416,7 @@ def repair_angled_crossings(routes, originals, rounds=4):
     return {k: _cham(k, p) for k, p in cur.items()}, reverted
 
 
-def clamp_teardrop_fillets(sig, pad_feed, pad_run, route_metal, clear, pad_r, row_of, col_of):
+def clamp_teardrop_fillets(dsg, sig, pad_feed, pad_run, route_metal, clear, pad_r, row_of, col_of):
     """Per-pad fillet radius, shrunk until the metal the tear ADDS clears foreign metal.
 
     Judged on the incremental region (tear minus the pad disc), not the whole tear: foreign
@@ -456,14 +453,14 @@ def clamp_teardrop_fillets(sig, pad_feed, pad_run, route_metal, clear, pad_r, ro
         if u is None:
             continue
         row, col = row_of.get(i, 0), col_of.get(i, "L")
-        tip_w = teardrop_tip_width(row, col)
+        tip_w = teardrop_tip_width(dsg, row, col)
         disc = Point(float(x), float(y)).buffer(pad_r, resolution=24)
         # What the BARE pad already holds. A pad whose neighbours are closer than `clear`
         # cannot be asked for `clear` -- it never had it -- so hold it to what it has and
         # the tear still cannot worsen the gap. See TEARDROP_CLEAR_FLOOR_FROM_PAD.
         near = min((obstacles[int(k)].distance(disc) for k in tree.query(disc.buffer(clear))
                     if owner[int(k)] != i), default=float("inf"))
-        want = min(clear, near) if TEARDROP_CLEAR_FLOOR_FROM_PAD else clear
+        want = min(clear, near) if dsg.TEARDROP_CLEAR_FLOOR_FROM_PAD else clear
         if want < clear:
             crowded += 1
             tightest = min(tightest, want)
@@ -485,7 +482,7 @@ def clamp_teardrop_fillets(sig, pad_feed, pad_run, route_metal, clear, pad_r, ro
 
         # The tear may not outrun the final straight run, so cap the fillet at the radius
         # whose tip lands exactly there (teardrop_fillet_for_tip inverts the length formula).
-        F_nom = float(teardrop_fillet_for(row, col))
+        F_nom = float(teardrop_fillet_for(dsg, row, col))
         F_max = min(F_nom,
                     teardrop_fillet_for_tip(pad_r, tip_w, pad_run.get(i, float("inf"))))
         L_max = teardrop_tip_dist(pad_r, F_max, tip_w)
@@ -519,13 +516,13 @@ def clamp_teardrop_fillets(sig, pad_feed, pad_run, route_metal, clear, pad_r, ro
             short += 1
 
     def _tip_um(row, col, fillet_r=None):
-        L = teardrop_len_for(row, col, pad_r, fillet_r)
+        L = teardrop_len_for(dsg, row, col, pad_r, fillet_r)
         return "-" if L is None else "%.0f um" % (L * 1000.0)
 
-    a_row, v_row = teardrop_kind_rows("L")
+    a_row, v_row = teardrop_kind_rows(dsg, "L")
     print(f"teardrops: {full} at full fillet, {short} shrunk, {skip} left as plain circles "
-          f"(fillet r {TEARDROP_FILLET_R_ANGLED*1000:.0f} um -> tip {_tip_um(a_row, 'L')} angled"
-          f" / {TEARDROP_FILLET_R_VERTICAL*1000:.0f} um -> tip {_tip_um(v_row, 'L')} vertical,"
+          f"(fillet r {dsg.TEARDROP_FILLET_R_ANGLED*1000:.0f} um -> tip {_tip_um(a_row, 'L')} angled"
+          f" / {dsg.TEARDROP_FILLET_R_VERTICAL*1000:.0f} um -> tip {_tip_um(v_row, 'L')} vertical,"
           f" clearance {clear*1000:.0f} um)")
     if crowded:
         print(f"    {crowded} pads already sit closer than {clear*1000:.0f} um to foreign "
@@ -538,15 +535,15 @@ def clamp_teardrop_fillets(sig, pad_feed, pad_run, route_metal, clear, pad_r, ro
         r = (col_of.get(i, "L"), row_of.get(i, 0))
         d = by_row.setdefault(r, [0, 0, 0])
         F = fillets.get(i)
-        d[0 if (F is not None and abs(F - teardrop_fillet_for(row_of.get(i, 0),
+        d[0 if (F is not None and abs(F - teardrop_fillet_for(dsg, row_of.get(i, 0),
                                                               col_of.get(i, "L"))) < 1e-12)
           else (1 if F is not None else 2)] += 1
     for r in sorted(by_row):
         f_, s_, k_ = by_row[r]
-        tag = ("   <- angled" if r[1] in angled_rows_for(r[0]) else "   <- vertical")
+        tag = ("   <- angled" if r[1] in angled_rows_for(dsg, r[0]) else "   <- vertical")
         got = [fillets[i] for i in range(len(sig_arr))
                if fillets.get(i) is not None and (col_of.get(i, "L"), row_of.get(i, 0)) == r]
-        worst = ("" if not got or min(got) >= teardrop_fillet_for(r[1], r[0])
+        worst = ("" if not got or min(got) >= teardrop_fillet_for(dsg, r[1], r[0])
                  else f", shrunk down to {_tip_um(r[1], r[0], min(got))}")
         print(f"    {r[0]} row {r[1]}: {f_} full, {s_} shrunk, {k_} plain "
               f"(tip {_tip_um(r[1], r[0])}{worst})" + tag)

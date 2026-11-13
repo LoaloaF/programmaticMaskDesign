@@ -2,16 +2,10 @@
 """
 import numpy as np
 
-from lib import active
 
-active.require()
-from lib.active import *  # noqa: F401,F403  -- this design's knobs (see lib/active.py)
-
-
-_SIG_CACHE = None      # connector pads, loaded once per process
-
-
-def extend_sig_with_new_blocks(sig, n_new_per_col=N_NEW_BLOCKS_PER_COLUMN):
+def extend_sig_with_new_blocks(dsg, sig, n_new_per_col=None):
+    if n_new_per_col is None:
+        n_new_per_col = dsg.N_NEW_BLOCKS_PER_COLUMN
     sig = np.asarray(sig, dtype=float)
     xmid = (sig[:, 0].min() + sig[:, 0].max()) / 2
     new_rows = []
@@ -30,19 +24,19 @@ def extend_sig_with_new_blocks(sig, n_new_per_col=N_NEW_BLOCKS_PER_COLUMN):
     return np.vstack([sig] + new_rows)
 
 
-def _load_extended_sig():
+def _load_extended_sig(dsg):
     """Load the real connector pads from the CSV once, cache the result. The 12-block also
     synthesises N_NEW_BLOCKS_PER_COLUMN extra blocks per column below the real ones (see
-    extend_sig_with_new_blocks); the 8-block uses the CSV as is (N_NEW_BLOCKS_PER_COLUMN = 0)."""
-    global _SIG_CACHE
-    if _SIG_CACHE is None:
-        sig = np.loadtxt(CONNECTOR_CSV, delimiter=",", skiprows=1)
-        _SIG_CACHE = extend_sig_with_new_blocks(sig) if N_NEW_BLOCKS_PER_COLUMN else sig
-    return _SIG_CACHE
+    extend_sig_with_new_blocks); the 8-block uses the CSV as is (N_NEW_BLOCKS_PER_COLUMN = 0).
+    Cached on the design (`dsg.cache`), not in this module: one design's pads never leak into another's."""
+    if "connector_sig" not in dsg.cache:
+        sig = np.loadtxt(dsg.CONNECTOR_CSV, delimiter=",", skiprows=1)
+        dsg.cache["connector_sig"] = extend_sig_with_new_blocks(dsg, sig) if dsg.N_NEW_BLOCKS_PER_COLUMN else sig
+    return dsg.cache["connector_sig"]
 
 
-def load_connector(side="left", block=0):
-    sig = _load_extended_sig()
+def load_connector(dsg, side="left", block=0):
+    sig = _load_extended_sig(dsg)
     ys = np.sort(np.unique(np.round(sig[:, 1], 2)))
     xmid = (sig[:, 0].min() + sig[:, 0].max()) / 2
     n = len(ys)

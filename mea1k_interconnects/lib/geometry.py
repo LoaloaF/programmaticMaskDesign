@@ -4,11 +4,6 @@ import math
 import numpy as np
 from shapely.geometry import Polygon
 
-from lib import active
-
-active.require()
-from lib.active import *  # noqa: F401,F403  -- this design's knobs (see lib/active.py)
-
 
 def entity_xy_points(e):
     if e.dxftype() == "LWPOLYLINE":
@@ -107,7 +102,7 @@ def stroke_centerline_to_polygon(centerline, widths):
     return [(float(x), float(y)) for x, y in ring]
 
 
-def chamfer_polyline(pts, target=CHAMFER_MAX_MM, frac=CHAMFER_FRAC, tol=1e-12, keep_tail=1):
+def chamfer_polyline(pts, target, frac, tol=1e-12, keep_tail=1):
     """Bevel every interior corner: at each vertex set back an EQUAL distance d along both
     legs and join the two set-back points with a straight diagonal. On a 90 deg corner that
     diagonal is exactly 45 deg. Endpoints are never moved. d = min(target, frac*len_in,
