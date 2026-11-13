@@ -132,6 +132,9 @@ if NAMES:
           % (os.path.basename(oas_path), os.path.basename(lyp_path)))
 
 # --- check against the target -----------------------------------------------------
+if os.environ.get("WAFER_CHECK", "1") == "0":   # e.g. the golden harness, which fingerprints the output
+    print("\ncheck against the target SKIPPED (WAFER_CHECK=0)")
+    raise SystemExit(0)
 target = P["target"]["path"]
 if not os.path.exists(target):
     print("target %s not found -- built, but NOT checked" % target)

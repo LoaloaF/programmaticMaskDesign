@@ -187,12 +187,28 @@ def build_design(spec, out_dir: str, render: bool = True, geometry: bool = True)
     cmd_all(bcfg, MappingConfig(), icfg, render=render)
 
 
-def run_batch(render: bool = True, side_by_side: bool = True):
+def _build_one(args):
+    spec, out_dir, render, geometry = args
+    build_design(spec, out_dir, render, geometry=geometry)
+    return variant_tag(spec.name, spec.ionp_pattern_id)
+
+
+def run_batch(render: bool = True, side_by_side: bool = True, jobs: int = 1):
     out_dir = ensure_out_dir()
-    written = set()
+    #the first entry of each geometry writes its barcode-free artefacts (see build_design)
+    seen, work = set(), []
     for spec in DESIGNS:
-        build_design(spec, out_dir, render, geometry=spec.name not in written)
-        written.add(spec.name)
+        work.append((spec, out_dir, render, spec.name not in seen))
+        seen.add(spec.name)
+    if jobs > 1:
+        #every design is an independent, pure build writing its own files: same output, in parallel
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(max_workers=jobs) as ex:
+            for tag in ex.map(_build_one, work):
+                print(f"done {tag}")
+    else:
+        for w in work:
+            _build_one(w)
 
     if side_by_side:
         #TWO comparison drawings, because DESIGNS is geometries x barcode ids and the two
@@ -220,12 +236,14 @@ def _build_parser():
     p.add_argument("--no-render", action="store_true", help="skip PNG rendering")
     p.add_argument("--no-side-by-side", action="store_true",
                    help="skip the combined all-designs-in-one DXF")
+    p.add_argument("--jobs", type=int, default=1,
+                   help="build the designs in N parallel processes (same output; default 1)")
     return p
 
 
 def main(argv=None):
     args = _build_parser().parse_args(argv)
-    run_batch(render=not args.no_render, side_by_side=not args.no_side_by_side)
+    run_batch(render=not args.no_render, side_by_side=not args.no_side_by_side, jobs=args.jobs)
     _write_manifest(args)
 
 

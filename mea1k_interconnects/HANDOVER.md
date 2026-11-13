@@ -60,12 +60,13 @@ python3 build_designs.py --rev 2 --out-dir /tmp/rev2   # Rev2 settings: regressi
 
 # or one stage of one design, with the configs' defaults (the default variant of each family):
 python3 00_preflight.py                  # env + pad-grid constraints (§4.2), no run
-python3 01_generate_12block.py           # -> designs/new_interconnect_circular_12Block_56_15.dxf
-python3 02_route_12block.py              # -> designs/new_interconnect_with_connector_chamfered_12Block_56_15.dxf
-python3 01_generate_8block.py            # -> designs/new_interconnect_circular_8block_51_35.dxf
-python3 02_route_8block.py               # -> designs/new_interconnect_with_connector_8blocks_chamfered_1layer_51_35.dxf
-python3 01_generate_12block.py --config dummy    # -> designs/new_interconnect_circular_dummy_61_10.dxf
-python3 02_make_dummy.py                 # -> designs/dummy_new_interconnect_circular_dummy_61_10_padrows.gds
+# (bare output names land in <out root>/interconnect/adhoc/)
+python3 01_generate.py --config 12block  # -> new_interconnect_circular_12Block_56_15.dxf
+python3 02_route.py --design 12block     # -> new_interconnect_with_connector_chamfered_12Block_56_15.dxf
+python3 01_generate.py --config 8block   # -> new_interconnect_circular_8block_51_35.dxf
+python3 02_route.py --design 8block      # -> new_interconnect_with_connector_8blocks_chamfered_1layer_51_35.dxf
+python3 01_generate.py --config dummy    # -> new_interconnect_circular_dummy_61_10.dxf
+python3 02_make_dummy.py                 # -> dummy_new_interconnect_circular_dummy_61_10_padrows.gds
 python3 03_inspect.py [file.dxf]         # per-layer entity/vertex census + bbox
 
 python3 old_interconnect/02_route_old_12block.py         # minutes; no CLI; ~99 MB final + debug
@@ -191,8 +192,12 @@ catalog.py                            DESIGNS (§4.4) and REVISIONS (§4.5, §4.
 resolve.py                            (design, revision) -> settings; `maskgen show` prints them
 build_designs.py                      builds all five designs of a revision
 00_preflight.py                       checks §4.2 against the configs
-01_generate_{12block,8block}.py       stage 01 (the 12-block one also builds the dummy grid)
-02_route_{12block,8block}.py          stage 02: design-specific functions + main()
+01_generate.py                        stage 01 for every design (--config 12block|dummy|8block);
+                                        what differs: STRATEGIES at the top
+02_route.py                           stage 02 for both connector designs (--design 12block|8block);
+                                        what differs: ROUTE_STRATEGIES at the top
+01_generate_{12block,8block}.py,      the former per-design scripts, now entry points that call the
+02_route_{12block,8block}.py            merged ones (build_designs / catalog still name them)
 02_make_dummy.py                      stage 02 for the dummy: band cap + DXF -> GDS
 03_inspect.py                         layer census
 lib/active.py                         select() -> the design's settings as a Design object
@@ -223,16 +228,24 @@ loads `config_<design>.py`, `lib/constants.py` and the paths, and returns them a
   `from lib.active import *` (same values); Phase 5 replaces that. Until then a process still
   routes one design.
 
-**Router split.** `lib/` holds everything common to both designs. The routers keep only what
-differs (a banner under the imports lists it):
+**One generator, one router (refactor Phase 5).** `lib/` holds the helpers. `01_generate.py` and
+`02_route.py` are each one script for all designs. Every difference is a named per-design switch at
+the top (`STRATEGIES` / `ROUTE_STRATEGIES`), and each switch selects the former per-design script's
+code unchanged, so the output is geometry-identical. Stage 01 differs in three ways:
+- `drop_bottom_left`: the 12-block/dummy grid drops bottom pads; the 8-block keeps every row.
+- `pair_shorts`: the 8-block's folded edge pads.
+- `k0_via`: the 12-block/dummy Rev4 top-row vias.
 
-| | 12-block | 8-block |
+Stage 02:
+
+| switch | 12-block | 8-block |
 |---|---|---|
-| Phase 1 | fans the band out to `FAN_TARGET_PITCH`, lifts odd wires to Metal2 through vias (layer `Via`) | keeps native band x, stays on Metal1; drops the 16 pair-short ties at the band |
-| Connector | 8 blocks from the CSV + 4 synthesised (`N_NEW_BLOCKS_PER_COLUMN`) | the 8 CSV blocks |
-| In-block routing | `route_single_*` | `route_blue_terminal*`, `route_green_single*` |
-| Trace width | widens below the fan (`taper_widths_along_path`) | narrows 3.5 → 2 µm in the neck, above the fan-in |
-| Polyimide | neck flares over the fan (`fanout_*`) | no flare |
+| `fanout`, `two_layer` | fans the band out to `FAN_TARGET_PITCH`, lifts odd wires to Metal2 through vias (layer `Via`) | keeps native band x, stays on Metal1 |
+| `band_ties` | — | drops the 16 pair-short ties at the band |
+| (config) | 8 blocks from the CSV + 4 synthesised (`N_NEW_BLOCKS_PER_COLUMN`) | the 8 CSV blocks |
+| `in_block` | `"rows"`: `route_single_*` | `"ckt"`: `route_blue_terminal*`, `route_green_single*` |
+| `taper` | `"below_fan"`: widens below the fan (`taper_widths_along_path`) | `"neck"`: narrows 3.5 → 2 µm in the neck, above the fan-in |
+| `polyimide_flare` | neck flares over the fan (`fanout_*`) | no flare |
 
 Derived values (config section 7, `config_common.py`) keep the original expressions, so
 float results are bit-identical to the pre-refactor code. Don't reorder that arithmetic.

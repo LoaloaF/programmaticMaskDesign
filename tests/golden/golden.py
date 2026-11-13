@@ -5,7 +5,11 @@ one-command check:
 
     export MASKGEN_OUT=/path/outside/the/repo
     python3 tests/golden/golden.py capture 667ba2d   # once: build the reference from a commit
-    python3 tests/golden/golden.py check             # after a change: rebuild + compare
+    python3 tests/golden/golden.py check             # after a change: rebuild + compare (~4 min)
+    python3 tests/golden/golden.py check --only all  # + the frozen legacy Rev2 reproduction
+    python3 tests/golden/golden.py check --only interconnect   # just what a change touches
+                                     # parts: interconnect (designs, configs, Rev4 wafer),
+                                     #        electrode (probes + their wafer), legacy (Rev2 repro)
     python3 tests/golden/golden.py compare DIR       # compare an already-built candidate folder
 
 `capture` exports the commit with `git archive` into a scratch tree, `check` copies the
@@ -118,39 +122,58 @@ def _copy_wafer_files(src, dst, also=()):
             shutil.copy2(os.path.join(src, f), dst)
 
 
-def produce_interconnect(tree, out):
+# The three independent chains. Each produces the artefacts under the listed manifest prefixes;
+# `check --only` runs a subset and compares only its prefixes.
+PARTS = {
+    "interconnect": ("interconnect/", "config/", "wafer/wafer4_rev4/"),
+    "electrode": ("electrode/", "wafer/e64ch_4shank/"),
+    "legacy": ("wafer/wafer4_rev2/",),
+}
+JOBS = max(2, (os.cpu_count() or 4))
+
+
+def _snapshot(ic, snap, name, rev, stage, dst, tree, env):
+    subprocess.run([PY, snap, name, str(rev), stage, dst, tree], cwd=ic, check=True,
+                   stdout=subprocess.DEVNULL, env=dict(os.environ, **env))
+
+
+def produce_interconnect(tree, out, self_check=False):
     ic = os.path.join(tree, "mea1k_interconnects")
     env = _work(out)
-    for rev in (2, 3, 4):
-        run([PY, "build_designs.py", "--rev", str(rev), "--out-dir",
-             os.path.join(out, "interconnect", "rev%d" % rev)],
-            ic, os.path.join(out, "logs", "build_rev%d.log" % rev), env=env)
-    # config snapshots: what every stage sees after build_designs' overrides
+    with cf.ThreadPoolExecutor(3) as ex:                    # the three revisions are independent
+        list(ex.map(lambda rev: run(
+            [PY, "build_designs.py", "--rev", str(rev), "--out-dir", os.path.join(out, "interconnect", "rev%d" % rev)],
+            ic, os.path.join(out, "logs", "build_rev%d.log" % rev), env=env), (2, 3, 4)))
+    # config snapshots: what every stage sees after the catalog's overrides
     snap = os.path.join(out, "_snapshot.py")
     open(snap, "w").write(SNAPSHOT)
     lists = json.loads(subprocess.run(
         [PY, "-c", "import json, catalog; print(json.dumps([sorted(catalog.REVISIONS), sorted(catalog.DESIGNS)]))"],
         cwd=ic, capture_output=True, text=True, check=True).stdout)
-    for rev in lists[0]:
-        for name in lists[1]:
-            for stage in ("gen", "route"):
-                dst = os.path.join(out, "config", "rev%d_%s_%s.json" % (rev, name, stage))
-                os.makedirs(os.path.dirname(dst), exist_ok=True)
-                subprocess.run([PY, snap, name, str(rev), stage, dst, tree], cwd=ic, check=True,
-                               stdout=subprocess.DEVNULL, env=dict(os.environ, **env))
+    os.makedirs(os.path.join(out, "config"), exist_ok=True)
+    with cf.ThreadPoolExecutor(JOBS) as ex:
+        list(ex.map(lambda a: _snapshot(ic, snap, *a, tree, env),
+                    [(name, rev, stage, os.path.join(out, "config", "rev%d_%s_%s.json" % (rev, name, stage)))
+                     for rev in lists[0] for name in lists[1] for stage in ("gen", "route")]))
     os.remove(snap)
     work = env["MASKGEN_OUT"]
-    # Rev4 wafer: 01d (default config_rev4) reads <root>/interconnect/rev4 = the build above
+    # Rev4 wafer: 01d (default config_rev4) reads <root>/interconnect/rev4 = the build above. Its own check
+    # against the fabricated Rev2 wafer is skipped unless --self-checks: the golden wafer passed it, and
+    # the fingerprint comparison proves this one is the same wafer.
     os.makedirs(os.path.join(work, "interconnect"), exist_ok=True)
     os.symlink(os.path.join(out, "interconnect", "rev4"), os.path.join(work, "interconnect", "rev4"))
     log = run([KL, "-b", "-r", "wafer_nesting/01d_rebuild_wafer.py"], ic,
-              os.path.join(out, "logs", "01d_wafer4_rev4.log"), env=env)
-    if not re.search(r"IDENTICAL to .* except the expected", log):
+              os.path.join(out, "logs", "01d_wafer4_rev4.log"), env=dict(env, WAFER_CHECK="1" if self_check else "0"))
+    if self_check and not re.search(r"IDENTICAL to .* except the expected", log):
         raise SystemExit("01d config_rev4 did not pass its own check")
     _copy_wafer_files(os.path.join(work, "wafer", "wafer4_rev4"), os.path.join(out, "wafer", "wafer4_rev4"))
-    # legacy: measure the Rev2 placements off the fabricated wafer again, rebuild it
+
+
+def produce_legacy(tree, out, self_check=False):
+    """legacy/rev2_repro: measure the Rev2 placements off the fabricated wafer again, rebuild it."""
+    work = _work(out)["MASKGEN_OUT"]
     leg = os.path.join(tree, "legacy", "rev2_repro")
-    env2 = dict(env, WAFERNEST_CONFIG="config_rev2")
+    env2 = {"MASKGEN_OUT": work, "WAFERNEST_CONFIG": "config_rev2"}
     run([KL, "-b", "-r", os.path.join(leg, "01c_extract_exact_placements.py")], tree,
         os.path.join(out, "logs", "01c_wafer4_rev2.log"), env=env2)
     pl = os.path.join(work, "wafer", "wafer4_rev2", "placements.json")
@@ -165,11 +188,11 @@ def produce_interconnect(tree, out):
     _copy_wafer_files(os.path.join(work, "wafer", "wafer4_rev2"), os.path.join(out, "wafer", "wafer4_rev2"))
 
 
-def produce_electrode(tree, out):
+def produce_electrode(tree, out, self_check=False):
     gpd = os.path.join(tree, "ufte_probes")
     env = _work(out)
     work = env["MASKGEN_OUT"]
-    run([PY, "-m", "electrode_bundle.batch", "--no-render"], gpd,
+    run([PY, "-m", "electrode_bundle.batch", "--no-render", "--jobs", str(min(8, JOBS))], gpd,
         os.path.join(out, "logs", "electrode_batch.log"), env=env)
     shanks = os.path.join(work, "electrode", "64Ch_4Shankdesigns", "shanks")
     shutil.copytree(shanks, os.path.join(out, "electrode", "64Ch_4Shankdesigns", "shanks"),
@@ -186,11 +209,14 @@ def produce_electrode(tree, out):
     _copy_wafer_files(wdir, os.path.join(out, "wafer", "e64ch_4shank"), also=("placement.json",))
 
 
-def produce(tree, out):
-    """Run every build in `tree`, collect the outputs under `out`."""
+PRODUCERS = {"interconnect": produce_interconnect, "electrode": produce_electrode, "legacy": produce_legacy}
+
+
+def produce(tree, out, parts=tuple(PARTS), self_check=False):
+    """Run the builds of `parts` in `tree`, concurrently, collect the outputs under `out`."""
     os.makedirs(out, exist_ok=True)
-    with cf.ThreadPoolExecutor(2) as ex:
-        jobs = [ex.submit(produce_interconnect, tree, out), ex.submit(produce_electrode, tree, out)]
+    with cf.ThreadPoolExecutor(len(parts)) as ex:
+        jobs = [ex.submit(PRODUCERS[p], tree, out, self_check) for p in parts]
         for j in jobs:
             j.result()
 
@@ -390,12 +416,14 @@ def xor_files(a, b, scratch):
     return json.load(open(res))
 
 
-def compare(gold_manifest, cand_dir, gold_dir, tree=None):
-    """Returns the list of failures (empty = identical)."""
+def compare(gold_manifest, cand_dir, gold_dir, tree=None, parts=tuple(PARTS)):
+    """Returns the list of failures (empty = identical). Only artefacts of `parts` are compared."""
     G = json.load(open(gold_manifest))
     C = fingerprint(cand_dir, roots={"<TREE>": tree} if tree else None)
     fails, viaB = [], []
-    for key, g in sorted(G["artifacts"].items()):
+    prefixes = tuple(p for part in parts for p in PARTS[part])
+    wanted = {k: v for k, v in G["artifacts"].items() if k.startswith(prefixes)}
+    for key, g in sorted(wanted.items()):
         c = C.get(key)
         if c is None:
             fails.append("MISSING  %s" % key)
@@ -418,6 +446,7 @@ def compare(gold_manifest, cand_dir, gold_dir, tree=None):
         else:
             fails.append("CHANGED  %s (%s)" % (key, g["kind"]))
     extra = sorted(set(C) - set(G["artifacts"]))
+    print("  compared %d artefacts (%s)" % (len(wanted), ", ".join(parts)))
     probs = check_logs(cand_dir)
     fails += ["LOG      %s" % p for p in probs if p not in G.get("log_problems", [])]
     for v in viaB:
@@ -443,7 +472,7 @@ def cmd_capture(sha, root):
     subprocess.run(["tar", "-x", "-C", tree], stdin=arch.stdout, check=True)
     arch.wait()
     print("building into %s" % gold)
-    produce(tree, gold)
+    produce(tree, gold, tuple(PARTS), self_check=True)
     arts = fingerprint(gold, roots={"<TREE>": tree})
     man = {"sha": full, "captured": time.strftime("%Y-%m-%d %H:%M"), "tools": tool_versions(),
            "frozen": {os.path.relpath(os.path.join(d, f), FROZEN):
@@ -475,7 +504,7 @@ def _report(fails, manifest):
     print("\nGOLDEN CHECK PASSED against %s" % os.path.basename(manifest))
 
 
-def cmd_check(root, manifest, keep):
+def cmd_check(root, manifest, keep, parts=tuple(PARTS), self_check=False):
     manifest = manifest or _latest_manifest()
     G = json.load(open(manifest))
     if G["tools"] != tool_versions():
@@ -492,10 +521,12 @@ def cmd_check(root, manifest, keep):
             dst = os.path.join(tree, f)
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy2(src, dst)
-    print("working tree copied -> %s\nbuilding into %s" % (tree, cand))
-    produce(tree, cand)
+    print("working tree copied -> %s\nbuilding %s into %s" % (tree, ", ".join(parts), cand))
+    t0 = time.time()
+    produce(tree, cand, parts, self_check)
+    print("  built in %.0f s" % (time.time() - t0))
     gold = os.path.join(root, "golden", G["sha"][:7])
-    fails = compare(manifest, cand, gold, tree)
+    fails = compare(manifest, cand, gold, tree, parts)
     shutil.rmtree(tree)
     if not keep and not fails:
         shutil.rmtree(cand)
@@ -508,13 +539,23 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("capture"); c.add_argument("sha")
     k = sub.add_parser("check"); k.add_argument("--manifest"); k.add_argument("--keep", action="store_true")
+    k.add_argument("--only", default="interconnect,electrode",
+                   help="comma list of %s, or all (default: interconnect,electrode -- legacy/ is frozen "
+                        "and reads only committed files; check it with --only all or --only legacy "
+                        "when those change)" % ", ".join(PARTS))
+    k.add_argument("--self-checks", action="store_true",
+                   help="also run 01d's own check of the Rev4 wafer against the fabricated Rev2 wafer (+4 min)")
     m = sub.add_parser("compare"); m.add_argument("dir"); m.add_argument("--manifest")
     a = ap.parse_args()
     root = out_root(a.out)
     if a.cmd == "capture":
         cmd_capture(a.sha, root)
     elif a.cmd == "check":
-        cmd_check(root, a.manifest, a.keep)
+        parts = tuple(PARTS) if a.only == "all" else tuple(p for p in a.only.split(",") if p)
+        bad = [p for p in parts if p not in PARTS]
+        if bad:
+            raise SystemExit("unknown part(s) %s; choose from %s" % (bad, ", ".join(PARTS)))
+        cmd_check(root, a.manifest, a.keep, parts, a.self_checks)
     else:
         manifest = a.manifest or _latest_manifest()
         G = json.load(open(manifest))
