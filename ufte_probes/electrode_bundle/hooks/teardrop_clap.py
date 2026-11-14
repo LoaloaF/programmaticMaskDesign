@@ -1,6 +1,6 @@
 r"""Today's hook: a bulbous TEARDROP head with 6 rounded CLAPS, fully parametric.
 
-Drawn from `changes_plan/new_hook.png`. Right half, attach point at the top:
+Drawn from the new_hook.png sketch (git history: ufte_probes/changes_plan/, removed 2026-11-14). Right half, attach point at the top:
 
         (stem_hw)              |<->|  stem_hw          y_top ---- attach, = the trace width
                                |   |

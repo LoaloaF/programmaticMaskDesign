@@ -1,7 +1,7 @@
 # legacy/rev2_repro — reproducing the fabricated Rev2 wafer
 
 This folder is frozen. It reproduces `MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds` (repo root)
-from the committed Rev2 designs (`mea1k_interconnects/designs/`), and it is the only place
+from the committed Rev2 designs (`mea1k_interconnects/rev2_reference/`), and it is the only place
 where the hand-placed dummies are recovered from the fabricated wafer.
 
 It was moved out of `mea1k_interconnects/wafer_nesting/` in refactor Phase 1 (from commit 667ba2d).

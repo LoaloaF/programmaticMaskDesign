@@ -26,7 +26,7 @@ The defaults match the fabricated wafer, `../MEA1K_wafer4_12x_8x_8x_breakoutboar
   [--changed]` prints every setting and the step that set it.
 
 **The revisions.**
-- **Rev2:** the fabricated wafer. Its design files are committed in `designs/` and are read only by
+- **Rev2:** the fabricated wafer. Its design files are committed in `rev2_reference/` and are read only by
   `legacy/rev2_repro/`.
 - **Rev3:** changes only the pad stack (§4.5).
   - The final PI etch becomes via-sized circles around each pad's perimeter.
@@ -113,14 +113,14 @@ the 26 dummies, which were placed by hand into the gaps and are never nested.
 Frozen in `legacy/` (each with a README):
 - **`legacy/rev2_repro/`** measures the placements off the fabricated wafer (01c) and rebuilds it
   `GEOMETRY IDENTICAL` (01d). It also holds the Rev3 wafer config and the Rev2/Rev3 overlay (01e).
-  These scripts proved that `designs/` and the wafer agree cell by cell (XOR = 0), and that the
+  These scripts proved that `rev2_reference/` and the wafer agree cell by cell (XOR = 0), and that the
   wafer's connector cells sit −90 µm in y from their DXFs.
 - **`legacy/interconnect_nest_2026-07/`** is the annealing nest of the connector designs. It was
   never shipped and uses the pre-renumbering layer numbers.
 
 **Wafer layer numbers were changed by hand.** On the fabricated wafer the GDS layers were
 renumbered manually to match the negative-etching markers. For the dummy the mapping is 1 → 3 and
-3 → 7, with 5 and 6 unchanged. With it, both committed `designs/*_padrows.gds` are
+3 → 7, with 5 and 6 unchanged. With it, both committed `rev2_reference/*_padrows.gds` are
 polygon-for-polygon identical to the wafer's `dummy_61_10_NEW` / `dummy_35_36_NEW` cells.
 
 Every revision's numbering, mark slots and colours are now one table, `maskgen/core/layers.py`:
@@ -163,10 +163,8 @@ lib/phase1.py, lib/fanmath.py         band -> hand-off transition; eased fan pro
 lib/geometry.py, lib/checks.py        helpers; crossings / pad_hits
 lib/generate_helpers.py               stage-01 helpers
 wafer_nesting/                        the Rev4 wafer config + the committed Rev2 placements (§1.1)
-designs/                              the committed Rev2 design files (read by legacy/ only)
+rev2_reference/                       the committed Rev2 design files (read by legacy/ only)
 assets/                               inputs: connector pad CSV, board outlines, old interconnect
-electrode_bundle_U4C08.dxf            reference for the teardrop profile (§5); not read
-reference/WaferWith12_ALLNEW.gds      byte-identical copy of the fabricated Rev2 wafer; not read
 ```
 
 **Config mechanism.** Each router calls `DSG = lib.active.select(design, in, out)`. `select`
@@ -284,7 +282,7 @@ so the shipped `51_35` DXF was missing a bulb against the wafer (found by legacy
 This table is `DESIGNS` in `catalog.py`: each design is its base config plus those
 overrides, applied in memory, so the configs keep their defaults and nothing has to be edited
 and reverted. `python3 build_designs.py --rev 2 --out-dir <dir>` rebuilds all five with Rev2
-settings, geometry-identical to the files shipped in `designs/` (checked 2026-10-07, and by the
+settings, geometry-identical to the files shipped in `rev2_reference/` (checked 2026-10-07, and by the
 golden check since), and those match the wafer (proven by `legacy/rev2_repro/01c`: XOR = 0 per
 cell). The `71_15` vias sit 33.75 µm from their pad centres in x and y, as in the wafer's
 `CONN_SMALL_71_15_NEW` cell, and the dummy GDS files equal the wafer's dummy cells after the
@@ -371,7 +369,7 @@ Rev2 and Rev3 builds are unchanged: the new knobs (`metal3_inset`, `etch_via_lay
 ## 5. Teardrops and angled entry (`lib/teardrop.py`)
 
 Each connector pad is a teardrop matching the mating electrode bundle
-(`electrode_bundle_U4C08.dxf`: pad r 110 µm, trace 10 µm, fillet r 275 µm). The outline is
+(a ufte_probes U4C08 probe: pad r 110 µm, trace 10 µm, fillet r 275 µm). The outline is
 the pad circle plus two concave fillet arcs, tangent externally to the pad and to the trace
 edges; `teardrop_ring` reproduces the reference to 0.09 µm. The tip distance is derived:
 

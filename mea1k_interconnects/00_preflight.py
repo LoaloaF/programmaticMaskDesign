@@ -38,7 +38,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(HERE, "assets")
-DESIGNS = os.path.join(HERE, "designs")
+DESIGNS = os.path.join(HERE, "rev2_reference")
 
 DEPS = ("ezdxf", "shapely", "numpy", "gdstk", "matplotlib")   # gdstk: 02_make_dummy.py;
                                                               # matplotlib: maskgen review (and legacy/old_interconnect/)

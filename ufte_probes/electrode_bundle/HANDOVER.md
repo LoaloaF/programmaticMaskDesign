@@ -142,7 +142,7 @@ default in `config.py` **or** pass overrides: `BundleConfig(hook_drop=300)`.
   slot (x = 0), widened to `wide_wire_hw`, and carrying the hook; recording channel `c` is
   fiber `c+1` and the channels alternate outward (ch0 on +x next to the Ref, ch1 on −x, …).
   `shapes.fiber_x_positions` is the layout; `batch._fiber_x` must agree with it.
-- **Insertion hook** (`hooks/teardrop_clap.py`, from `changes_plan/new_hook.png`) — a
+- **Insertion hook** (`hooks/teardrop_clap.py`, from the `new_hook.png` sketch, in git history) — a
   teardrop head with 6 claps (5 µm arms) and one 35 × 45 µm elliptical etch hole: the
   **loop**, the probe's depth datum (§3.2). `build_bundle` asserts ≥ `hook_etch_margin`
   (8 µm) of polyimide around it.

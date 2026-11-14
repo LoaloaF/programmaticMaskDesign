@@ -18,7 +18,7 @@ ROOT = os.path.join(os.path.dirname(os.path.dirname(HERE)), "mea1k_interconnects
 # Folder holding the connector DXFs listed in DESIGNS: the output folder of
 # mea1k_interconnects/, which is ROOT now that wafer_nesting/ sits inside it.
 # Put an absolute path here if they live elsewhere.
-DESIGN_DIR = os.path.join(ROOT, "designs")
+DESIGN_DIR = os.path.join(ROOT, "rev2_reference")     # was designs/ (renamed 2026-11)
 
 REPO = os.path.dirname(os.path.dirname(HERE))         # LEGACY (refactor Phase 6): frozen in legacy/
 # The base wafer GDS (wafer outline + alignment marks): the one shared copy, maskgen/wafer/data/.

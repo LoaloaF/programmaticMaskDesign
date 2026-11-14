@@ -38,8 +38,6 @@ ufte_probes/                 run the generator from HERE
     designs/                 shipped ...Example sample files (not output)
     tests/
   wafer_nesting/             the probe wafer's config (config_64ch_4shank.py) + README
-  changes_plan/              the design change list and the per-session briefs
-  mario_code/                the earlier standalone generator (Mario Togni & Baran Yasar), reference only
 ```
 
 ## Prerequisites

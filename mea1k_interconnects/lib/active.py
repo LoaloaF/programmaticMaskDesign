@@ -21,7 +21,7 @@ import sys
 
 HERE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # the folder
 ASSETS = os.path.join(HERE, "assets")
-DESIGNS = os.path.join(HERE, "designs")     # the committed Rev2 reference designs -- inputs, never written
+DESIGNS = os.path.join(HERE, "rev2_reference")     # the committed Rev2 reference designs -- inputs, never written
 if os.path.dirname(HERE) not in sys.path:
     sys.path.insert(0, os.path.dirname(HERE))   # the repo root: the maskgen package
 

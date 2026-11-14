@@ -12,7 +12,7 @@
 > | `64Ch_4Shankdesigns/shanks/` | `<root>/electrode/64Ch_4Shankdesigns/shanks/` |
 > | `64Ch_4Shankdesigns/wafer/` | `<root>/wafer/64Ch_4Shankdesigns/` |
 >
-> - `mea1k_interconnects/designs/` keeps only the committed Rev2 inputs and is never written.
+> - `mea1k_interconnects/rev2_reference/` (was `designs/`) keeps only the committed Rev2 inputs and is never written.
 > - The Rev2 reproduction (`01c`, `01e`, `config_rev2`, `config_rev3`) moved to
 >   `legacy/rev2_repro/`. Rev4 reads the committed placements
 >   `mea1k_interconnects/wafer_nesting/data/wafer4_rev2_placements.json` instead.
@@ -288,8 +288,7 @@ pick it up — gotcha 2.)
 
 ### 4.2 `config_rev2.py` — the fabricated Rev2 wafer
 
-Target `MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds` (byte-identical to
-`../reference/WaferWith12_ALLNEW.gds`): 4 + 4 + 4 connectors and 26 dummies, 38 placements.
+Target `MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds` (repo root): 4 + 4 + 4 connectors and 26 dummies, 38 placements.
 
 What 01c established, each by XOR = 0:
 

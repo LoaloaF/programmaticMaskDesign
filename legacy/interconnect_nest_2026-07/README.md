@@ -14,7 +14,7 @@ The annealing nester itself is maintained in `maskgen/wafer/nest_sa.py` as a pla
 this folder keeps the copy it ran with (`02_nest.py`).
 
 **What changed when it moved here (refactor Phase 6):** paths only.
-- `ROOT`, the template and the marks file now point at `mea1k_interconnects/designs/` and
+- `ROOT`, the template and the marks file now point at `mea1k_interconnects/rev2_reference/` and
   `maskgen/wafer/data/`.
 - `config_common` writes under the output root without importing `maskgen`.
 

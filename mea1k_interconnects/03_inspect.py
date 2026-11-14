@@ -10,8 +10,8 @@ LWPOLYLINE and HATCH entities. Geometry emitted as any other type looks perfectl
 on screen but is invisible to the nester's footprint, which then comes out smaller than
 the real part -- the dangerous direction (wafer_nesting HANDOVER.md 3.2).
 
-    python3 03_inspect.py                       # everything in designs/
-    python3 03_inspect.py designs/foo.dxf       # one file
+    python3 03_inspect.py                       # everything in rev2_reference/
+    python3 03_inspect.py rev2_reference/foo.dxf       # one file
 """
 import argparse
 import glob
@@ -21,7 +21,7 @@ import sys
 import ezdxf
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-DESIGNS = os.path.join(HERE, "designs")
+DESIGNS = os.path.join(HERE, "rev2_reference")
 
 # What wafer_nesting stage 01 can read.
 NESTABLE = {"LWPOLYLINE", "HATCH"}
@@ -93,7 +93,7 @@ def inspect(path):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("files", nargs="*", help="DXFs to inspect (default: all of designs/)")
+    ap.add_argument("files", nargs="*", help="DXFs to inspect (default: all of rev2_reference/)")
     a = ap.parse_args()
 
     files = a.files or sorted(glob.glob(os.path.join(DESIGNS, "*.dxf")))

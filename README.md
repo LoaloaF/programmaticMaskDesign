@@ -147,7 +147,7 @@ The connector side stays identical to Rev3 / Rev2. Details: `mea1k_interconnects
 - 4 × 8-block `71_15`;
 - 26 dummies.
 
-It is reproduced, geometry-identically, from `mea1k_interconnects/designs/` (the committed Rev2
+It is reproduced, geometry-identically, from `mea1k_interconnects/rev2_reference/` (the committed Rev2
 design files) by the frozen scripts in `legacy/rev2_repro/`. That folder also recovers the
 hand-placed dummies from the wafer.
 

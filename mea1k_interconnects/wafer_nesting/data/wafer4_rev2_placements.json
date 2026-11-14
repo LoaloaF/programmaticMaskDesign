@@ -52,7 +52,7 @@
  "cells": [
   {
    "name": "dummy_35_36_NEW",
-   "source": "<ROOT>/mea1k_interconnects/designs/dummy_new_interconnect_circular_dummy_35_36_padrows.gds",
+   "source": "<ROOT>/mea1k_interconnects/rev2_reference/dummy_new_interconnect_circular_dummy_35_36_padrows.gds",
    "source_md5": "6f003230f4c1606d4ae502139214d483",
    "layers": {
     "(1, 0)": [
@@ -101,7 +101,7 @@
   },
   {
    "name": "dummy_61_10_NEW",
-   "source": "<ROOT>/mea1k_interconnects/designs/dummy_new_interconnect_circular_dummy_61_10_padrows.gds",
+   "source": "<ROOT>/mea1k_interconnects/rev2_reference/dummy_new_interconnect_circular_dummy_61_10_padrows.gds",
    "source_md5": "c3669eae524ee50a686fefab260e6891",
    "layers": {
     "(1, 0)": [
@@ -150,7 +150,7 @@
   },
   {
    "name": "CONN_SMALL_71_15_NEW",
-   "source": "<ROOT>/mea1k_interconnects/designs/new_interconnect_with_connector_8blocks_chamfered_1layer_71_15.dxf",
+   "source": "<ROOT>/mea1k_interconnects/rev2_reference/new_interconnect_with_connector_8blocks_chamfered_1layer_71_15.dxf",
    "source_md5": "fcef4d97c8617d144f25ae0b2f1288fe",
    "layers": {
     "metal1": [
@@ -207,7 +207,7 @@
   },
   {
    "name": "CONN_SMALL_51_35_NEW",
-   "source": "<ROOT>/mea1k_interconnects/designs/new_interconnect_with_connector_8blocks_chamfered_1layer_51_35.dxf",
+   "source": "<ROOT>/mea1k_interconnects/rev2_reference/new_interconnect_with_connector_8blocks_chamfered_1layer_51_35.dxf",
    "source_md5": "8804f30301016916ca663c63dacac80d",
    "layers": {
     "metal1": [
@@ -264,7 +264,7 @@
   },
   {
    "name": "CONN_BIG_NEW",
-   "source": "<ROOT>/mea1k_interconnects/designs/new_interconnect_with_connector_chamfered_12Block_56_15.dxf",
+   "source": "<ROOT>/mea1k_interconnects/rev2_reference/new_interconnect_with_connector_chamfered_12Block_56_15.dxf",
    "source_md5": "b337dc6acc28bfb6e9a30bf9de6f6d23",
    "layers": {
     "metal1": [

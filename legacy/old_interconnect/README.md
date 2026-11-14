@@ -13,6 +13,6 @@ python3 legacy/old_interconnect/02_route_old_8block_doubled.py
 They have no command-line options. Every setting is a constant at the top of each script.
 
 **What changed in the move here (refactor Phase 8):** paths only. Inputs still come from
-`mea1k_interconnects/assets/`. Outputs no longer go into the repo's `designs/`; they go to
+`mea1k_interconnects/assets/`. Outputs no longer go into the repo's `designs/` (now `rev2_reference/`, which holds only the Rev2 inputs); they go to
 `<output root>/interconnect/old/`. The output root is `$MASKGEN_OUT`, otherwise the path in
 `<repo>/.maskgen_out`. These scripts do not import `maskgen`.

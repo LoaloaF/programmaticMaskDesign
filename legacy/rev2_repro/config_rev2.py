@@ -33,7 +33,7 @@ import os
 HERE = os.path.dirname(os.path.abspath(__file__))     # .../legacy/rev2_repro
 REPO = os.path.dirname(os.path.dirname(HERE))
 ROOT = os.path.join(REPO, "mea1k_interconnects")   # the committed Rev2 designs + wafer template
-DESIGN_DIR = os.path.join(ROOT, "designs")
+DESIGN_DIR = os.path.join(ROOT, "rev2_reference")     # was designs/ (renamed 2026-11)
 
 
 def _out_root():
@@ -51,7 +51,7 @@ OUT_DIR = os.path.join(_out_root(), "wafer", RUN_TAG)
 PLACEMENTS_PATH = os.path.join(OUT_DIR, "placements.json")
 WAFER_OUT = os.path.join(OUT_DIR, "wafer_%s.gds" % RUN_TAG)
 
-# The wafer to reproduce. Byte-identical to ../reference/WaferWith12_ALLNEW.gds.
+# The wafer to reproduce (the fabricated Rev2 wafer, committed at the repo root).
 TARGET_GDS = os.path.join(os.path.dirname(ROOT), "MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds")
 
 # Wafer outline + alignment marks. Shapes whose bounding-box centre lies further than

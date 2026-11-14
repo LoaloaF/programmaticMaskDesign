@@ -7,7 +7,7 @@
 
 The output root is --out, else $MASKGEN_OUT, else the path in <repo>/.maskgen_out (maskgen/core/
 paths.py); `python3 -m maskgen where interconnect 4` prints the folder and what the last run wrote.
-The committed Rev2 reference DXFs in designs/ are INPUTS (the wafer rebuild reads them) -- nothing
+The committed Rev2 reference DXFs in rev2_reference/ are INPUTS (the wafer rebuild reads them) -- nothing
 writes there any more.
 
 WHAT gets built is catalog.py: the designs (a base config plus a few overrides) and the revisions

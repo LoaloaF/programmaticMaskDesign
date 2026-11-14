@@ -48,7 +48,7 @@ def teardrop_ring(px, py, r, ux, uy, fillet_r, width, res=48):
     arriving along (ux, uy). Same construction as filleted_bulb, but aimed along an arbitrary
     direction and blended into two trace edges rather than one straight wall.
 
-    This is the profile the mating electrode bundle uses (electrode_bundle_U4C08.dxf), and it
+    This is the profile the mating electrode bundle uses (a ufte_probes U4C08 probe), and it
     is fixed once the three radii are: a fillet centre must sit r + fillet_r from the pad
     centre (external tangency) and fillet_r off the trace edge line, which puts it
     (width/2 + fillet_r) sideways and teardrop_tip_dist() along the approach. The pad arc then

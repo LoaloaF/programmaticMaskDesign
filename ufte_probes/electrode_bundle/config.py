@@ -322,7 +322,7 @@ class BundleConfig:
     # --- core geometry (micron) ---
     wire_width: float = 2          # width of the wire
     delta_y: float = 8000 / 63     # default staircase step between electrode depths
-    # THE ELECTRODE SITE, four concentric circles (see changes_plan/new_circular_electrode.png
+    # THE ELECTRODE SITE, four concentric circles (the new_circular_electrode.png sketch, git history: ufte_probes/changes_plan/, removed 2026-11-14,
     # and the dimensioned tip drawing). Sizes are the drawing's, rounded:
     #     l_contact  13.5   the EXPOSED electrode -- the opening etched in the polyimide,
     #                       cut by `pad_etching`, its own mask: that etch goes through the
