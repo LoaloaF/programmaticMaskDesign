@@ -79,7 +79,7 @@ def run_stage(design, rev, stage, mid, final, band_ref=None):
     cfg = importlib.import_module("config_" + d.base)
     apply(cfg, design, rev, stage, band_ref)
     script = getattr(d, stage)
-    argv = ["--config", d.base] if script == "01_generate_12block.py" else []
+    argv = {"01_generate.py": ["--config", d.base], "02_route.py": ["--design", d.base]}.get(script, [])
     argv += ["--out", mid] if stage == "gen" else ["--in", mid, "--out", final]
     sys.argv = [script] + argv
     runpy.run_path(script, run_name="__main__")

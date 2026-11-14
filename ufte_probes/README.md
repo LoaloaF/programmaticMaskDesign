@@ -1,84 +1,46 @@
-# ufte_probes — electrode bundles and wafer nesting
+# ufte_probes: electrode bundles and their wafer
 
-> **Refactor Phase 1 (2026-11): generated files moved out of the repo.**
->
-> Outputs now go under the output root: `$MASKGEN_OUT`, or the path written in `<repo>/.maskgen_out`
-> (see the top-level README). Old paths map as follows:
->
-> | old path | new path |
-> |---|---|
-> | `designs/rev<N>/` | `<root>/interconnect/rev<N>/` |
-> | `wafer_nesting/runs/<tag>/` | `<root>/wafer/<tag>/` |
-> | `64Ch_4Shankdesigns/shanks/` | `<root>/electrode/64Ch_4Shankdesigns/shanks/` |
-> | `64Ch_4Shankdesigns/wafer/` | `<root>/wafer/64Ch_4Shankdesigns/` |
->
-> - `mea1k_interconnects/designs/` keeps only the committed Rev2 inputs and is never written.
-> - The Rev2 reproduction (`01c`, `01e`, `config_rev2`, `config_rev3`) moved to
->   `legacy/rev2_repro/`. Rev4 reads the committed placements
->   `mea1k_interconnects/wafer_nesting/data/wafer4_rev2_placements.json` instead.
-> - Text below that still names an old path means the new one.
-> - `python3 -m maskgen where` prints the folders.
-
-Two folders, one pipeline. `electrode_bundle/` computes a flexible electrode probe from
-parameters and emits its CAD; `wafer_nesting/` takes designs like that one, arranges as
-many copies as fit on a 100 mm wafer, and writes the combined GDS for fab.
-
-They are independent — you can nest any DXF, not just a bundle — but this is the path
-they were built for:
+`electrode_bundle/` computes a flexible 64-channel electrode probe from parameters and emits its CAD.
+The probe wafer then arranges as many copies as fit on a 100 mm wafer and writes the combined GDS for
+fab:
+- the wafer stages are shared with the interconnect project, in `maskgen/wafer/`;
+- this project's wafer config is in `wafer_nesting/`.
 
 ```
-electrode_bundle/            wafer_nesting/
-  design_sets.py               config_64ch_4shank.py
-      │                              │
-      ▼                              ▼
-  <TARGET_SET>/shanks/  ─────►  <TARGET_SET>/wafer/
-   the probe geometry            as many as fit, nested, fab-ready
+electrode_bundle/design_sets.py        wafer_nesting/config_64ch_4shank.py
+        │                                        │
+        ▼                                        ▼
+<root>/electrode/<set>/shanks/  ─────►  <root>/wafer/<set>/
+  the probe geometry                      as many as fit, nested, fab-ready
 ```
 
-Full detail lives in [`electrode_bundle/HANDOVER.md`](electrode_bundle/HANDOVER.md) (the
-generator) and [`wafer_nesting/README.md`](wafer_nesting/README.md) (the nester). Read those;
-this page is only the map and the order to do things in.
+`<root>` is the maskgen output root (top-level README; `python3 -m maskgen where` prints it).
+Nothing is written into the repo.
+
+Full detail:
+- the generator: [`electrode_bundle/HANDOVER.md`](electrode_bundle/HANDOVER.md);
+- the wafer: [`wafer_nesting/README.md`](wafer_nesting/README.md).
+
+This page is only the map and the order to do things in.
 
 > **Before anything is fabricated**, read the layer map at the bottom of
 > [`wafer_nesting/README.md`](wafer_nesting/README.md). The DXF-layer → fab-layer mapping is
 > provisional and has one open decision in it (`ionp`).
 
----
-
 ## Layout
 
-Two code folders side by side, and one **target folder per design set** holding both
-halves of the output. The target folder's name lives in `electrode_bundle/config.py` and
-`wafer_nesting/config_64ch_4shank.py` as `TARGET_SET`; the two must agree.
-
 ```
-ufte_probes/      <- run everything from HERE
-  README.md                   <- this page
-  electrode_bundle/           <- the design generator (code)
+ufte_probes/                 run the generator from HERE
+  electrode_bundle/          the design generator
     HANDOVER.md
     batch.py, design_sets.py, config.py, bundle.py, ...
-    hooks/                    <- named insertion-hook specs
-    designs/                  <- shipped ...Example sample files (not output)
+    hooks/                   named insertion-hook specs
+    designs/                 shipped ...Example sample files (not output)
     tests/
-  wafer_nesting/               <- the nester (code)
-    README.md
-    check_setup.py, extract_footprints.py, nest_skyline.py,
-    export.py, verify.py, wafer_map.py
-    config_64ch_4shank.py, config_common.py, maskgen/wafer/footprints.py
-    new_wafer_actually.GDS    <- wafer template, included
-    marks_union.wkt           <- alignment marks, included
-  changes_plan/               <- the design change list and the per-session briefs
-  64Ch_4Shankdesigns/         <- the target folder (all generated output)
-    shanks/                   <- DXFs, PNGs, per-design JSON
-    wafer/                    <- footprints, poses, preview, wafer GDS, wafer map
+  wafer_nesting/             the probe wafer's config (config_64ch_4shank.py) + README
+  changes_plan/              the design change list and the per-session briefs
+  mario_code/                the earlier standalone generator (Mario Togni & Baran Yasar), reference only
 ```
-
-**Run every command from this folder**, not from inside either subfolder. Both tools
-depend on it: `python3 -m electrode_bundle.batch` needs the package's parent on the path,
-and the wafer stage scripts are invoked as `../maskgen/wafer/<stage>.py` (or all at once:
-`python3 -m maskgen wafer 64Ch_4Shankdesigns`, from anywhere).
-
----
 
 ## Prerequisites
 
@@ -86,48 +48,44 @@ and the wafer stage scripts are invoked as `../maskgen/wafer/<stage>.py` (or all
 pip install ezdxf shapely numpy matplotlib pytest
 ```
 
-(On the dev machine these live in the `dxf` conda env:
-`source /opt/anaconda3/etc/profile.d/conda.sh && conda activate dxf`.)
+- On the dev machine these live in the `dxf` conda env, and also in the base conda Python.
+- **KLayout** runs the wafer export and verify stages.
 
-Plus **KLayout** for nesting stages 03 and 04 (GDS work). `check_setup.py` looks for it
-at `/Applications/klayout.app/Contents/MacOS/klayout` and
-`/Applications/KLayout/klayout.app/Contents/MacOS/klayout`.
-
-Check both halves before starting:
+Check the generator before starting:
 
 ```bash
-python3 -m pytest electrode_bundle/tests -q                       # 240 tests; slow, minutes
-WAFERNEST_CONFIG=config_64ch_4shank \
-  python3 ../maskgen/wafer/check_setup.py                          # resolves every path
+python3 -m pytest electrode_bundle/tests -q -p no:cacheprovider     # 176 tests, ~4 min
 ```
-
-`check_setup.py` changes nothing. If an input is missing it names the exact setting in
-the exact file to edit, and lists the DXFs it can actually see.
-
----
 
 ## 1. Generate the designs
 
-**The usual command.** Builds every design listed in `electrode_bundle/design_sets.py` —
-four geometries (U1.6, U2.5, U4, U8) × four IONP barcodes each = 16 variants:
+**The usual command.** It builds every design listed in `electrode_bundle/design_sets.py`: four
+geometries (U1.6, U2.5, U4, U8) × four IONP barcodes each, so 16 variants.
 
 ```bash
-python3 -m electrode_bundle.batch
+python3 -m electrode_bundle.batch [--jobs N]
 ```
 
-Everything lands in **`<TARGET_SET>/shanks/`**. Per geometry (`<name>`, e.g. `U4`):
-`electrode_bundle_<name>.dxf` + `.png` (barcode-free), `electrode_to_flex_mapping_<name>.json`
-and `<name>_electrodes.json`. Per barcoded variant (`<tag>`, e.g. `U4C08`):
-`electrode_bundle_<tag>.dxf` + `.png` and `<tag>_info.json`. Plus two comparison drawings:
-**`all_designs_side_by_side.dxf`** (every geometry in a row) and
-**`all_ionp_patterns_side_by_side.dxf`** (all 16 barcoded variants in a row). Add
-`--no-render` to skip the PNGs (much faster) or `--no-side-by-side` to skip the combined
-DXFs.
+Everything lands in **`<root>/electrode/<TARGET_SET>/shanks/`**:
+- **Per geometry** (`<name>`, e.g. `U4`):
+  - `electrode_bundle_<name>.dxf` + `.png` (barcode-free);
+  - `electrode_to_flex_mapping_<name>.json`;
+  - `<name>_electrodes.json`.
+- **Per barcoded variant** (`<tag>`, e.g. `U4C08`):
+  - `electrode_bundle_<tag>.dxf` + `.png`;
+  - `<tag>_info.json`.
+- **Two comparison drawings:**
+  - **`all_designs_side_by_side.dxf`**: every geometry in a row;
+  - **`all_ionp_patterns_side_by_side.dxf`**: all 16 barcoded variants in a row.
 
-To change what gets built, edit `_BASE_DESIGNS` in `electrode_bundle/design_sets.py`; its
-docstring has a labelled diagram of every length parameter.
+Options:
+- `--no-render` skips the PNGs (much faster).
+- `--no-side-by-side` skips the combined DXFs.
 
-Rebuild a comparison drawing on its own, optionally for a subset:
+To change what gets built, edit `_BASE_DESIGNS` in `electrode_bundle/design_sets.py`. Its docstring
+has a labelled diagram of every length parameter.
+
+**Rebuild a comparison drawing on its own**, optionally for a subset:
 
 ```bash
 python3 -m electrode_bundle.side_by_side              # all geometries
@@ -135,55 +93,54 @@ python3 -m electrode_bundle.side_by_side --ionp       # all barcoded variants
 python3 -m electrode_bundle.side_by_side 1.6 U8       # name substrings
 ```
 
-**One-off, scratch probe.** `main.py` builds a single probe from a bare `BundleConfig()`
-(not one of the `DESIGNS`), with a barcode:
+**Compare features side by side.** These run from the repo root and write a PNG/PDF grid with one
+feature per row, at one scale per row:
+
+```bash
+python3 -m maskgen review --probes                    # tip, first sites, solder pads, whole device
+python3 -m maskgen review --probes U1.6C00 U8C15      # barcoded variants: + the IONP rows
+```
+
+**One-off, scratch probe.** `main.py` builds a single probe from a bare `BundleConfig()`, with a
+barcode. It is not one of the `DESIGNS`.
 
 ```bash
 python3 -m electrode_bundle.main all --pattern-i 11
 ```
 
-Writes `<root>/electrode/64Ch_4Shankdesigns/shanks/electrode_bundle_C11.dxf` plus its preview and
-`64ch_C11_info.json`. Details: [`electrode_bundle/HANDOVER.md`](electrode_bundle/HANDOVER.md) §1.
+It writes `electrode_bundle_C11.dxf`, its preview and `64ch_C11_info.json` into the shanks folder.
+Details: [`electrode_bundle/HANDOVER.md`](electrode_bundle/HANDOVER.md) §1.
 
-> The files in `electrode_bundle/designs/` carry an **`Example`** suffix and are shipped
-> samples from an earlier generation of the generator. They are not reproduced by any
-> command and nothing reads them — `config_64ch_4shank.py` nests the real generated designs
-> in `<TARGET_SET>/shanks/`, so run the generator first.
+> The files in `electrode_bundle/designs/` carry an **`Example`** suffix. They are shipped samples
+> from an earlier generation of the generator: no command reproduces them, and nothing reads them.
 
-## 2. Nest it onto a wafer
+## 2. Put it on a wafer
 
 ```bash
-export WAFERNEST_CONFIG=config_64ch_4shank
-KL=/Applications/KLayout/klayout.app/Contents/MacOS/klayout
-
-python3 ../maskgen/wafer/check_setup.py
-python3 ../maskgen/wafer/extract_footprints.py
-python3 ../maskgen/wafer/nest_skyline.py --time 900
-# paste the SHANK_COUNTS line it prints into the config, then:
-$KL -b -r ../maskgen/wafer/export.py
-$KL -b -r ../maskgen/wafer/verify.py
-python3 ../maskgen/wafer/wafer_map.py
+python3 -m maskgen wafer 64Ch_4Shankdesigns      # from the repo root
 ```
 
-Which designs and in what ratio is set at the top of
-`wafer_nesting/config_64ch_4shank.py`. Output lands in `<root>/wafer/64Ch_4Shankdesigns/`; the
-deliverable is `wafer_64Ch_4Shankdesigns.gds`, `nest_preview.png` shows the arrangement
-(refreshed live while the search runs), and `wafer_map_64Ch_4Shankdesigns.png` labels every
-device with its variant.
+The command:
+- builds the shanks if they are missing;
+- nests if there is no nest yet;
+- exports, verifies and draws the map.
 
-Stage 04 should end with `ALL CHECKS PASSED`. Stage 03 refuses to overwrite an existing
-wafer GDS — delete it (or change `RUN_TAG`) to re-export.
+The deliverable is `<root>/wafer/64Ch_4Shankdesigns/wafer_64Ch_4Shankdesigns.gds`.
+`wafer_map_64Ch_4Shankdesigns.png` labels every device with its variant. The stages one by one, and
+the options, are in [`wafer_nesting/README.md`](wafer_nesting/README.md).
 
----
+**The shipped wafer is final.** It holds 59 devices, and its nest is verified. Run `--nest` only
+for a new design set.
 
 ## Two things worth knowing up front
 
-**The piece count is an output, not an input.** The config's `SHANK_RATIO` is read only as
-a *ratio*; `nest_skyline.py` fills the wafer and reports how many fit — 59 at 74 % density
-for the current 64-channel set. Because of that, `SHANK_COUNTS` in the config has to be
-updated from the nester's printed line before exporting, or stage 03's count assertion
-trips.
+**The piece count is an output, not an input.**
+- The config's `SHANK_RATIO` is read only as a *ratio*.
+- The nester fills the wafer and reports how many fit: 59 at 74 % density for the current set.
+- So `SHANK_COUNTS` in the config has to be updated from the nester's printed line before
+  exporting, or the export's count assertion trips.
 
-**A DXF layer missing from `LAYER_MAP` is silently deleted on export.** Stage 03 prints
-what it mapped and what it dropped on every run — read that output. Stage 04's per-layer
-shape-count check is the backstop.
+**A DXF layer missing from the layer map is silently deleted on export.** The map is
+`PROBE_64CH` in `maskgen/core/layers.py`.
+- The export prints what it mapped and what it dropped on every run: read that output.
+- The verify stage's per-layer shape-count check is the backstop.

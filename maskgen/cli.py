@@ -180,6 +180,57 @@ def cmd_wafer(a):
     print("\nwafer %s -> %s" % (a.tag, out))
 
 
+def cmd_review(a):
+    """A review sheet (maskgen/review): features as rows, designs / revisions as columns."""
+    from maskgen.core import manifest
+    from maskgen.review import rois, sheet, sources
+    if a.rois:
+        for fam, rs in rois.FAMILIES.items():
+            print(fam)
+            for r in rs:
+                print("  %-28s %s" % (r.name, r.note))
+        return
+    root = paths.out_root(a.out)
+
+    def load(make):
+        """make() -> Column; build a missing design once (not wafers: `maskgen wafer` decides that)."""
+        try:
+            return make()
+        except sources.Missing as e:
+            if a.no_build or e.build[1][1:3] == ["-m", "maskgen"]:
+                raise SystemExit(str(e))
+            _run(e.build[1], e.build[0], {"MASKGEN_OUT": root})
+            return make()
+
+    family = "probe" if a.probes is not None else "wafer" if a.wafers else "interconnect"
+    selected = rois.select(family, a.roi)            # fail on a bad --roi before loading anything
+    if family == "probe":
+        names = a.probes or [n for n in sources.probe_designs(root=root) if "C" not in n] or \
+            ["U1.6", "U2.5", "U4", "U8"]
+        columns = [load(lambda n=n: sources.probe(n, root=root)) for n in names]
+        name, title = "probes_" + "_".join(names), "UFTE probes: " + ", ".join(names)
+    elif family == "wafer":
+        columns = [load(lambda t=t: sources.wafer(t, root=root)) for t in a.wafers]
+        name, title = "wafers_" + "_".join(a.wafers), "Wafer alignment-mark slots: " + ", ".join(a.wafers)
+    else:
+        revs = a.rev or [4]
+        designs = a.design or sources.interconnect_designs()
+        columns = [load(lambda d=d, r=r: sources.interconnect(d, r, root=root)) for d in designs for r in revs]
+        name = "ic_" + "_".join("rev%d" % r for r in revs) + ("" if not a.design else "_" + "_".join(designs))
+        title = "MEA1K interconnect: Rev%s, %s" % ("/".join(map(str, revs)),
+                                                    "every design" if not a.design else ", ".join(designs))
+    name = a.name or name
+    folder = paths.review_dir(name, root)
+    files, rows, skipped = sheet.build(columns, selected, folder, title, do_xor=a.xor)
+    man = manifest.write(folder, "review", name,
+                         spec={"family": family, "columns": [c.label for c in columns],
+                               "rois": [r.roi.name for r in rows], "xor": a.xor},
+                         inputs=[f for c in columns for f in c.files], outputs=files, root=root)
+    if skipped:
+        print("not in any column: %s" % ", ".join(skipped))
+    manifest.report(man)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="maskgen", description=__doc__.split("\n")[0])
     ap.add_argument("--out", help="output root (default: $MASKGEN_OUT, then <repo>/.maskgen_out)")
@@ -199,8 +250,19 @@ def main(argv=None):
     s.add_argument("--design")
     s.add_argument("--stage", default="route", choices=("gen", "route"))
     s.add_argument("--changed", action="store_true", help="only settings the design / revisions change")
+    rv = sub.add_parser("review", help="review sheet: named features side by side (default: every "
+                                       "interconnect design at Rev4)")
+    rv.add_argument("--rev", type=int, nargs="+", help="interconnect revisions, one column each (e.g. 3 4)")
+    rv.add_argument("--design", nargs="+", help="interconnect designs (default: all)")
+    rv.add_argument("--probes", nargs="*", help="electrode geometries / variants (default: the geometries)")
+    rv.add_argument("--wafers", nargs="+", help="wafer tags (maskgen wafer) or rev2_fabricated")
+    rv.add_argument("--roi", nargs="+", help="only features whose name contains one of these")
+    rv.add_argument("--xor", action="store_true", help="outline where a column differs from its reference")
+    rv.add_argument("--name", help="sheet folder name under <root>/review/")
+    rv.add_argument("--no-build", action="store_true", help="fail instead of building missing designs")
+    rv.add_argument("--rois", action="store_true", help="list the named features and exit")
     a = ap.parse_args(argv)
-    {"where": cmd_where, "runs": cmd_runs, "show": cmd_show, "wafer": cmd_wafer}[a.cmd](a)
+    {"where": cmd_where, "runs": cmd_runs, "show": cmd_show, "wafer": cmd_wafer, "review": cmd_review}[a.cmd](a)
 
 
 if __name__ == "__main__":

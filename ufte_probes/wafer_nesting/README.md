@@ -1,44 +1,41 @@
 # wafer_nesting — how to nest a design set onto a wafer
 
-> **Refactor Phase 1 (2026-11): generated files moved out of the repo.**
->
-> Outputs now go under the output root: `$MASKGEN_OUT`, or the path written in `<repo>/.maskgen_out`
-> (see the top-level README). Old paths map as follows:
->
-> | old path | new path |
-> |---|---|
-> | `designs/rev<N>/` | `<root>/interconnect/rev<N>/` |
-> | `wafer_nesting/runs/<tag>/` | `<root>/wafer/<tag>/` |
-> | `64Ch_4Shankdesigns/shanks/` | `<root>/electrode/64Ch_4Shankdesigns/shanks/` |
-> | `64Ch_4Shankdesigns/wafer/` | `<root>/wafer/64Ch_4Shankdesigns/` |
->
-> - `mea1k_interconnects/designs/` keeps only the committed Rev2 inputs and is never written.
-> - The Rev2 reproduction (`01c`, `01e`, `config_rev2`, `config_rev3`) moved to
->   `legacy/rev2_repro/`. Rev4 reads the committed placements
->   `mea1k_interconnects/wafer_nesting/data/wafer4_rev2_placements.json` instead.
-> - Text below that still names an old path means the new one.
-> - `python3 -m maskgen where` prints the folders.
+```bash
+python3 -m maskgen wafer 64Ch_4Shankdesigns        # from the repo root
+```
 
-> **Refactor Phase 6 (2026-11): the stage scripts are shared.** They live in `maskgen/wafer/`
-> and serve both projects; this folder keeps only the probe wafer's config. Renames:
-> `00_check_setup` → `check_setup`, `01_extract_footprints` → `extract_footprints`,
-> `nest_tiler` → `nest_skyline`, `03_export_wafer` → `export`, `04_verify_wafer` → `verify`,
-> `05_map_wafer` → `wafer_map`. The template GDS and the marks file are in `maskgen/wafer/data/`.
->
-> **One command runs everything:** `python3 -m maskgen wafer 64Ch_4Shankdesigns`. It builds the
-> shanks if they are missing and nests only if there is no nest yet (`--nest` forces it); then it
-> exports, verifies and draws the map (`--force` replaces an existing export).
->
-> **The shipped nest is verified.** `poses.json` is a left–right mirror of the nest that was
-> originally checked (`poses_before_mirror.json`), and no script did the mirroring. It was
-> re-checked (2026-11-13) against the same rules the nester enforces:
-> - all 59 pieces lie inside the usable radius, flat included;
-> - none touches the 0.7 mm alignment-mark keep-out;
-> - the real device footprints do not overlap (0 pairs above 1e-6 mm²).
->
-> The conservative per-kind envelopes the nester packs do touch in 4 places, by up to a 6.6 µm
-> sliver. `verify.py` also passes on the exported wafer: per-layer contents match the sources,
-> and all four dark-field masks carry the inverted vernier on both sides.
+The command:
+- builds the shanks if they are missing;
+- nests only if there is no nest yet (`--nest` forces it, `--time` sets its budget);
+- then exports, verifies and draws the map (`--force` replaces an existing export).
+
+The stage scripts are shared with the interconnect wafer and live in `maskgen/wafer/`; this folder
+holds only the probe wafer's config. The stages are still called by their old numbers below:
+
+| stage | script |
+|---|---|
+| 00 | `check_setup` |
+| 01 | `extract_footprints` |
+| 02 | `nest_skyline` (or `nest_sa`) |
+| 03 | `export` |
+| 04 | `verify` |
+| 05 | `wafer_map` |
+
+The template GDS and the marks file are in `maskgen/wafer/data/`.
+
+**The shipped nest is verified.** `poses.json` is a left–right mirror of the nest that was
+originally checked (`poses_before_mirror.json`), and no script did the mirroring. It was re-checked
+on 2026-11-13 against the same rules the nester enforces:
+- all 59 pieces lie inside the usable radius, flat included;
+- none touches the 0.7 mm alignment-mark keep-out;
+- the real device footprints do not overlap (0 pairs above 1e-6 mm²).
+
+The conservative per-kind envelopes the nester packs do touch in 4 places, by up to a 6.6 µm sliver.
+`verify.py` passes on the exported wafer: per-layer contents match the sources, and all four
+dark-field masks carry the inverted vernier on both sides.
+
+`maskgen review --wafers 64Ch_4Shankdesigns wafer4_rev4` puts every alignment-mark slot of this
+wafer next to the interconnect wafer's.
 
 Takes design DXFs, finds the densest legal arrangement on a 100 mm wafer, and writes the
 combined GDS for fabrication. **One config file drives the whole run** — the stage scripts
@@ -55,26 +52,19 @@ generator that produces the DXFs nested here is documented in
 
 ## Layout
 
-One target folder per design set, holding **both** halves of the pipeline:
+One design set, two output folders under the maskgen output root (top-level README):
 
 ```
-ufte_probes/
-  electrode_bundle/            <- the design generator (code)
-  wafer_nesting/                <- this folder (code)
-  64Ch_4Shankdesigns/          <- the target folder
-    shanks/                    <- generator output: DXFs, PNGs, per-design JSON
-    wafer/                     <- nesting output: footprints, poses, preview, wafer GDS
+<root>/electrode/64Ch_4Shankdesigns/shanks/   generator output: DXFs, PNGs, per-design JSON
+<root>/wafer/64Ch_4Shankdesigns/              nesting output: footprints, poses, preview, wafer GDS, map
 ```
 
-The folder name lives in exactly two places, and they must agree:
+The set's name lives in exactly two places, and they must agree:
 
 | File | Constant |
 |---|---|
 | `electrode_bundle/config.py` | `TARGET_SET = "64Ch_4Shankdesigns"` |
 | `wafer_nesting/config_64ch_4shank.py` | `TARGET_SET = "64Ch_4Shankdesigns"` |
-
-Keeping both halves under one folder is the point: a wafer can never be built from shanks
-that live somewhere else.
 
 ---
 
@@ -111,7 +101,7 @@ exact setting to edit. It changes nothing.
 | `verify.py` | re-checks the wafer against the sources | KLayout |
 | `wafer_map.py` | `placement.json` → labelled map PNG | python3 + matplotlib |
 
-### Outputs — all land in `<root>/wafer/<TARGET_SET>/`
+### Outputs, all in `<root>/wafer/<TARGET_SET>/`
 
 | File | What |
 |---|---|

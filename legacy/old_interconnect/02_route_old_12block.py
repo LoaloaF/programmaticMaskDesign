@@ -1,24 +1,19 @@
-"""8-block doubling-wire variant rendered with the new fan/polygon/middle-spine logic.
+"""12-block variant of route_append_to_interconnect_single.py.
 
-This merges two earlier scripts:
-  - coded.py — the 8-connector-block routing WITH doubling wires: per connector,
-    CKT 1-32 carry TWO wires each and CKT 33-64 carry ONE wire each (96 wires/
-    connector * 8 connectors = 768 wires onto 512 real pads).
-  - route_append_to_interconnect_12blocks_actualpolygons.py — the NECK->FAN->WIDEN
-    decoupled fan + global-center middle spine, the actual-polygon rendering
-    (stroke_centerline_to_polygon), the real-interconnect connection, and the
-    polygon DXF emission.
-
-The doubling routes plug straight into the new fan/spine because both use the same
-3-point IN-only route format [(entry, lane), (px, lane), (px, py)].
+Design change vs. the 8-block version:
+  - Every pad on every connector gets exactly ONE wire (no doubling).
+  - 4 new connector blocks are added below the existing 8 (2 below each column),
+    keeping the same inter-block spacing as the existing column.
+  - The wires that used to be the "second copy" on a doubled pad now land on a
+    pad of one of the 4 new bottom blocks.
 
 Totals:
-  - 8 blocks total: 4 left + 4 right
-  - 96 wires per block (64 doubled + 32 single)
-  - 768 wires total (matches the 768 interconnect endpoints) onto 512 pads
+  - 12 blocks total: 6 left + 6 right
+  - 64 wires per block (single-wire everywhere)
+  - 768 wires total (still matches the 768 interconnect endpoints)
 
-The 512 pads come straight from connector_signal_pads_exact_mm.csv (no synthetic
-blocks).
+The 4 new blocks are synthesised in memory from block 3 of each column shifted
+down by the inter-block stride; the source CSV is not modified.
 
 All internal route coordinates are in mm.
 DXF coordinates are in um because KLayout reads 1 DXF unit as 1 um.
@@ -47,7 +42,7 @@ IC_PITCH = 0.0025     # interconnect endpoint pitch
 # tracks the width so the 0.5 µm edge-to-edge gap is preserved. Default 2 µm == the
 # interconnect, so the whole routing is geometrically identical to before until the knob
 # is turned up; width never drops below IC_TW (the fab minimum).
-CONNECTOR_TW    = 0.002                # connector trace width (>= IC_TW)
+CONNECTOR_TW    = 0.0035                 # connector trace width (>= IC_TW)
 GAP             = 0.0005                 # edge-to-edge spacing, constant
 CONNECTOR_PITCH = CONNECTOR_TW + GAP     # connector lane pitch tracks the width
 
@@ -69,15 +64,25 @@ FAN_LEN_MM    = 2.5   # diagonal pitch fan-out, constant IC_TW width
 WIDEN_LEN_MM  = 0.5   # vertical width ramp at full CONNECTOR_PITCH
 
 # Block topology.
-N_BLOCKS_PER_COLUMN = 4                 # the 8 real Molex connectors (4 left + 4 right)
-N_WIRES_PER_BLOCK = 96                  # doubling: 64 doubled (CKT 1-32) + 32 single (CKT 33-64)
+N_BLOCKS_PER_COLUMN = 6                 # 4 existing + 2 new bottom blocks per column
+N_NEW_BLOCKS_PER_COLUMN = 2
+N_WIRES_PER_BLOCK = 64                  # single-wire-everywhere: one wire per pad
 WIRES_PER_COLUMN = N_BLOCKS_PER_COLUMN * N_WIRES_PER_BLOCK   # 384
 TOTAL_WIRES = 2 * WIRES_PER_COLUMN                            # 768
 
 import os as _os
-_HERE = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))   # the folder above old_interconnect/
+# legacy/old_interconnect/ (moved here in refactor Phase 8; paths only): inputs from the project's
+# assets/, outputs under the maskgen output root ($MASKGEN_OUT, else <repo>/.maskgen_out) in
+# interconnect/old/ -- never into the repo. Nothing in legacy/ imports maskgen.
+_REPO = _os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+_HERE = _os.path.join(_REPO, "mea1k_interconnects")
 _ASSETS = _os.path.join(_HERE, "assets")
-_DESIGNS = _os.path.join(_HERE, "designs")
+_ROOT = _os.environ.get("MASKGEN_OUT")
+if not _ROOT and _os.path.exists(_os.path.join(_REPO, ".maskgen_out")):
+    _ROOT = open(_os.path.join(_REPO, ".maskgen_out")).read().strip()
+if not _ROOT:
+    raise SystemExit("set MASKGEN_OUT (or write the path into %s/.maskgen_out)" % _REPO)
+_DESIGNS = _os.path.join(_os.path.abspath(_os.path.expanduser(_ROOT)), "interconnect", "old")
 _os.makedirs(_DESIGNS, exist_ok=True)
 
 # Interconnect source DXF and placement.
@@ -87,11 +92,11 @@ INTERCONNECT_LAYERS_EMIT = ("Metal", "Metal2", "L1D0_etching1", "L3D0_etching2")
 INTERCONNECT_SHIFT_UP_MM = 3.0
 
 # Output paths and board-length target.
-DEBUG_DXF = _os.path.join(_DESIGNS, "mea1k_interconnect_with_connector_8blocks_doubled_polygons_debug.dxf")
-FINAL_DXF = _os.path.join(_DESIGNS, "mea1k_interconnect_with_connector_8blocks_doubled_polygons_final.dxf")
-DEBUG_PNG = _os.path.join(_DESIGNS, "mea1k_interconnect_with_connector_8blocks_doubled_polygons_debug.png")
+DEBUG_DXF = _os.path.join(_DESIGNS, "mea1k_interconnect_with_connector_12blocks_polygons_debug.dxf")
+FINAL_DXF = _os.path.join(_DESIGNS, "mea1k_interconnect_with_connector_12blocks_polygons_final.dxf")
+DEBUG_PNG = _os.path.join(_DESIGNS, "mea1k_interconnect_with_connector_12blocks_polygons_debug.png")
 
-TARGET_TOTAL_LENGTH_MM = 30.0
+TARGET_TOTAL_LENGTH_MM = 38.0
 
 # Polyimide outline (single unified outline; replaces the original interconnect polyimide).
 # All distances in mm. See plan: top stays narrow next to the interconnect, widens to
@@ -112,31 +117,70 @@ POLYIMIDE = {
 # rectangle, and the 4 corner cut-circles carve concave arc notches into the side walls
 # (they straddle the edges) — i.e. they remove polyimide, not add ears. The board is
 # positioned by board_placement(). All distances in mm.
-BOARD_OUTLINE_DXF = _os.path.join(_ASSETS, "Board_8x_outline_simon.dxf")
+BOARD_OUTLINE_DXF = _os.path.join(_ASSETS, "Board_12x_outline_simon.dxf")
 BOARD_CORNER_R = 0.8       # bottom-corner fillet radius (from Simon's corner splines)
 BOARD_LEFT_MARGIN_MM = 4.5   # left side of polyimide to the reference-pad right edge
 BOARD_BOTTOM_GAP_MM  = 1.5   # lowest-block centroid above the polyimide bottom edge
 
 
 # ======================================================================================
-# Signal-pad loading (512 real pads, no synthetic blocks)
+# Signal-pad extension: synthesise the 4 new bottom blocks
 # ======================================================================================
 
 _SIG_CACHE = None
 
 
-def _load_extended_sig():
-    """Load the 512 connector pads once, cache the result.
+def extend_sig_with_new_blocks(sig, n_new_per_col=N_NEW_BLOCKS_PER_COLUMN):
+    """Append synthetic Molex 227044 pads for N new bottom blocks per column.
 
-    Kept the name _load_extended_sig (no longer "extended") so the rest of the file
-    is unchanged from the 12-block variant. The doubling model lands 768 wires onto
-    these 512 real pads, so there is nothing to synthesise here.
+    Block 3 of each existing column (the bottommost existing block) is used as the
+    geometric template. New blocks are placed below it at the same inter-block
+    stride that already exists between consecutive blocks of the column.
     """
+    sig = np.asarray(sig, dtype=float)
+    xmid = (sig[:, 0].min() + sig[:, 0].max()) / 2
+
+    new_rows = []
+    for side_mask in (sig[:, 0] < xmid, sig[:, 0] >= xmid):
+        col_sig = sig[side_mask]
+        ys = np.sort(np.unique(np.round(col_sig[:, 1], 2)))
+
+        # Existing layout: 4 blocks × 4 rows = 16 unique y rows per column.
+        # ys[0..3] = bottommost block (block 3); ys[12..15] = topmost block (block 0).
+        if len(ys) < 8:
+            raise RuntimeError(
+                f"need at least 2 blocks (8 rows) per column to compute stride; got {len(ys)}"
+            )
+
+        inter_block_stride = float(ys[4] - ys[0])      # 4 rows apart = one block down
+
+        # Pads of block 3 for this column = pads at the 4 lowest row y-values.
+        block3_y_band = (ys[0] - 0.01, ys[3] + 0.01)
+        block3_pads = col_sig[
+            (col_sig[:, 1] >= block3_y_band[0]) & (col_sig[:, 1] <= block3_y_band[1])
+        ]
+
+        if len(block3_pads) != 64:
+            raise RuntimeError(
+                f"expected 64 pads in block 3 template, got {len(block3_pads)}"
+            )
+
+        for new_block_idx in range(n_new_per_col):
+            dy = (new_block_idx + 1) * inter_block_stride       # shift down
+            shifted = block3_pads.copy()
+            shifted[:, 1] -= dy
+            new_rows.append(shifted)
+
+    extended = np.vstack([sig] + new_rows)
+    return extended
+
+
+def _load_extended_sig():
+    """Load + extend the signal pads once, cache the result."""
     global _SIG_CACHE
     if _SIG_CACHE is None:
-        _SIG_CACHE = np.loadtxt(
-            CONNECTOR_CSV, delimiter=",", skiprows=1
-        )
+        sig = np.loadtxt(CONNECTOR_CSV, delimiter=",", skiprows=1)
+        _SIG_CACHE = extend_sig_with_new_blocks(sig)
     return _SIG_CACHE
 
 
@@ -221,121 +265,90 @@ def _check_fast(seglist, pads):
 
 
 # ======================================================================================
-# Doubling-wire routing (from coded.py): CKT 1-32 doubled, CKT 33-64 single.
-# IN-only (3-point) routes so they plug straight into add_spine / add_spine_right.
+# Single-wire-everywhere routing
 # ======================================================================================
 
-def route_green_double(chan):
-    """Bottom pair (CKT 1-32): TWO wires per pad, both peel into the same pad centre
-    from the row2-row3 corridor at slightly different IN lanes. Returns
-    {(c, 'a'|'b'): polyline} so each wire gets a unique key. IN-only (3 points),
-    terminates at the pad."""
-    rows = sorted({round(chan[c][1], 3) for c in chan})       # 4 rows, ascending
-    if len(rows) < 2:
-        return {}
-    y4, y3 = rows[0], rows[1]
-    bottom = sorted((c for c in chan if round(chan[c][1], 3) in (y3, y4)),
-                    key=lambda c: chan[c][0])
-    xlo = min(chan[c][0] for c in bottom)
-    corridor_base = y3 + 0.10                                 # lowest IN lane (above row3)
-    x_in_entry = xlo - 1.2
+def route_single_left(chan):
+    """Route one left-column connector: all 64 pads, one wire each, entering from the left.
 
-    routes = {}
-    for k, c in enumerate(bottom):                            # k = 0..31, CKT order
-        px, py = chan[c]
-        for w_i, lbl in enumerate(("a", "b")):
-            lane = corridor_base + (2 * k + w_i) * PITCH      # interleaved a,b lanes
-            pad_x = px + (w_i - 0.5) * PITCH
-            routes[(c, lbl)] = [(x_in_entry, lane), (pad_x, lane), (pad_x, py)]
-    return routes
-
-
-def route_blue_terminal(chan):
-    """Top pair (CKT 33-64): one wire per pad. Mirror of route_green_double's pattern,
-    entering above row 1 and dipping DOWN to each top-pair pad. IN-only (3 points)."""
+    Top pair (rows y1, y2):     32 lanes in the ABOVE-row-1 corridor.
+    Bottom pair (rows y3, y4):  32 lanes in the row-2-row-3 corridor.
+    """
     rows = sorted({round(chan[c][1], 3) for c in chan})
-    if len(rows) < 2:
+    if len(rows) < 4:
         return {}
-    y2, y1 = rows[-2], rows[-1]                               # top pair = two HIGHEST rows
-    top = sorted((c for c in chan if round(chan[c][1], 3) in (y1, y2)),
-                 key=lambda c: chan[c][0])
-    xlo = min(chan[c][0] for c in top)
-    above1_base = y1 + 0.12                                   # lowest IN lane (above row1)
-    x_in_entry = xlo - 1.2
+
+    y4, y3, y2, y1 = rows[0], rows[1], rows[2], rows[3]
+
+    xlo = min(p[0] for p in chan.values())
+    x_in_entry = xlo - 0.2
+
+    above1_base = y1 + 0.12
+    corridor_base = y3 + 0.12
 
     routes = {}
+
+    top = sorted(
+        (c for c in chan if round(chan[c][1], 3) in (y1, y2)),
+        key=lambda c: chan[c][0],
+    )
     for k, c in enumerate(top):
         px, py = chan[c]
         lane = above1_base + k * PITCH
         routes[c] = [(x_in_entry, lane), (px, lane), (px, py)]
-    return routes
 
-
-def route_doubled_and_single(chan):
-    """Per-connector: CKT 1-32 always doubled (route_green_double on whichever rows
-    hold them), CKT 33-64 always single (route_blue_terminal). Works for both
-    columns regardless of which physical row pair holds CKT 1-32."""
-    chan_doubled = {c: chan[c] for c in chan if c <= 32}
-    chan_single  = {c: chan[c] for c in chan if c >= 33}
-    routes = route_green_double(chan_doubled)
-    routes.update(route_blue_terminal(chan_single))
-    return routes
-
-
-def route_green_double_right(chan):
-    """Right column doubled (CKT 1-32 = TOP pair after rotation). Enters the row 2-3
-    corridor from the RIGHT, runs LEFT, then UP into pad. Lane geometry mirrors
-    route_green_double: the RIGHTMOST CKT peels FIRST (highest lane, nearest row 2)."""
-    rows = sorted({round(chan[c][1], 3) for c in chan})
-    if len(rows) < 2:
-        return {}
-    y2, y1 = rows[-2], rows[-1]                               # y1 = topmost row
-    top = sorted((c for c in chan if round(chan[c][1], 3) in (y1, y2)),
-                 key=lambda c: chan[c][0])
-    n = len(top)
-    xhi = max(chan[c][0] for c in top)
-    corridor_top = y2 - 0.10                                   # highest IN lane (just below row 2)
-    x_in_entry = xhi + 1.2                                     # outside-RIGHT of column
-
-    routes = {}
-    for k, c in enumerate(top):                               # k=0 leftmost, k=n-1 rightmost
+    bottom = sorted(
+        (c for c in chan if round(chan[c][1], 3) in (y3, y4)),
+        key=lambda c: chan[c][0],
+    )
+    for k, c in enumerate(bottom):
         px, py = chan[c]
-        for w_i, lbl in enumerate(("a", "b")):
-            lane = corridor_top - (2 * (n - 1 - k) + w_i) * PITCH      # rightmost gets highest
-            pad_x = px + (0.5 - w_i) * PITCH
-            routes[(c, lbl)] = [(x_in_entry, lane), (pad_x, lane), (pad_x, py)]
-    return routes
-
-
-def route_blue_terminal_right(chan):
-    """Right column single (CKT 33-64 = BOTTOM pair after rotation). Enters from the
-    RIGHT just below row 4, runs LEFT, then UP into pad. Mirror of route_blue_terminal."""
-    rows = sorted({round(chan[c][1], 3) for c in chan})
-    if len(rows) < 2:
-        return {}
-    y4, y3 = rows[0], rows[1]                                  # y4 = bottom row
-    bot = sorted((c for c in chan if round(chan[c][1], 3) in (y3, y4)),
-                 key=lambda c: chan[c][0])
-    n = len(bot)
-    xhi = max(chan[c][0] for c in bot)
-    below4_top = y4 - 0.12                                     # highest IN lane (just below row 4)
-    x_in_entry = xhi + 1.2
-
-    routes = {}
-    for k, c in enumerate(bot):
-        px, py = chan[c]
-        lane = below4_top - (n - 1 - k) * PITCH
+        lane = corridor_base + k * PITCH
         routes[c] = [(x_in_entry, lane), (px, lane), (px, py)]
+
     return routes
 
 
-def route_doubled_and_single_right(chan):
-    """Right column: CKT 1-32 doubled via route_green_double_right (top pair, from
-    right), CKT 33-64 single via route_blue_terminal_right (bottom pair, from right)."""
-    chan_doubled = {c: chan[c] for c in chan if c <= 32}      # CKT 1-32 sit on TOP pair (rotated)
-    chan_single  = {c: chan[c] for c in chan if c >= 33}      # CKT 33-64 sit on BOTTOM pair
-    routes = route_green_double_right(chan_doubled)
-    routes.update(route_blue_terminal_right(chan_single))
+def route_single_right(chan):
+    """Route one right-column connector: all 64 pads, one wire each, entering from the right.
+
+    Top pair (rows y1, y2):     32 lanes in the row-2-row-3 corridor (just below y2).
+    Bottom pair (rows y3, y4):  32 lanes BELOW row 4.
+    """
+    rows = sorted({round(chan[c][1], 3) for c in chan})
+    if len(rows) < 4:
+        return {}
+
+    y4, y3, y2, y1 = rows[0], rows[1], rows[2], rows[3]
+
+    xlow = min(p[0] for p in chan.values())
+    x_in_entry = xlow - 0.2
+
+    corridor_top = y2 - 0.13
+    below4_top = y4 - 0.15
+
+    routes = {}
+
+    top = sorted(
+        (c for c in chan if round(chan[c][1], 3) in (y1, y2)),
+        key=lambda c: chan[c][0],
+    )
+    n_top = len(top)
+    for k, c in enumerate(top):
+        px, py = chan[c]
+        lane = corridor_top - (n_top - 1 - k) * PITCH
+        routes[c] = [(x_in_entry, lane), (px, lane), (px, py)]
+
+    bottom = sorted(
+        (c for c in chan if round(chan[c][1], 3) in (y3, y4)),
+        key=lambda c: chan[c][0],
+    )
+    n_bot = len(bottom)
+    for k, c in enumerate(bottom):
+        px, py = chan[c]
+        lane = below4_top - (n_bot - 1 - k) * PITCH
+        routes[c] = [(x_in_entry, lane), (px, lane), (px, py)]
+
     return routes
 
 
@@ -727,7 +740,7 @@ def build_columns_staged(
         chan = translate_chan(chan, connector_dx, connector_dy)
         all_pads += list(chan.values())
 
-        routes_local = route_doubled_and_single(chan)
+        routes_local = route_single_left(chan)
         rank = conn_rank_mixed(routes_local)
 
         for k, poly in routes_local.items():
@@ -760,7 +773,7 @@ def build_columns_staged(
         chan = translate_chan(chan, connector_dx, connector_dy)
         all_pads += list(chan.values())
 
-        routes_local = route_doubled_and_single_right(chan)
+        routes_local = route_single_right(chan)
         rank = conn_rank_mixed(routes_local, descending=True)
 
         for k, poly in routes_local.items():
@@ -776,7 +789,7 @@ def build_columns_staged(
             routes_local,
             spine_x_right,
             y_top_right,
-            ymin - 0.28 - N_WIRES_PER_BLOCK * PITCH,
+            ymin - 0.28 - 64 * PITCH,
             x_up_base,
             rank,
             x_center,
@@ -1264,7 +1277,7 @@ def write_into_existing_interconnect_dxf(routes_all, sig, out_path, use_connecto
 # ======================================================================================
 
 def main():
-    print("running route_append_8blocks_doubled_polygons.py")
+    print("running route_append_to_interconnect_12blocks.py")
     print(
         f"design: {N_BLOCKS_PER_COLUMN} blocks/column × {N_WIRES_PER_BLOCK} wires/block = "
         f"{TOTAL_WIRES} wires total"
@@ -1394,7 +1407,7 @@ def main():
     print("Expected counts:")
     print(f"  connector_Metal  = {TOTAL_WIRES // 2}")
     print(f"  connector_Metal2 = {TOTAL_WIRES // 2}")
-    print(f"  pads             = {2 * N_BLOCKS_PER_COLUMN * 64}")
+    print(f"  pads             = {12 * N_WIRES_PER_BLOCK}")
 
 
 if __name__ == "__main__":

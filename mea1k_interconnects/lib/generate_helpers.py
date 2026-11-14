@@ -1,4 +1,4 @@
-"""Geometry helpers shared by the two stage-01 generators (01_generate_*.py).
+"""Geometry helpers shared by the stage-01 generator (01_generate.py).
 
 Not the same as lib/geometry.py: stroke_centerline_to_polygon here is the generators' own
 version, and these need no design config.

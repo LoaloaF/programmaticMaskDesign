@@ -39,17 +39,17 @@ Design = namedtuple("Design", "key base gen route mid final set note")
 
 DESIGNS = {
     "12block": Design(
-        "12block", "12block", "01_generate_12block.py", "02_route_12block.py",
+        "12block", "12block", "01_generate.py", "02_route.py",
         "new_interconnect_circular_12Block_56_15",
         "new_interconnect_with_connector_chamfered_12Block_56_15.dxf",
         {}, "768 wires, two metal layers, pad 58 um (56 + 15 um gap)"),
     "8block_51_35": Design(
-        "8block_51_35", "8block", "01_generate_8block.py", "02_route_8block.py",
+        "8block_51_35", "8block", "01_generate.py", "02_route.py",
         "new_interconnect_circular_8block_51_35",
         "new_interconnect_with_connector_8blocks_chamfered_1layer_51_35.dxf",
         {}, "512 wires, one metal layer, pad 53 um"),
     "8block_71_15": Design(
-        "8block_71_15", "8block", "01_generate_8block.py", "02_route_8block.py",
+        "8block_71_15", "8block", "01_generate.py", "02_route.py",
         "new_interconnect_circular_8block_71_15",
         "new_interconnect_with_connector_8blocks_chamfered_1layer_71_15.dxf",
         {"GEN_CONFIG": {"pad_side": 73.0, "pad_side_extra": 71.0, "gap": 13.0},
@@ -57,12 +57,12 @@ DESIGNS = {
          "N_RIGHT_BULBS": 1},
         "8-block with 73 um pads, 13 um gap; one bulb on the right neck wall"),
     "dummy_61_10": Design(
-        "dummy_61_10", "dummy", "01_generate_12block.py", "02_make_dummy.py",
+        "dummy_61_10", "dummy", "01_generate.py", "02_make_dummy.py",
         "new_interconnect_circular_dummy_61_10",
         "dummy_new_interconnect_circular_dummy_61_10_padrows.gds",
         {}, "12-block pad grid, wire band shorted by a cap (etch/release test), GDS"),
     "dummy_35_36": Design(
-        "dummy_35_36", "dummy", "01_generate_12block.py", "02_make_dummy.py",
+        "dummy_35_36", "dummy", "01_generate.py", "02_make_dummy.py",
         "new_interconnect_circular_dummy_35_36",
         "dummy_new_interconnect_circular_dummy_35_36_padrows.gds",
         {"GEN_CONFIG": {"pad_side": 37.0, "pad_side_extra": 35.0, "gap": 34.0},

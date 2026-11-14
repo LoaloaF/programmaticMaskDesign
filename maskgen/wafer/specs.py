@@ -13,12 +13,12 @@ from maskgen.core.paths import REPO
 
 WAFERS = {
     "wafer4_rev4": dict(
-        kind="fixed", config="config_rev4",
+        kind="fixed", config="config_rev4", layerset="interconnect_rev4",
         project="mea1k_interconnects",
         needs=("interconnect", 4),                 # build_designs.py --rev 4 if its outputs are missing
         note="MEA1K interconnect wafer, Rev4 pad stack at the fabricated Rev2 placements"),
     "64Ch_4Shankdesigns": dict(
-        kind="nested", config="config_64ch_4shank", nester="skyline",
+        kind="nested", config="config_64ch_4shank", nester="skyline", layerset="probe_64ch",
         project="ufte_probes",
         needs=("electrode", "64Ch_4Shankdesigns"),  # electrode_bundle.batch if its outputs are missing
         note="UFTE 64-channel probes, 4 geometries x 4 barcodes, count-maximising nest"),

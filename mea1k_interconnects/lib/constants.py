@@ -66,7 +66,7 @@ GEN_ROUTING_FIXED = {
     # wire by a tangent-fillet teardrop. Off = Rev2/Rev3 (the wire stops at the via centre).
     "m1_pad": False,
     "m1_pad_enc": 1.0,        # pad radius = via_radius + this (um): 2.5 + 1 -> 7 um diameter
-    # Rev4, 12-block generator only (01_generate_12block.py; the 8-block ignores them). The top pad of a
+    # Rev4, 12-block generator only (01_generate.py --config 12block; the 8-block ignores them). The top pad of a
     # column sits between two lanes only 12.5 um apart (centres), too tight for a full via + 1 um
     # Metal1 margin: its via gets radius via_k0_radius, moved via_k0_dx in x. The lower pads' vias move
     # via_rest_dx in x, clear of the previous column's last lane. None / 0 = unchanged.

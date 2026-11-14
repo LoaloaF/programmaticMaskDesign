@@ -1,7 +1,7 @@
 """Dummy device: the 12-block pad grid with larger pads, its 768 wire ends shorted by a cap.
 
 A test structure for the flex etch / release process. Built in two steps:
-    01_generate_12block.py --config dummy   pad grid + per-column routing -> DXF
+    01_generate.py --config dummy   pad grid + per-column routing -> DXF
     02_make_dummy.py                        caps the wire band, maps layers -> GDS
 Units: um. Defaults = the 61_10 variant on the fabricated wafer. The 35_36 variant has smaller
 pads at the same pitch (pad grid + via_offset_y) -- see HANDOVER §4.4.
@@ -14,7 +14,7 @@ TOTAL_WIRES = 768             # wires the pad grid must emit (same rule as the 1
 
 
 # =============================================================================
-# 1. Pad grid -- stage 01 (01_generate_12block.py --config dummy)
+# 1. Pad grid -- stage 01 (01_generate.py --config dummy)
 # =============================================================================
 # Same generator as the 12-block; differs in pad size, gap, via position and the jigsaw.
 

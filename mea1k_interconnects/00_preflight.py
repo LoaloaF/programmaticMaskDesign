@@ -41,16 +41,16 @@ ASSETS = os.path.join(HERE, "assets")
 DESIGNS = os.path.join(HERE, "designs")
 
 DEPS = ("ezdxf", "shapely", "numpy", "gdstk", "matplotlib")   # gdstk: 02_make_dummy.py;
-                                                              # matplotlib: only old_interconnect/
+                                                              # matplotlib: maskgen review (and legacy/old_interconnect/)
 
 ASSET_FILES = ("connector_signal_pads_exact_mm.csv", "Board_8x_outline_simon.dxf",
                "Board_12x_outline_simon.dxf", "mea1k_interconnect_only.dxf")
 
 # design key -> (generator script, router script); the numbers come from config_<key>.py
 BUILDS = {
-    "12block": ("01_generate_12block.py", "02_route_12block.py"),
-    "8block": ("01_generate_8block.py", "02_route_8block.py"),
-    "dummy": ("01_generate_12block.py --config dummy", "02_make_dummy.py"),
+    "12block": ("01_generate.py --config 12block", "02_route.py --design 12block"),
+    "8block": ("01_generate.py --config 8block", "02_route.py --design 8block"),
+    "dummy": ("01_generate.py --config dummy", "02_make_dummy.py"),
 }
 
 

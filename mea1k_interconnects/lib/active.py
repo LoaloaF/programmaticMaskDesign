@@ -8,8 +8,8 @@
 
 The lib modules no longer read the design from globals (refactor Phase 4): every lib function that
 needs a setting takes `dsg` as its first argument, and their caches live on it (`dsg.cache`). They can
-be imported before select(), and two designs cannot leak into each other through them. The routers'
-own top-level code (02_route_*.py) still uses the star import; refactor Phase 5 replaces that.
+be imported before select(), and two designs cannot leak into each other through them. The router's
+own top-level code (02_route.py) still uses the star import.
 
 Values are the same objects the star import exposes, so `dsg.X` and the router's `X` agree. The
 arithmetic in the lib functions is unchanged -- only where a name is looked up moved.

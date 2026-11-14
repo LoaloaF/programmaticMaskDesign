@@ -322,13 +322,41 @@ def fp_gds(path):
     return {"kind": "gds", "layers": out}
 
 
-def fp_json(path, roots):
-    """`roots` = {token: path}: machine/run-specific prefixes replaced before hashing."""
+def fp_json(path, roots, fix=None):
+    """`roots` = {token: path}: machine/run-specific prefixes replaced before hashing. `fix(data)`, if
+    given, rewrites the parsed JSON first (see stage_scripts_now)."""
     s = open(path).read()
     for tok, r in sorted(roots.items(), key=lambda kv: -len(kv[1])):
         s = s.replace(r, tok)
-    data = _norm(json.loads(s))
+    data = json.loads(s)
+    if fix:
+        data = fix(data)
+    data = _norm(data)
     return {"kind": "json", "sha": _sha([json.dumps(data, sort_keys=True)])}
+
+
+# Refactor Phase 8 deleted the per-design entry points; the catalog now runs the merged stage scripts
+# with the design as an argument. A config snapshot records the script it ran and its argv, so a
+# snapshot taken before that (the 667ba2d reference) names the old entry point. This rewrites such a
+# snapshot into the call that does the same thing today; the config namespace itself is untouched and
+# must still match exactly. The reference is NOT re-captured.
+_OLD_STAGE_SCRIPTS = {                       # old entry point -> (script now, argument it implied)
+    "01_generate_12block.py": ("01_generate.py", ["--config", "12block"]),
+    "01_generate_8block.py": ("01_generate.py", ["--config", "8block"]),
+    "02_route_12block.py": ("02_route.py", ["--design", "12block"]),
+    "02_route_8block.py": ("02_route.py", ["--design", "8block"]),
+}
+
+
+def stage_scripts_now(snap):
+    old = _OLD_STAGE_SCRIPTS.get(snap.get("script"))
+    if old:
+        snap = dict(snap, script=old[0])
+        argv = list(snap.get("argv", []))
+        if argv[:1] != old[1][:1]:           # 01_generate_12block.py was already called with --config
+            argv = old[1] + argv
+        snap["argv"] = argv
+    return snap
 
 
 def fp_text(path):
@@ -420,7 +448,7 @@ def compare(gold_manifest, cand_dir, gold_dir, tree=None, parts=tuple(PARTS)):
     """Returns the list of failures (empty = identical). Only artefacts of `parts` are compared."""
     G = json.load(open(gold_manifest))
     C = fingerprint(cand_dir, roots={"<TREE>": tree} if tree else None)
-    fails, viaB = [], []
+    fails, viaB, renamed = [], [], []
     prefixes = tuple(p for part in parts for p in PARTS[part])
     wanted = {k: v for k, v in G["artifacts"].items() if k.startswith(prefixes)}
     for key, g in sorted(wanted.items()):
@@ -443,6 +471,13 @@ def compare(gold_manifest, cand_dir, gold_dir, tree=None, parts=tuple(PARTS)):
                 fails.append("GEOMETRY %s: XOR um2 %s" % (key, json.dumps(bad)))
             else:
                 fails.append("CHANGED  %s on %s (golden file missing for XOR)" % (key, ", ".join(diff[:8])))
+        elif key.startswith("config/") and os.path.exists(os.path.join(gold_dir, key)):
+            # the reference names the old per-design stage scripts (see stage_scripts_now)
+            if fp_json(os.path.join(gold_dir, key), {}, stage_scripts_now) == \
+                    fp_json(os.path.join(cand_dir, key), {"<TREE>": tree} if tree else {}, stage_scripts_now):
+                renamed.append(key)
+                continue
+            fails.append("CHANGED  %s (json, also after mapping the old stage-script names)" % key)
         else:
             fails.append("CHANGED  %s (%s)" % (key, g["kind"]))
     extra = sorted(set(C) - set(G["artifacts"]))
@@ -451,6 +486,8 @@ def compare(gold_manifest, cand_dir, gold_dir, tree=None, parts=tuple(PARTS)):
     fails += ["LOG      %s" % p for p in probs if p not in G.get("log_problems", [])]
     for v in viaB:
         print("  equal by XOR: " + v)
+    if renamed:
+        print("  equal after mapping the old stage-script names: %d config snapshot(s)" % len(renamed))
     if extra:
         print("  note: %d new output(s) not in the golden set: %s" % (len(extra), ", ".join(extra[:6])))
     return fails

@@ -177,15 +177,17 @@ IC_REV4 = LayerSet("interconnect_rev4", [
 # --- the UFTE probe wafer -----------------------------------------------------------------
 # Metal is the first mask (7/0 carries the alignment reference); every later mask is dark field.
 # !!! PROVISIONAL -- NOT CONFIRMED FOR FABRICATION (ufte_probes/wafer_nesting/README.md) !!!
-# The probe .lyp is still written by ufte_probes/../maskgen/wafer/export.py's own colour cycle
-# (no style here yet: the shipped .lyp is part of the golden reference); refactor Phase 6 moves it here.
+# The styles below are what `maskgen review` draws with. The shipped probe wafer's .lyp is still written
+# by maskgen/wafer/export.py's own colour cycle: that file is part of the golden reference, so it changes
+# only together with a new probe wafer. Listed back -> front, the etch mask (the device outline, a large
+# area) at the back.
 PROBE_64CH = LayerSet("probe_64ch", [
-    FabLayer(7, "Metal", (PROBE.METAL,), (), None, None, None),
-    FabLayer(6, "Etching", (PROBE.ETCHING,), (), None, None, None),
-    FabLayer(3, "pad_etching", (PROBE.PAD_ETCHING,), (), None, None, None),
-    FabLayer(8, "PEDOT_SIROF", (PROBE.PEDOT_SIROF,), (), None, None, None),
-    FabLayer(1, "IONP", (PROBE.IONP,), (), None, None, None),
-    FabLayer(10, "WaferOutline", (), (), None, None, None),
+    FabLayer(6, "Etching", (PROBE.ETCHING,), (), "#1060e0", "I5", 1),
+    FabLayer(10, "WaferOutline", (), (), "#808080", "I1", 2),
+    FabLayer(7, "Metal", (PROBE.METAL,), (), "#e01818", "I0", 2),
+    FabLayer(8, "PEDOT_SIROF", (PROBE.PEDOT_SIROF,), (), "#8020d0", "I9", 1),
+    FabLayer(3, "pad_etching", (PROBE.PAD_ETCHING,), (), "#00b8c8", "I0", 1),
+    FabLayer(1, "IONP", (PROBE.IONP,), (), "#00c060", "I0", 1),
 ], note="provisional")
 
 LAYERSETS = {s.key: s for s in (IC_REV2, IC_REV3, IC_REV4, PROBE_64CH)}

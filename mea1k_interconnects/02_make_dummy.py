@@ -1,6 +1,6 @@
 """Stage 02 for the dummy device: cap the interconnect's wire band and write a GDS.
 
-Reads the stage-01 DXF (01_generate_12block.py --config dummy), maps its layers to GDS,
+Reads the stage-01 DXF (01_generate.py --config dummy), maps its layers to GDS,
 extends every Metal1 band wire up into Metal1 bars (bridged into one continuous bar, so all
 wires are shorted), adds a Metal1 + etch circle above each bar and a polyimide ring on the etch
 layer. Settings: config_dummy.py, section 2.

@@ -2,7 +2,7 @@
 
 Every design knob for this part, in physical order from the chip side to the connector.
 Units: stage 01 and Phase 1 in um, Phase 2 (connector side) in mm. Layer names and sampling
-resolutions are in lib/constants.py; the routing code is in lib/ and 02_route_12block.py.
+resolutions are in lib/constants.py; the routing code is in lib/ and 02_route.py --design 12block.
 """
 
 DEFAULT_IN = "new_interconnect_circular_12Block_56_15.dxf"     # router input (stage-01 output)
@@ -11,7 +11,7 @@ BOARD_OUTLINE = "Board_12x_outline_simon.dxf"                   # in assets/
 
 
 # =============================================================================
-# 1. Pad grid -- stage 01 (01_generate_12block.py)
+# 1. Pad grid -- stage 01 (01_generate.py --config 12block)
 # =============================================================================
 
 GEN_CONFIG = {

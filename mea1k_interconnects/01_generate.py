@@ -11,9 +11,8 @@ from lib.active import in_designs as _in_designs      # bare filename -> <out ro
 # Stage 01 for EVERY interconnect design: the pad grid + per-column Metal1 routing + vias + polyimide.
 # Every knob lives in config_<name>.py (section 1) -- edit it there. Three base configs use this
 # generator: 12block (the connector design), dummy (the dummy device's pad grid, a 12-block grid) and
-# 8block. What differs between them in HOW the grid is built is STRATEGIES below (refactor Phase 5:
-# this file merges the former 01_generate_12block.py and 01_generate_8block.py; each switch selects
-# that script's original code).
+# 8block. What differs between them in HOW the grid is built is STRATEGIES below (this file merges
+# the former per-design generators; each switch selects that generator's original code).
 import argparse as _argparse, importlib as _importlib
 CONFIGS = ("12block", "dummy", "8block")
 _pre = _argparse.ArgumentParser(add_help=False)

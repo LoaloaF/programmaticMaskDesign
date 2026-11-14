@@ -2,7 +2,7 @@
 
 Every design knob for this part, in physical order from the chip side to the connector.
 Units: stage 01 and Phase 1 in um, Phase 2 (connector side) in mm. Layer names and sampling
-resolutions are in lib/constants.py; the routing code is in lib/ and 02_route_8block.py.
+resolutions are in lib/constants.py; the routing code is in lib/ and 02_route.py --design 8block.
 """
 
 # Defaults = the 51_35 variant on the fabricated wafer. The 71_15 variant differs only in the
@@ -13,7 +13,7 @@ BOARD_OUTLINE = "Board_8x_outline_simon.dxf"                    # in assets/
 
 
 # =============================================================================
-# 1. Pad grid -- stage 01 (01_generate_8block.py)
+# 1. Pad grid -- stage 01 (01_generate.py --config 8block)
 # =============================================================================
 
 GEN_CONFIG = {

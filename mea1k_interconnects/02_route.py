@@ -2,8 +2,7 @@
 
     python3 02_route.py --design 12block|8block [--in X.dxf] [--out Y.dxf]
 
-One router for both designs (refactor Phase 5 merged 02_route_12block.py and 02_route_8block.py; the old
-names remain as entry points). What differs between them is ROUTE_STRATEGIES below -- every switch selects
+One router for both designs (it merges the former per-design routers). What differs between them is ROUTE_STRATEGIES below -- every switch selects
 that router's original code:
 
   12-block -- TWO metal layers                       8-block -- ONE metal layer
