@@ -111,6 +111,10 @@ W6_8X64 = dict(W6_12BLOCK,
                GEN_ROUTING=dict({"via_k0_radius": 1.75, "via_k0_dx": -0.25, "via_rest_dx": 0.5},
                                 **W6_12BLOCK["GEN_ROUTING"]),
                ROUTE_SCRIPT="02_route_wafer6_8x.py")
+# dummy_61_10 on wafer6: the new stage-01 via rules (W6_12BLOCK's GEN_ROUTING; wafer4 Rev4's via_k0 settings and
+# dummy handle come down the chain) and 2 mm wires band -> bar (Rev4: 1.2 mm): bar and circles 800 um higher
+W6_DUMMY = {"GEN_ROUTING": dict(W6_12BLOCK["GEN_ROUTING"]),
+            "DUMMY": {"band_overlap": 2000.0, "pad_rect_y": 2000.0, "circle_y": 2900.0}}
 W6_CHANGES = [
     "one via rule: every Metal1 landing pad 2.0 um from the Metal2 pad's left and top edges, "
     "every via edge 3.0 um (Rev4: 0.5-2.0 um in x, 1.5 um in y, by via kind) (m1_margin)",
@@ -146,6 +150,9 @@ W6_CHANGES = [
     "centre rows (the far row's wires between the near row's pads) -- the 32 centre-row pads get two wires "
     "each, one from either lane, 180 deg apart; 15 um approach, 100 um teardrop fillet",
     "8x64: polyimide = his outline with the top edge raised 259 um for the top run, 2 mm neck fillets",
+    "dummy_61_10: the new pad-grid via rules above (m1_margin, via_k0_where, via_k0_h, top_lane_uniform); "
+    "wires 2 mm from the band to the shorting bar (Rev4: 1.2 mm) -- bar and circles 800 um higher; "
+    "otherwise wafer4 Rev4's dummy",
 ]
 
 REVISIONS = {
@@ -196,7 +203,7 @@ REVISIONS = {
     "wafer6": {
         1: Rev(1, ("wafer4", 4), "interconnect_rev4",
                set={},
-               per_design={"12block_56_15": W6_12BLOCK, "8x64_56_15": W6_8X64},
+               per_design={"12block_56_15": W6_12BLOCK, "8x64_56_15": W6_8X64, "dummy_61_10": W6_DUMMY},
                dummy_set={}, via_edge_gap=None, band_ref_rev=("wafer4", 3),
                status="in design",
                changes=W6_CHANGES),
