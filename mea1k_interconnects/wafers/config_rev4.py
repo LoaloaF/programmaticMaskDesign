@@ -24,7 +24,7 @@ bulbs. It changes only the dummies' etch ring (layer 3), inside the existing dum
 
 Every piece keeps its Rev2 position, so this builds from Rev2's placements -- nothing is nested.
 Those placements were measured off the fabricated Rev2 wafer ONCE (legacy/rev2_repro, 01c) and are
-committed as data/wafer4_rev2_placements.json; this config needs nothing from legacy/.
+committed as ../rev2_reference/wafer4_rev2_placements.json; this config needs nothing from legacy/.
 
     cd mea1k_interconnects
     python3 build_designs.py --rev 4                    # -> <out root>/interconnect/rev4/
@@ -37,7 +37,7 @@ Pure standard library: KLayout's Python runs this.
 import os
 import sys
 
-HERE = os.path.dirname(os.path.abspath(__file__))     # .../mea1k_interconnects/wafer_nesting
+HERE = os.path.dirname(os.path.abspath(__file__))     # .../mea1k_interconnects/wafers
 ROOT = os.path.dirname(HERE)                          # .../mea1k_interconnects
 sys.path.insert(0, os.path.dirname(ROOT))             # the repo root: the maskgen package
 from maskgen.core import paths as _paths              # noqa: E402
@@ -51,7 +51,7 @@ WAFER_OUT = os.path.join(OUT_DIR, "wafer_%s.gds" % RUN_TAG)
 # Rev2's placements, measured off the fabricated wafer by legacy/rev2_repro/01c and committed. "<ROOT>"
 # in its paths stands for the repo root (01d substitutes it). It also names the wafer 01d checks
 # against: the fabricated Rev2 wafer.
-PLACEMENTS_PATH = os.path.join(HERE, "data", "wafer4_rev2_placements.json")
+PLACEMENTS_PATH = os.path.join(ROOT, "rev2_reference", "wafer4_rev2_placements.json")
 from maskgen import wafer as _wafer                   # noqa: E402
 WAFER_TEMPLATE = _wafer.TEMPLATE_GDS                  # maskgen/wafer/data/ (shared by every wafer)
 TEMPLATE_KEEP_RADIUS_MM = 50.0

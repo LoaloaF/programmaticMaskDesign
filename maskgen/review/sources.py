@@ -28,7 +28,7 @@ from maskgen.core import paths
 
 PROBE_SET = "64Ch_4Shankdesigns"
 REFERENCE_WAFERS = {        # tag -> (file in the repo, LayerSet key)
-    "rev2_fabricated": ("MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds", "interconnect_rev2"),
+    "rev2_fabricated": ("mea1k_interconnects/rev2_reference/MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds", "interconnect_rev2"),
 }
 
 

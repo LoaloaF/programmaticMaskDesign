@@ -2,7 +2,7 @@
 
     data/                    the wafer template (outline + alignment marks) and the marks keep-out
     configs.py               load(): the wafer config named by $WAFERNEST_CONFIG (each project keeps
-                             its wafer configs: mea1k_interconnects/wafer_nesting/, ufte_probes/wafer_nesting/)
+                             its wafer configs: mea1k_interconnects/wafers/, ufte_probes/wafers/)
     config_common.py         derive(): the output paths + DESIGNS helpers every nested wafer config gets
     footprints.py            DXF -> footprint polygon (+ offset), for the nesters
     marks.py                 alignment marks: give dark-field masks the inverted vernier (pya)

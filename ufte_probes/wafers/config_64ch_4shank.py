@@ -22,7 +22,7 @@ import os, sys
 # `python3 -m maskgen where wafer 64Ch_4Shankdesigns` prints the folder.
 TARGET_SET = "64Ch_4Shankdesigns"
 
-HERE = os.path.dirname(os.path.abspath(__file__))     # .../wafer_nesting
+HERE = os.path.dirname(os.path.abspath(__file__))     # .../ufte_probes/wafers
 ROOT = os.path.dirname(HERE)                          # the common folder above it
 sys.path.insert(0, os.path.dirname(ROOT))             # the repo root: the maskgen package
 from maskgen.core import paths as _paths              # noqa: E402

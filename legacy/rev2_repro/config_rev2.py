@@ -51,8 +51,8 @@ OUT_DIR = os.path.join(_out_root(), "wafer", RUN_TAG)
 PLACEMENTS_PATH = os.path.join(OUT_DIR, "placements.json")
 WAFER_OUT = os.path.join(OUT_DIR, "wafer_%s.gds" % RUN_TAG)
 
-# The wafer to reproduce (the fabricated Rev2 wafer, committed at the repo root).
-TARGET_GDS = os.path.join(os.path.dirname(ROOT), "MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds")
+# The wafer to reproduce (the fabricated Rev2 wafer, committed next to its designs; was at the repo root).
+TARGET_GDS = os.path.join(DESIGN_DIR, "MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds")
 
 # Wafer outline + alignment marks. Shapes whose bounding-box centre lies further than
 # TEMPLATE_KEEP_RADIUS_MM from the wafer centre are discarded: the template carries a third

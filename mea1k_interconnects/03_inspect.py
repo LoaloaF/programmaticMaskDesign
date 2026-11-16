@@ -5,10 +5,10 @@ A layer-by-layer census: entity counts, vertex counts, entity types and the boun
 Useful for knowing what you are looking at, and for spotting a layer that came out empty
 or a wire count that is not what you asked for.
 
-It also flags one thing you CANNOT see in a viewer: `wafer_nesting` stage 01 reads only
+It also flags one thing you CANNOT see in a viewer: the wafer footprint stage (maskgen/wafer/footprints.py) reads only
 LWPOLYLINE and HATCH entities. Geometry emitted as any other type looks perfectly normal
 on screen but is invisible to the nester's footprint, which then comes out smaller than
-the real part -- the dangerous direction (wafer_nesting HANDOVER.md 3.2).
+the real part -- the dangerous direction (legacy/interconnect_nest_2026-07/HANDOVER.md 3.2).
 
     python3 03_inspect.py                       # everything in rev2_reference/
     python3 03_inspect.py rev2_reference/foo.dxf       # one file
@@ -23,7 +23,7 @@ import ezdxf
 HERE = os.path.dirname(os.path.abspath(__file__))
 DESIGNS = os.path.join(HERE, "rev2_reference")
 
-# What wafer_nesting stage 01 can read.
+# What the wafer footprint stage can read.
 NESTABLE = {"LWPOLYLINE", "HATCH"}
 
 
@@ -85,7 +85,7 @@ def inspect(path):
             if t not in NESTABLE:
                 bad[t] = bad.get(t, 0) + n
     if bad:
-        print("    NOTE: %s -- invisible to wafer_nesting stage 01, which reads only"
+        print("    NOTE: %s -- invisible to the wafer footprint stage, which reads only"
               % ", ".join("%d x %s" % (n, t) for t, n in sorted(bad.items())))
         print("          LWPOLYLINE and HATCH. Its footprint would under-cover this part.")
     print()

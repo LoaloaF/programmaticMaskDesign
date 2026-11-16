@@ -1,7 +1,7 @@
 """Load the wafer config a stage runs with.
 
     $WAFERNEST_CONFIG   a config module name, looked up in each project's wafer folder
-                        (mea1k_interconnects/wafer_nesting/, ufte_probes/wafer_nesting/), or a path to one
+                        (mea1k_interconnects/wafers/, ufte_probes/wafers/), or a path to one
 
 Pure standard library: KLayout's Python runs the stages that call this.
 """
@@ -12,8 +12,8 @@ import sys
 
 from maskgen.core.paths import REPO
 
-PROJECT_DIRS = [os.path.join(REPO, "mea1k_interconnects", "wafer_nesting"),
-                os.path.join(REPO, "ufte_probes", "wafer_nesting")]
+PROJECT_DIRS = [os.path.join(REPO, "mea1k_interconnects", "wafers"),
+                os.path.join(REPO, "ufte_probes", "wafers")]
 
 
 def load(default=None):

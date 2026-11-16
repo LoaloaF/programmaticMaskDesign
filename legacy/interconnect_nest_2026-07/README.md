@@ -8,7 +8,7 @@ Why it is frozen rather than maintained:
 - **It uses the layer numbers from BEFORE the fabricated wafer's hand renumbering.** The fabricated
   numbering is `maskgen/core/layers.py`.
 - **It never shipped.** The fabricated wafer used hand-placed positions, which Rev4 reuses
-  (`mea1k_interconnects/wafer_nesting/`).
+  (`mea1k_interconnects/wafers/`).
 
 The annealing nester itself is maintained in `maskgen/wafer/nest_sa.py` as a placement backend;
 this folder keeps the copy it ran with (`02_nest.py`).

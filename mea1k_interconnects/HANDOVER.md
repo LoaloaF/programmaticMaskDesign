@@ -17,7 +17,7 @@ The five designs on the wafer:
 | dummy `61_10` | a 12-block pad grid whose wire band is shorted by a cap; an etch/release test structure, GDS output |
 | dummy `35_36` | the dummy config with a few values overridden (§4.4) |
 
-The defaults match the fabricated wafer, `../MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds`.
+The defaults match the fabricated wafer, `rev2_reference/MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds`.
 
 **Where things are defined.**
 - **Designs and revisions:** `catalog.py`.
@@ -101,14 +101,14 @@ python3 -m maskgen wafer wafer4_rev4      # (repo root) Rev4 designs if missing,
 ```
 
 It places every Rev4 design at the Rev2 placements. Those were measured once off the fabricated
-wafer and committed as `wafer_nesting/data/wafer4_rev2_placements.json`: the 12 connector devices and
+wafer and committed as `rev2_reference/wafer4_rev2_placements.json`: the 12 connector devices and
 the 26 dummies, which were placed by hand into the gaps and are never nested.
 - **Writes:** `<root>/wafer/wafer4_rev4/wafer_wafer4_rev4.{gds,oas,lyp}`.
 - **Then checks the wafer against Rev2.** The only allowed differences are the pad-stack layers,
   inside the pads, and the new mark.
-- **Config:** `wafer_nesting/config_rev4.py`.
+- **Config:** `wafers/config_rev4.py`.
 - **Code:** the shared `maskgen/wafer/rebuild.py`.
-- **More:** `wafer_nesting/README.md`.
+- **More:** `wafers/README.md`.
 
 Frozen in `legacy/` (each with a README):
 - **`legacy/rev2_repro/`** measures the placements off the fabricated wafer (01c) and rebuilds it
@@ -162,8 +162,9 @@ lib/board.py                          polyimide: board outline, neck / flare, bu
 lib/phase1.py, lib/fanmath.py         band -> hand-off transition; eased fan profile + gap check
 lib/geometry.py, lib/checks.py        helpers; crossings / pad_hits
 lib/generate_helpers.py               stage-01 helpers
-wafer_nesting/                        the Rev4 wafer config + the committed Rev2 placements (§1.1)
-rev2_reference/                       the committed Rev2 design files (read by legacy/ only)
+wafers/                               the Rev4 wafer config (§1.1)
+rev2_reference/                       the fabricated Rev2 wafer GDS, its design files (read by legacy/ only)
+                                      and its measured placements (read by the Rev4 wafer)
 assets/                               inputs: connector pad CSV, board outlines, old interconnect
 ```
 

@@ -1,6 +1,6 @@
 {
  "target": {
-  "path": "<ROOT>/MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds",
+  "path": "<ROOT>/mea1k_interconnects/rev2_reference/MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds",
   "md5": "8bc879686a0a1404d1fb365d226b6fa0",
   "dbu_um": 0.001,
   "libname": "WAFER",

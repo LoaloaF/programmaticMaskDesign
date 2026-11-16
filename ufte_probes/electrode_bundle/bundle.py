@@ -499,7 +499,7 @@ def build_bundle(cfg: BundleConfig) -> BundleResult:
         render.append((rx + [rx[0]], ry + [ry[0]], 'g'))
 
     #THE ETCH MASK. `Etching` is the only layer the fab actually patterns here --
-    #the positive Polyimide layer is dropped on export (wafer_nesting's LAYER_MAP), because
+    #the positive Polyimide layer is dropped on export (the PROBE_64CH layer map, maskgen/core/layers.py), because
     #the device is not deposited, it is FREED from a full sheet of polyimide. So everything
     #removed in that one step has to be in here: the moat around the device, the spear that
     #frees the tip, and the insertion loop's hole.

@@ -4,10 +4,10 @@
 The probe wafer then arranges as many copies as fit on a 100 mm wafer and writes the combined GDS for
 fab:
 - the wafer stages are shared with the interconnect project, in `maskgen/wafer/`;
-- this project's wafer config is in `wafer_nesting/`.
+- this project's wafer config is in `wafers/`.
 
 ```
-electrode_bundle/design_sets.py        wafer_nesting/config_64ch_4shank.py
+electrode_bundle/design_sets.py        wafers/config_64ch_4shank.py
         │                                        │
         ▼                                        ▼
 <root>/electrode/<set>/shanks/  ─────►  <root>/wafer/<set>/
@@ -19,12 +19,12 @@ Nothing is written into the repo.
 
 Full detail:
 - the generator: [`electrode_bundle/HANDOVER.md`](electrode_bundle/HANDOVER.md);
-- the wafer: [`wafer_nesting/README.md`](wafer_nesting/README.md).
+- the wafer: [`wafers/README.md`](wafers/README.md).
 
 This page is only the map and the order to do things in.
 
 > **Before anything is fabricated**, read the layer map at the bottom of
-> [`wafer_nesting/README.md`](wafer_nesting/README.md). The DXF-layer → fab-layer mapping is
+> [`wafers/README.md`](wafers/README.md). The DXF-layer → fab-layer mapping is
 > provisional and has one open decision in it (`ionp`).
 
 ## Layout
@@ -37,7 +37,7 @@ ufte_probes/                 run the generator from HERE
     hooks/                   named insertion-hook specs
     designs/                 shipped ...Example sample files (not output)
     tests/
-  wafer_nesting/             the probe wafer's config (config_64ch_4shank.py) + README
+  wafers/                    the probe wafer's config (config_64ch_4shank.py) + README
 ```
 
 ## Prerequisites
@@ -125,7 +125,7 @@ The command:
 
 The deliverable is `<root>/wafer/64Ch_4Shankdesigns/wafer_64Ch_4Shankdesigns.gds`.
 `wafer_map_64Ch_4Shankdesigns.png` labels every device with its variant. The stages one by one, and
-the options, are in [`wafer_nesting/README.md`](wafer_nesting/README.md).
+the options, are in [`wafers/README.md`](wafers/README.md).
 
 **The shipped wafer is final.** It holds 59 devices, and its nest is verified. Run `--nest` only
 for a new design set.

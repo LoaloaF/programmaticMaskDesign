@@ -114,7 +114,7 @@ if P["target"].get("libname"):
 L.write(C.WAFER_OUT, opt)
 print("\nwrote %s" % C.WAFER_OUT)
 
-# Named layers (config LAYERSET), as the electrode wafer does (ufte_probes/wafer_nesting/
+# Named layers (config LAYERSET), as the electrode wafer does (maskgen/wafer/
 # export.py): GDS2 has no layer-name record, so the names go (a) into an .oas twin, whose
 # LAYERNAME records carry them in the file itself, and (b) into a KLayout .lyp next to the GDS.
 # The GDS written above is untouched; the check below reads it back, not these.

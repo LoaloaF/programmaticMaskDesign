@@ -156,7 +156,7 @@ def cmd_wafer(a):
         _run([KL, "-b", "-r", specs.STAGE["rebuild"]], proj, env)
     else:
         _run([sys.executable, specs.STAGE["check_setup"]], proj, env)
-        sys.path.insert(0, os.path.join(proj, "wafer_nesting"))
+        sys.path.insert(0, os.path.join(proj, "wafers"))
         from maskgen.wafer.configs import load
         os.environ.update(env)
         C = load()

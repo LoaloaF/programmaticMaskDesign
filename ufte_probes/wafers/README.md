@@ -1,4 +1,4 @@
-# wafer_nesting — how to nest a design set onto a wafer
+# ufte_probes/wafers — how to nest a design set onto a wafer
 
 ```bash
 python3 -m maskgen wafer 64Ch_4Shankdesigns        # from the repo root
@@ -64,7 +64,7 @@ The set's name lives in exactly two places, and they must agree:
 | File | Constant |
 |---|---|
 | `electrode_bundle/config.py` | `TARGET_SET = "64Ch_4Shankdesigns"` |
-| `wafer_nesting/config_64ch_4shank.py` | `TARGET_SET = "64Ch_4Shankdesigns"` |
+| `wafers/config_64ch_4shank.py` | `TARGET_SET = "64Ch_4Shankdesigns"` |
 
 ---
 

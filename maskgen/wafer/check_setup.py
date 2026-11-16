@@ -72,7 +72,7 @@ if os.path.isfile(C.MARKS_WKT):
     ok("alignment marks", C.MARKS_WKT)
 else:
     bad("alignment marks", C.MARKS_WKT,
-        "set MARKS_WKT in %s.py -- marks_union.wkt ships inside wafer_nesting/" % CFG_NAME)
+        "set MARKS_WKT in %s.py -- marks_union.wkt ships in maskgen/wafer/data/" % CFG_NAME)
 
 # --- designs ------------------------------------------------------------------
 print("\nDesigns (DESIGN_DIR = %s):" % C.DESIGN_DIR)

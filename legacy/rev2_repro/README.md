@@ -1,6 +1,6 @@
 # legacy/rev2_repro — reproducing the fabricated Rev2 wafer
 
-This folder is frozen. It reproduces `MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds` (repo root)
+This folder is frozen. It reproduces `mea1k_interconnects/rev2_reference/MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds`
 from the committed Rev2 designs (`mea1k_interconnects/rev2_reference/`), and it is the only place
 where the hand-placed dummies are recovered from the fabricated wafer.
 
@@ -8,7 +8,7 @@ It was moved out of `mea1k_interconnects/wafer_nesting/` in refactor Phase 1 (fr
 The main workflow no longer depends on it:
 
 - Rev4 builds from the placements this folder measured once. They are committed as
-  `mea1k_interconnects/wafer_nesting/data/wafer4_rev2_placements.json`, with `<ROOT>` written for
+  `mea1k_interconnects/rev2_reference/wafer4_rev2_placements.json`, with `<ROOT>` written for
   the repo root.
 - That data file is what `maskgen/wafer/rebuild.py` reads (config `config_rev4`, `python3 -m maskgen wafer wafer4_rev4`).
 
@@ -33,7 +33,7 @@ same commands with `config_rev3`.
 |---|---|
 | `01c_extract_exact_placements.py`, `01e_overlay_wafers.py` | none (`git mv`) |
 | `01d_rebuild_wafer.py`, `exact_io.py` | none (copies taken at 667ba2d) |
-| `config_rev2.py` | the PATHS block only. Inputs are still read from `mea1k_interconnects/`; `OUT_DIR` is under the output root. `_out_root()` is a stdlib copy of the rule in `maskgen/core/paths.py`. |
+| `config_rev2.py` | the PATHS block only. Inputs are still read from `mea1k_interconnects/`; `OUT_DIR` is under the output root. `TARGET_GDS` follows the wafer into `rev2_reference/` (2026-11). `_out_root()` is a stdlib copy of the rule in `maskgen/core/paths.py`. |
 | `config_rev3.py` | `REV3_DIR` and `OUT_DIR` are under the output root |
 | all | folder names in comments/paths follow the repo renames (`InterconnectGeneration` → `mea1k_interconnects`, `WaferNesting` → `wafer_nesting`, `generative_probe_design` → `ufte_probes`) |
 

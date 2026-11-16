@@ -61,7 +61,7 @@ into the gold as the design label.
 | `electrode_bundle_<name>.dxf` + `.png` | the geometry, **no** IONP layer — never nest this |
 | `electrode_to_flex_mapping_<name>.json` | channel → flex-PCB pad number |
 | `<name>_electrodes.json` | per-channel wafer **and** bundled positions, lengths, fold model (`probe_json.py`) |
-| `electrode_bundle_<tag>.dxf` + `.png` | the geometry **plus** its IONP barcode — what wafer_nesting nests |
+| `electrode_bundle_<tag>.dxf` + `.png` | the geometry **plus** its IONP barcode — what the wafer nests |
 | `<tag>_info.json` | per-stripe IONP metadata, with the flex mapping embedded |
 | `all_designs_side_by_side.dxf` | every geometry in a row, barcode-free, aligned on the loop |
 | `all_ionp_patterns_side_by_side.dxf` | all 16 barcoded variants in a row |
@@ -360,7 +360,7 @@ python3 -m pytest electrode_bundle/tests -q     # 240 tests, ~15 min
 3. **`<TARGET_SET>/shanks/` is disposable** — regenerated from `design_sets.py` +
    `config.py`. Copy a design out to keep it.
 4. **Never nest the plain `electrode_bundle_<name>.dxf`** — it has no `IONP` layer. The
-   wafer_nesting config nests the `<tag>` variants.
+   wafer config (`../wafers/config_64ch_4shank.py`) nests the `<tag>` variants.
 5. **`save_dxf` mutates the doc**: the build-only layers are deleted from it, not just from
    the file. Read contact centres before saving (everything in the package does).
 6. **`ref_dxf` is optional and off.** Setting `BundleConfig.ref_dxf` drives contact centres

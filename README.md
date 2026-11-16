@@ -14,16 +14,16 @@ programmaticMaskDesign/
   mea1k_interconnects/      MEA1K chip <-> Molex connector interconnects (HANDOVER.md)
     catalog.py              every design and every wafer revision
     build_designs.py        all five designs of a revision
-    wafer_nesting/          the interconnect wafer config (Rev4 at the Rev2 placements)
+    rev2_reference/         the fabricated Rev2 wafer GDS, its design files and its measured placements
+    wafers/                 the interconnect wafer config (Rev4 at the Rev2 placements)
   ufte_probes/              flexible 64-channel electrode probes (README.md)
     electrode_bundle/       the generator (HANDOVER.md, tests/)
-    wafer_nesting/          the probe wafer config
+    wafers/                 the probe wafer config
   legacy/                   FROZEN, runnable, never imports maskgen (see each README)
     rev2_repro/             reproduces the fabricated Rev2 wafer; the Rev2/Rev3 overlay
     interconnect_nest_2026-07/   the July 2026 annealing nest of the interconnects
     old_interconnect/       routers for the pre-circular-pad interconnect
   tests/golden/             regression harness: geometry must stay identical to commit 667ba2d
-  MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds   the fabricated interconnect wafer (Rev2)
 ```
 
 ## Setup
@@ -110,7 +110,7 @@ Each sheet writes four files:
 |---|---|---|
 | `mea1k_interconnects/` | the 12-block / 8-block interconnect DXFs and the dummy test structures | [`mea1k_interconnects/HANDOVER.md`](mea1k_interconnects/HANDOVER.md) |
 | `ufte_probes/` | electrode-probe DXFs from design specs | [`ufte_probes/README.md`](ufte_probes/README.md) |
-| `maskgen/wafer/` | wafer layout for both | [`ufte_probes/wafer_nesting/README.md`](ufte_probes/wafer_nesting/README.md) (nested wafers), [`mea1k_interconnects/wafer_nesting/README.md`](mea1k_interconnects/wafer_nesting/README.md) (fixed placements) |
+| `maskgen/wafer/` | wafer layout for both | [`ufte_probes/wafers/README.md`](ufte_probes/wafers/README.md) (nested wafers), [`mea1k_interconnects/wafers/README.md`](mea1k_interconnects/wafers/README.md) (fixed placements) |
 
 **Where things are defined.**
 - **Interconnect designs and revisions:** `mea1k_interconnects/catalog.py`. A revision lists only
@@ -137,18 +137,17 @@ The connector side stays identical to Rev3 / Rev2. Details: `mea1k_interconnects
 - **Output:** `<root>/wafer/wafer4_rev4/wafer_wafer4_rev4.{gds,oas,lyp}`. The layer names are
   stored in the OAS and the colours in the `.lyp` (`klayout x.oas -l x.lyp`).
 - **Placements:** the Rev2 placements, measured once off the fabricated wafer and committed as
-  `mea1k_interconnects/wafer_nesting/data/wafer4_rev2_placements.json`.
+  `mea1k_interconnects/rev2_reference/wafer4_rev2_placements.json`.
 
 ## The fabricated wafer (Rev2)
 
-`MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds` holds:
+`mea1k_interconnects/rev2_reference/MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds` holds:
 - 4 × 12-block;
 - 4 × 8-block `51_35`;
 - 4 × 8-block `71_15`;
 - 26 dummies.
 
-It is reproduced, geometry-identically, from `mea1k_interconnects/rev2_reference/` (the committed Rev2
-design files) by the frozen scripts in `legacy/rev2_repro/`. That folder also recovers the
+It is reproduced, geometry-identically, from the committed Rev2 design files next to it by the frozen scripts in `legacy/rev2_repro/`. That folder also recovers the
 hand-placed dummies from the wafer.
 
 The GDS layer numbers on the wafer are the hand-renumbered ones: Metal1 7, Polyimide_Negative +

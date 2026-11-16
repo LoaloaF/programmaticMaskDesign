@@ -4,7 +4,7 @@
     python3 -m electrode_bundle.side_by_side --ionp          # every barcoded VARIANT
     python3 -m electrode_bundle.side_by_side 1.6 2.5         # just these (substring match)
 
-Deliberately NOT wafer_nesting: this only translates, never rotates, and keeps the order you
+Deliberately NOT the wafer nester: this only translates, never rotates, and keeps the order you
 asked for (DESIGNS order, left to right, each labelled). It is a comparison drawing, not a
 wafer layout -- no wafer outline, no clearance checks, no alignment marks.
 
@@ -17,7 +17,7 @@ the 16 stripe patterns really are distinguishable from each other.
 Designs are lined up on a shared datum in y (`--align loop`, the default, or `top`), since
 each one's absolute y depends on its own pitch and hook drop and they would otherwise sit
 visibly staggered. Labels go on their own `Labels` layer
-(wafer_nesting's LAYER_MAP has no entry for it, so it would be dropped on a fab export
+(the wafer's PROBE_64CH layer map has no entry for it, so it would be dropped on a fab export
 rather than silently becoming a mask feature).
 """
 import argparse

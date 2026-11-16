@@ -18,9 +18,9 @@ import numpy as np
 #(maskgen/core/paths.py: --out / $MASKGEN_OUT / <repo>/.maskgen_out):
 #
 #    <root>/electrode/<TARGET_SET>/shanks/   <- this generator's output: DXFs, PNGs, JSON
-#    <root>/wafer/<TARGET_SET>/              <- wafer_nesting's: footprints, poses, wafer GDS
+#    <root>/wafer/<TARGET_SET>/              <- the wafer's: footprints, poses, wafer GDS
 #
-#wafer_nesting/config_64ch_4shank.py derives its two paths from the SAME constant, so a new
+#wafers/config_64ch_4shank.py derives its two paths from the SAME constant, so a new
 #design set is one edit here and one there -- and the shanks a wafer was nested from can
 #never drift into a different folder than the wafer built from them.
 #The folder is resolved when something is WRITTEN (out_dir()), not at import, so importing
@@ -71,7 +71,7 @@ LOOP_DATUM_VAR = "LOOP_Y_UM"
 #outline off them, and `dxf_io.save_dxf` drops them on the way out. That is the whole
 #reason to strip at SAVE rather than never emit: in-memory they are useful, in a file they
 #are a second, unversioned copy of the mask that some tool downstream will eventually
-#believe. `wafer_nesting`'s LAYER_MAP omits them too -- belt and braces, since a DXF from an
+#believe. The wafer's PROBE_64CH layer map omits them too -- belt and braces, since a DXF from an
 #older build may still carry them.
 EXPORT_DROP_LAYERS = _LY.PROBE_BUILD_ONLY      # ('Electrodes', 'Ref_Electrodes', 'Polyimide')
 

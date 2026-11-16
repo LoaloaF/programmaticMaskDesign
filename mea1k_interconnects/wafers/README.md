@@ -1,4 +1,4 @@
-# mea1k_interconnects/wafer_nesting — the interconnect wafer configs
+# mea1k_interconnects/wafers — the interconnect wafer configs
 
 The wafer **stages** are shared with the probe project and live in `maskgen/wafer/`; see
 `maskgen/wafer/__init__.py` for the list. This folder holds only what is specific to the MEA1K
@@ -7,7 +7,7 @@ interconnect wafer.
 | file | what |
 |---|---|
 | `config_rev4.py` | **the current wafer**: the Rev4 designs at the fabricated Rev2 wafer's exact positions |
-| `data/wafer4_rev2_placements.json` | those positions, measured once off the fabricated wafer (`legacy/rev2_repro`, 01c); `<ROOT>` = the repo root |
+| `../rev2_reference/wafer4_rev2_placements.json` | those positions, measured once off the fabricated wafer (`legacy/rev2_repro`, 01c), which sits next to it; `<ROOT>` = the repo root |
 
 Build it:
 

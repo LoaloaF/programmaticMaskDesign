@@ -176,7 +176,7 @@ IC_REV4 = LayerSet("interconnect_rev4", [
 
 # --- the UFTE probe wafer -----------------------------------------------------------------
 # Metal is the first mask (7/0 carries the alignment reference); every later mask is dark field.
-# !!! PROVISIONAL -- NOT CONFIRMED FOR FABRICATION (ufte_probes/wafer_nesting/README.md) !!!
+# !!! PROVISIONAL -- NOT CONFIRMED FOR FABRICATION (ufte_probes/wafers/README.md) !!!
 # The styles below are what `maskgen review` draws with. The shipped probe wafer's .lyp is still written
 # by maskgen/wafer/export.py's own colour cycle: that file is part of the golden reference, so it changes
 # only together with a new probe wafer. Listed back -> front, the etch mask (the device outline, a large
