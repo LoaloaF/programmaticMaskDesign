@@ -32,7 +32,9 @@ placement) starts again at Rev1 and names the revision of another wafer it start
 - **wafer6** = `MEA1K_wafer6_12x_8x_breakoutboards`: Rev1 = wafer4 Rev4 + its own changes (in design;
   `catalog.py` lists them). Its 12-block has its own stage 02, `02_route_wafer6.py` (Metal1 only, no via
   row, routed onto Alexei's 12x64 board in `assets/board_12x64_2026-06-26/`); `02_route.py` is unchanged
-  and still builds every wafer4 design.
+  and still builds every wafer4 design. Its second device, `8x64_56_15`, is the same chip side and cable
+  on Alexei's 8x64 board (`assets/board_8x64_2026-06-26/`), routed by `02_route_wafer6_8x.py` (which
+  reuses `02_route_wafer6.py`). wafer4's device list is fixed in `maskgen/core/wafers.py` (WAFER4_DEVICES).
 
 **The wafer4 revisions.**
 - **Rev2:** the fabricated wafer. Its design files are committed in `rev2_reference/` and are read only by

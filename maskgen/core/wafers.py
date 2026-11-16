@@ -30,15 +30,18 @@ Output layout (maskgen/core/paths.py):
 Pure standard library: KLayout's Python imports this (through paths.py).
 """
 
+# wafer4's five designs (catalog.DESIGNS also holds later wafers' devices)
+WAFER4_DEVICES = ("12block_56_15", "8block_51_35", "8block_71_15", "dummy_61_10", "dummy_35_36")
+
 WAFERS = {
     "wafer4": dict(
         name="MEA1K_wafer4_12x_8x_8x_breakoutboards", project="mea1k_interconnects",
         note="MEA1K interconnects: 4x 12-block, 4x 8-block 51_35, 4x 8-block 71_15, 26 dummies, hand-placed",
         revs={
-            2: dict(layout=None, layerset="interconnect_rev2",
+            2: dict(devices=WAFER4_DEVICES, layout=None, layerset="interconnect_rev2",
                     note="FABRICATED; the wafer itself is reproduced by legacy/rev2_repro"),
-            3: dict(layout=None, layerset="interconnect_rev3", note="designs only, not fabricated"),
-            4: dict(layout=dict(kind="fixed", config="config_rev4"), layerset="interconnect_rev4",
+            3: dict(devices=WAFER4_DEVICES, layout=None, layerset="interconnect_rev3", note="designs only, not fabricated"),
+            4: dict(devices=WAFER4_DEVICES, layout=dict(kind="fixed", config="config_rev4"), layerset="interconnect_rev4",
                     note="the Rev4 pad stack at the fabricated Rev2 placements"),
         }),
     "wafer5": dict(
@@ -54,7 +57,7 @@ WAFERS = {
         note="MEA1K interconnects, nested",
         revs={
             1: dict(layout=dict(kind="nested", config="config_wafer6", nester="skyline"),
-                    layerset="interconnect_rev4", devices=("12block_56_15",),
+                    layerset="interconnect_rev4", devices=("12block_56_15", "8x64_56_15"),
                     note="in design: wafer4 Rev4's 12-block + changes"),
         }),
 }

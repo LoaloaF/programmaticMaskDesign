@@ -122,10 +122,11 @@ def mirror(pts, xm):
 # ======================================================================================
 # Alexei's board
 # ======================================================================================
-def read_board():
-    """(outline segments, drills) in board mm: segments = point lists; drills = (x, y, diameter)."""
+def read_board(folder=BOARD_DIR, name="12x64"):
+    """(outline segments, drills) of folder/<name>.GM3|.TXT in board mm: segments = point lists; drills =
+    (x, y, diameter). 02_route_wafer6_8x.py reads the 8x64 board with it too."""
     segs, x, y, mode = [], 0.0, 0.0, 1
-    for ln in open(os.path.join(BOARD_DIR, "12x64.GM3")):      # Gerber, FSLAX44Y44, mm
+    for ln in open(os.path.join(folder, name + ".GM3")):      # Gerber, FSLAX44Y44, mm
         for g in re.findall(r"G0([123])", ln):
             mode = int(g)
         m = re.match(r"^(?:X(-?\d+))?(?:Y(-?\d+))?(?:I(-?\d+))?(?:J(-?\d+))?D0([12])\*", ln.strip())
@@ -148,7 +149,7 @@ def read_board():
                 segs.append([(x, y)] + mid + [(nx, ny)])
         x, y = nx, ny
     sizes, tool, drills, hx, hy = {}, None, [], 0.0, 0.0
-    for ln in open(os.path.join(BOARD_DIR, "12x64.TXT")):      # Excellon, METRIC, 4:4 leading zeros
+    for ln in open(os.path.join(folder, name + ".TXT")):      # Excellon, METRIC, 4:4 leading zeros
         ln = ln.strip()
         m = re.match(r"^T(\d+)F00S00C([\d.]+)$", ln)
         if m:

@@ -56,6 +56,9 @@ DESIGNS = {
          "GEN_ROUTING": {"via_offset_y": 33.75},
          "N_RIGHT_BULBS": 1},
         "8-block with 73 um pads, 13 um gap; one bulb on the right neck wall"),
+    "8x64_56_15": Design(
+        "8x64_56_15", "12block", "01_generate.py", "02_route.py",
+        {}, "the 12-block's chip side and cable (768 wires) on Alexei's 8x64 board (512 pads); wafer6 only"),
     "dummy_61_10": Design(
         "dummy_61_10", "dummy", "01_generate.py", "02_make_dummy.py",
         {}, "12-block pad grid, wire band shorted by a cap (etch/release test), GDS"),
@@ -85,6 +88,65 @@ DESIGNS = {
 #   status, changes   for people: what this revision is, and what it changes, one line each
 Rev = namedtuple("Rev", "n parent layerset set per_design dummy_set via_edge_gap band_ref_rev "
                         "status changes")
+
+# wafer6 Rev1's 12-block settings (12block_56_15); the 8x64 device shares its chip side and cable
+W6_12BLOCK = {"GEN_ROUTING": {
+    "m1_margin": 2.0, "via_k0_where": "needed", "via_k0_h": 5.0, "top_lane_uniform": True},
+    # the shifted lanes reach up to 5.25 um from Rev3's band; stage 02's sanity limit on that
+    # step (02_route.py, default 5 um) -- the step itself is a 300 um S-curve, checked for gaps
+    "BAND_REF_MAX_DX": 6.0,
+    # Phase-1 fan: lanes 6.5 um apart (was 7.0), band -> fan end 3.0 mm (NECK_LEN 420 + fan)
+    "FAN_TARGET_PITCH": 6.5, "FAN_LEN": 2580.0,
+    # stage 02 is the new router, 02_route_wafer6.py: its geometry is fixed in that file;
+    # FAN_TARGET_PITCH is its WIDE lane pitch
+    "ROUTE_SCRIPT": "02_route_wafer6.py",
+    # the neck's polyimide widening follows the fan: it ends at the fan bottom (automatic)
+    # and now also starts 467 um lower (Rev4 -400 um), so the ramp keeps its length
+    "POLY_FAN_TAPER_START_Y_UM": -400 - (2580.0 - 2112.914695780087),
+    # FAN_TARGET_PITCH changed: recompute the values derived from it (resolve.py)
+    "REDERIVE": True}
+# 8x64_56_15: wafer4 Rev4's 12-block via settings (it has no wafer4 history of its own) + W6_12BLOCK, and its own
+# stage 02 (02_route_wafer6_8x.py: Alexei's 8x64 board)
+W6_8X64 = dict(W6_12BLOCK,
+               GEN_ROUTING=dict({"via_k0_radius": 1.75, "via_k0_dx": -0.25, "via_rest_dx": 0.5},
+                                **W6_12BLOCK["GEN_ROUTING"]),
+               ROUTE_SCRIPT="02_route_wafer6_8x.py")
+W6_CHANGES = [
+    "one via rule: every Metal1 landing pad 2.0 um from the Metal2 pad's left and top edges, "
+    "every via edge 3.0 um (Rev4: 0.5-2.0 um in x, 1.5 um in y, by via kind) (m1_margin)",
+    "top-row vias: the full 5 um via on a 7 um Metal1 pad wherever it fits -- that column's lanes "
+    "move 1.5 um right to pass it; the small via only in the columns that carry 15 lanes (the "
+    "left half of the finished device), whose lanes cannot move (via_k0_where)",
+    "the small top vias become vertical capsules 3.5 x 5 um on a 5.5 x 7 um Metal1 pad (via_k0_h)",
+    "the top pad's lane sits one 4.5 um lane pitch from the next lane, like every lane, and jogs "
+    "45 deg into its via (top_lane_uniform)",
+    "Phase-1 fan: lanes 6.5 um apart after the fan (Rev4: 7.0), 2 um wire + 4.5 um gap -- the bundle and "
+    "the polyimide neck ~384 um narrower -- and the fan is 3.0 mm long (band -> full width; Rev4 "
+    "2.53 mm); the neck's widening moves down with it by 467 um (FAN_TARGET_PITCH, FAN_LEN, "
+    "POLY_FAN_TAPER_START_Y_UM)",
+    "new stage 02 (02_route_wafer6.py): Metal1 only, no via row. Alexei's 12x64 board is the ground "
+    "truth: connector pads on his drills (right column +15 um vs the CSV), polyimide = his outline + "
+    "the neck with 2 mm neck fillets (Rev4: 3 mm), a 0.8 mm hole at each corner mounting hole "
+    "(ROUTE_SCRIPT)",
+    "connector k takes band group k-1 (64 wires; 1-6 down the left column, 7-12 up the right): "
+    "1 and 12 from the side walls -- off the neck, along the top edge just above block 1, down the "
+    "wall clear of the notches; 2-11 down the centre, peeling off block by block",
+    "lane gaps: 4.5 um in the neck and the wall bundles; the centre fans in to 2.5 um between the "
+    "first blocks, then 3.5 um after block 2 and 5.5 um after blocks 3-4",
+    "into a block: two 32s, one per wide lane (rows 1-2, 3-4); top 16 to the row above, bottom 16 "
+    "to the row below, outermost wire to the nearest pad; 90 deg turn, 15 um approach, teardrop "
+    "with a 100 um fillet",
+] + [
+    "8x64_56_15 (new device): the 12-block's chip side, band, fan and neck as above on Alexei's 8x64 board "
+    "(2 x 4 connectors), its top connector where the 12x64's block 1 is (ROUTE_SCRIPT 02_route_wafer6_8x.py)",
+    "8x64: 96 wires per connector. Connector 1 / 8 from the wall: off the neck, along the top edge at 4.5 um "
+    "pitch 50 um above the pads, down the wall; connectors 2-4 / 5-7 down the centre at 5.0 um pitch, 5.5 um "
+    "after connector 2 / 7 has peeled off",
+    "8x64: into a connector as 2 x 48, one per wide lane; 16 to the outer row, 32 alternately to the two "
+    "centre rows (the far row's wires between the near row's pads) -- the 32 centre-row pads get two wires "
+    "each, one from either lane, 180 deg apart; 15 um approach, 100 um teardrop fillet",
+    "8x64: polyimide = his outline with the top edge raised 259 um for the top run, 2 mm neck fillets",
+]
 
 REVISIONS = {
     "wafer4": {
@@ -134,51 +196,13 @@ REVISIONS = {
     "wafer6": {
         1: Rev(1, ("wafer4", 4), "interconnect_rev4",
                set={},
-               per_design={"12block_56_15": {"GEN_ROUTING": {
-                   "m1_margin": 2.0, "via_k0_where": "needed", "via_k0_h": 5.0, "top_lane_uniform": True},
-                   # the shifted lanes reach up to 5.25 um from Rev3's band; stage 02's sanity limit on that
-                   # step (02_route.py, default 5 um) -- the step itself is a 300 um S-curve, checked for gaps
-                   "BAND_REF_MAX_DX": 6.0,
-                   # Phase-1 fan: lanes 6.5 um apart (was 7.0), band -> fan end 3.0 mm (NECK_LEN 420 + fan)
-                   "FAN_TARGET_PITCH": 6.5, "FAN_LEN": 2580.0,
-                   # stage 02 is the new router, 02_route_wafer6.py: its geometry is fixed in that file;
-                   # FAN_TARGET_PITCH is its WIDE lane pitch
-                   "ROUTE_SCRIPT": "02_route_wafer6.py",
-                   # the neck's polyimide widening follows the fan: it ends at the fan bottom (automatic)
-                   # and now also starts 467 um lower (Rev4 -400 um), so the ramp keeps its length
-                   "POLY_FAN_TAPER_START_Y_UM": -400 - (2580.0 - 2112.914695780087),
-                   # FAN_TARGET_PITCH changed: recompute the values derived from it (resolve.py)
-                   "REDERIVE": True}},
+               per_design={"12block_56_15": W6_12BLOCK, "8x64_56_15": W6_8X64},
                dummy_set={}, via_edge_gap=None, band_ref_rev=("wafer4", 3),
                status="in design",
-               changes=[
-                   "one via rule: every Metal1 landing pad 2.0 um from the Metal2 pad's left and top edges, "
-                   "every via edge 3.0 um (Rev4: 0.5-2.0 um in x, 1.5 um in y, by via kind) (m1_margin)",
-                   "top-row vias: the full 5 um via on a 7 um Metal1 pad wherever it fits -- that column's lanes "
-                   "move 1.5 um right to pass it; the small via only in the columns that carry 15 lanes (the "
-                   "left half of the finished device), whose lanes cannot move (via_k0_where)",
-                   "the small top vias become vertical capsules 3.5 x 5 um on a 5.5 x 7 um Metal1 pad (via_k0_h)",
-                   "the top pad's lane sits one 4.5 um lane pitch from the next lane, like every lane, and jogs "
-                   "45 deg into its via (top_lane_uniform)",
-                   "Phase-1 fan: lanes 6.5 um apart after the fan (Rev4: 7.0), 2 um wire + 4.5 um gap -- the bundle and "
-                   "the polyimide neck ~384 um narrower -- and the fan is 3.0 mm long (band -> full width; Rev4 "
-                   "2.53 mm); the neck's widening moves down with it by 467 um (FAN_TARGET_PITCH, FAN_LEN, "
-                   "POLY_FAN_TAPER_START_Y_UM)",
-                   "new stage 02 (02_route_wafer6.py): Metal1 only, no via row. Alexei's 12x64 board is the ground "
-                   "truth: connector pads on his drills (right column +15 um vs the CSV), polyimide = his outline + "
-                   "the neck with 2 mm neck fillets (Rev4: 3 mm), a 0.8 mm hole at each corner mounting hole "
-                   "(ROUTE_SCRIPT)",
-                   "connector k takes band group k-1 (64 wires; 1-6 down the left column, 7-12 up the right): "
-                   "1 and 12 from the side walls -- off the neck, along the top edge just above block 1, down the "
-                   "wall clear of the notches; 2-11 down the centre, peeling off block by block",
-                   "lane gaps: 4.5 um in the neck and the wall bundles; the centre fans in to 2.5 um between the "
-                   "first blocks, then 3.5 um after block 2 and 5.5 um after blocks 3-4",
-                   "into a block: two 32s, one per wide lane (rows 1-2, 3-4); top 16 to the row above, bottom 16 "
-                   "to the row below, outermost wire to the nearest pad; 90 deg turn, 15 um approach, teardrop "
-                   "with a 100 um fillet",
-               ]),
+               changes=W6_CHANGES),
     },
 }
+
 
 # A revision always sits under its wafer: REVISIONS = {"wafer6": {1: Rev(...)}}.
 for _w, _revs in REVISIONS.items():

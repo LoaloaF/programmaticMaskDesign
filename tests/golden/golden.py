@@ -199,7 +199,7 @@ def produce_interconnect(tree, out, self_check=False):
     snap = os.path.join(out, "_snapshot.py")
     open(snap, "w").write(SNAPSHOT)
     lists = json.loads(subprocess.run(
-        [PY, "-c", "import json, catalog; print(json.dumps([sorted(catalog.REVISIONS['wafer4']), sorted(catalog.DESIGNS)]))"],
+        [PY, "-c", "import json, catalog; print(json.dumps([sorted(catalog.REVISIONS['wafer4']), catalog.devices('wafer4', 4)]))"],
         cwd=ic, capture_output=True, text=True, check=True).stdout)
     os.makedirs(os.path.join(out, "config"), exist_ok=True)
     with cf.ThreadPoolExecutor(JOBS) as ex:
