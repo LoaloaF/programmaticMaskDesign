@@ -201,11 +201,17 @@ config_common.derive(globals())   # LAND_PAD_R, VIA_R, IC_TW, CONNECTOR_PITCH, P
 
 # Phase-2 fan profile. Lanes alternate Metal1/Metal2, so the same-layer pitch is 2x the lane
 # pitch; the fan carries the band width IC_TW.
-_FAN2_SL_TIGHT = 2.0 * CONNECTOR_PITCH
-_FAN2_SL_WIDE = 2.0 * BAND_PITCH_MM
-_FAN2_D = (TOTAL_WIRES - 1) / 2.0 * CONNECTOR_PITCH
-FAN2_G, _FAN2_LEN_AUTO = eased_fan_profile(_FAN2_SL_TIGHT, _FAN2_SL_WIDE, _FAN2_D,
-                                           FAN2_TARGET_GAP_MM, IC_TW,
-                                           FAN2_TILT_CAP_DEG, FAN_RES, FAN_LEN_SLACK)
-if FAN_LEN_MM is None:
-    FAN_LEN_MM = _FAN2_LEN_AUTO
+def derive_fan2(c, fan_len_auto=True):
+    """The Phase-2 fan values in namespace `c`. Run at import; resolve.py runs it again (with
+    config_common.derive) when a revision sets REDERIVE (e.g. a new FAN_TARGET_PITCH)."""
+    c["_FAN2_SL_TIGHT"] = 2.0 * c["CONNECTOR_PITCH"]
+    c["_FAN2_SL_WIDE"] = 2.0 * c["BAND_PITCH_MM"]
+    c["_FAN2_D"] = (c["TOTAL_WIRES"] - 1) / 2.0 * c["CONNECTOR_PITCH"]
+    c["FAN2_G"], c["_FAN2_LEN_AUTO"] = eased_fan_profile(c["_FAN2_SL_TIGHT"], c["_FAN2_SL_WIDE"], c["_FAN2_D"],
+                                                         c["FAN2_TARGET_GAP_MM"], c["IC_TW"],
+                                                         c["FAN2_TILT_CAP_DEG"], FAN_RES, FAN_LEN_SLACK)
+    if fan_len_auto:
+        c["FAN_LEN_MM"] = c["_FAN2_LEN_AUTO"]
+
+
+derive_fan2(globals(), fan_len_auto=FAN_LEN_MM is None)

@@ -862,11 +862,17 @@ def emit_polyimide(doc, msp, sig, info=None, ic_pads_bbox=None):
     neck_left_x = flare_l_um if flared else jig_left_x_um
     neck_right_x = flare_r_um if flared else jig_right_x_um
     bulb_flare_y = flare_y_um if flared else None
-    merged = unary_union([merged,
-                          *edge_bulbs(DSG, sig, neck_left_x, ymin, side="left", n_bulbs=N_LEFT_BULBS,
-                                      flare_y_um=bulb_flare_y),
-                          *edge_bulbs(DSG, sig, neck_right_x, ymin, side="right", n_bulbs=N_RIGHT_BULBS,
-                                      flare_y_um=bulb_flare_y)])
+    bulbs = [*edge_bulbs(DSG, sig, neck_left_x, ymin, side="left", n_bulbs=N_LEFT_BULBS,
+                         flare_y_um=bulb_flare_y),
+             *edge_bulbs(DSG, sig, neck_right_x, ymin, side="right", n_bulbs=N_RIGHT_BULBS,
+                         flare_y_um=bulb_flare_y)]
+    body = merged
+    merged = unary_union([body, *bulbs])
+    if merged.geom_type == "MultiPolygon":
+        # A bulb's base lies exactly ON the wall line; float noise between the two can leave it a
+        # separate piece. Grow the bulbs by 0.1 nm (below the 1 nm mask grid) so they overlap the wall.
+        merged = unary_union([body, *(b.buffer(1e-4, join_style=2) for b in bulbs)])
+        print("polyimide: bulbs touched the wall only along a line -- grown by 0.1 nm to merge")
 
     corners, _r_outer, r_inner = load_board_corner_features(DSG, sig)
     holes = []

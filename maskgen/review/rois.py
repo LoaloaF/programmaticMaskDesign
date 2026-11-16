@@ -89,6 +89,46 @@ def _band_above(col):
     return (x0 - 22.0, top - 6.0, x0 + 78.0, top + 354.0)
 
 
+
+def _fan(col):
+    """(outer-wire x min, x max, y where the outer wire reaches its full spread, top of the pad array) of
+    the Phase-1 fan, from every metal vertex between the pads and 6 mm above them -- cached."""
+    if "fan" not in col.cache:
+        p = _pads(col)
+        out = None
+        if p and col.kind == "routed":
+            side, _x0, ys = p
+            ytop = ys[-1] + side
+            v = np.concatenate([q for lay in (M1, M2) for q in col.outer(lay)])
+            v = v[(v[:, 1] > ytop + 300.0) & (v[:, 1] < ytop + 6000.0)]
+            if len(v):
+                xl, xr = v[:, 0].min(), v[:, 0].max()
+                y_end = v[v[:, 0] < xl + 0.5][:, 1].min()
+                out = (xl, xr, y_end, ytop)
+        col.cache["fan"] = out
+    return col.cache["fan"]
+
+
+def _fan_all(col):
+    """The whole Phase-1 fan: from the top pads up to where the bundle reaches its full width."""
+    f = _fan(col)
+    return None if f is None else (f[0], f[3], f[1], f[2] + 300.0)
+
+
+def _fan_edge(col):
+    """The outermost fanned wire where it reaches its full spread, with the polyimide edge beside it."""
+    f = _fan(col)
+    return None if f is None else (f[0] - 30.0, f[2] - 30.0, f[0] + 30.0, f[2] + 30.0)
+
+
+def _fan_lanes(col):
+    """A few lanes of the bundle just above the fan's end (the lane pitch after the fan)."""
+    f = _fan(col)
+    if f is None:
+        return None
+    xm = (f[0] + f[1]) / 2.0
+    return (xm - 25.0, f[2] + 50.0, xm + 25.0, f[2] + 100.0)
+
 def _openings(col):
     """Connector-pad openings: the PI-etch shapes of the most common size larger than 100 um."""
     if "openings" not in col.cache:
@@ -170,6 +210,12 @@ INTERCONNECT = [
         2.4, True, "the same on the 15-lane side: the small via between its two neighbour lanes"),
     ROI("band above column", "interconnect", _band_above, (100, 360), 0, 3.6, True,
         "the wire band leaving the column's top pad (Rev4: the wires step onto Rev3's path here)"),
+    ROI("fan", "interconnect", _fan_all, (0, 0), 400, 6.0, False,
+        "the Phase-1 fan: the wire band arching out from the pads to its full width (plus the polyimide band)"),
+    ROI("fan outer edge", "interconnect", _fan_edge, (600, 600), 0, 3.6, False,
+        "the outermost wire where the fan reaches full width, and the polyimide edge beside it"),
+    ROI("lanes after fan", "interconnect", _fan_lanes, (0, 0), 0, 2.4, True,
+        "lanes in the middle of the bundle just after the fan: the lane pitch along the neck"),
     ROI("connector pad", "interconnect", _connector(False), (0, 0), 60, 2.4, True,
         "the connector-pad opening nearest the middle of the connector, with its pad and entry"),
     ROI("outer connector pad", "interconnect", _connector(True), (0, 0), 60, 2.4, True,

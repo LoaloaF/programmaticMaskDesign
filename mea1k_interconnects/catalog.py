@@ -134,7 +134,15 @@ REVISIONS = {
                    "m1_margin": 2.0, "via_k0_where": "needed", "via_k0_h": 5.0, "top_lane_uniform": True},
                    # the shifted lanes reach up to 5.25 um from Rev3's band; stage 02's sanity limit on that
                    # step (02_route.py, default 5 um) -- the step itself is a 300 um S-curve, checked for gaps
-                   "BAND_REF_MAX_DX": 6.0}},
+                   "BAND_REF_MAX_DX": 6.0,
+                   # Phase-1 fan: lanes 6.5 um apart (was 7.0), band -> fan end 3.0 mm (NECK_LEN 420 + fan);
+                   # the via row stays where it was (VIA_ROW_GAP shortened by what the fan grew: Rev4's
+                   # auto fan was 2112.915 um), so the device keeps its length
+                   "FAN_TARGET_PITCH": 6.5, "FAN_LEN": 2580.0, "VIA_ROW_GAP": 14600.0 - (2580.0 - 2112.914695780087),
+                   # the neck's polyimide widening follows the fan: it ends at the fan bottom (automatic)
+                   # and now also starts 467 um lower (Rev4 -400 um), so the ramp keeps its length
+                   "POLY_FAN_TAPER_START_Y_UM": -400 - (2580.0 - 2112.914695780087),
+                   "REDERIVE": True}},
                dummy_set={}, via_edge_gap=None, band_ref_rev=("wafer4", 3),
                status="in design",
                changes=[
@@ -146,6 +154,10 @@ REVISIONS = {
                    "the small top vias become vertical capsules 3.5 x 5 um on a 5.5 x 7 um Metal1 pad (via_k0_h)",
                    "the top pad's lane sits one 4.5 um lane pitch from the next lane, like every lane, and jogs "
                    "45 deg into its via (top_lane_uniform)",
+                   "Phase-1 fan: lanes 6.5 um apart after the fan (Rev4: 7.0) -- the bundle and the polyimide "
+                   "neck ~384 um narrower -- and the fan reaches its full width 3.0 mm below the band (Rev4: "
+                   "2.53 mm); the via row and connector stay put; the polyimide neck's widening moves down with the "
+                   "fan by 467 um (FAN_TARGET_PITCH, FAN_LEN, VIA_ROW_GAP, POLY_FAN_TAPER_START_Y_UM)",
                ]),
     },
 }

@@ -62,6 +62,15 @@ def apply(cfg, design, wafer, rev, stage, band_ref=None, prov=None):
         w, r = gaps[-1]
         _apply_via_edge_gap(cfg, r.via_edge_gap, "%s via_edge_gap=%g" % (catalog.label(w, r.n), r.via_edge_gap),
                             prov)
+    if getattr(cfg, "REDERIVE", False):
+        # A revision changed a knob that derived values come from (e.g. FAN_TARGET_PITCH): recompute
+        # them. Opt-in, so the fabricated revisions keep their import-time (stale) values.
+        import config_common
+        auto = getattr(cfg, "FAN_LEN_MM", None) == getattr(cfg, "_FAN2_LEN_AUTO", None)
+        config_common.derive(vars(cfg))
+        if hasattr(cfg, "derive_fan2"):
+            cfg.derive_fan2(vars(cfg), fan_len_auto=auto)
+        prov["REDERIVE"] = prov.get("REDERIVE", "?") + " (derived values recomputed)"
     if band_ref and stage == "route":
         cfg.BAND_REF_DXF = band_ref
         prov[BAND_REF] = "%s band_ref_rev=%s" % (catalog.label(wafer, rev), catalog.label(*catalog.band_ref(wafer, rev)))
