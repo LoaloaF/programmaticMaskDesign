@@ -89,8 +89,9 @@ def run_stage(design, wafer, rev, stage, mid, final, band_ref=None):
     d = catalog.DESIGNS[design]
     cfg = importlib.import_module("config_" + d.base)
     apply(cfg, design, wafer, rev, stage, band_ref)
-    script = getattr(d, stage)
-    argv = {"01_generate.py": ["--config", d.base], "02_route.py": ["--design", d.base]}.get(script, [])
+    script = (getattr(cfg, "ROUTE_SCRIPT", None) if stage == "route" else None) or getattr(d, stage)
+    argv = {"01_generate.py": ["--config", d.base], "02_route.py": ["--design", d.base],
+            "02_route_wafer6.py": ["--design", d.base]}.get(script, [])
     argv += ["--out", mid] if stage == "gen" else ["--in", mid, "--out", final]
     sys.argv = [script] + argv
     runpy.run_path(script, run_name="__main__")

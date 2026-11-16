@@ -47,7 +47,8 @@ def _cli():
     p.add_argument("--out", dest="out_dxf", default=None,
                    help="routed output DXF; bare name -> <out root>/adhoc/ "
                         "(default: config_<design>.DEFAULT_OUT)")
-    return p.parse_args() if __name__ == "__main__" else p.parse_args([])
+    # "route_base": imported by a newer router (02_route_wafer6.py) that reuses Phase 1 + the polyimide
+    return p.parse_args() if __name__ in ("__main__", "route_base") else p.parse_args([])
 
 
 # Select the design BEFORE importing anything else from lib/ -- see lib/active.py.

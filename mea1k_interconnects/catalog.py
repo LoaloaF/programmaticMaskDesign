@@ -138,7 +138,10 @@ REVISIONS = {
                    # Phase-1 fan: lanes 6.5 um apart (was 7.0), band -> fan end 3.0 mm (NECK_LEN 420 + fan);
                    # the via row stays where it was (VIA_ROW_GAP shortened by what the fan grew: Rev4's
                    # auto fan was 2112.915 um), so the device keeps its length
-                   "FAN_TARGET_PITCH": 6.5, "FAN_LEN": 2580.0, "VIA_ROW_GAP": 14600.0 - (2580.0 - 2112.914695780087),
+                   "FAN_TARGET_PITCH": 4.54, "FAN_LEN": 2580.0,
+                   # the new routing (02_route_wafer6.py): Metal1 only, quarters, raised shoulders. Its lane
+                   # pitch is FAN_TARGET_PITCH = 2 um wire + the gap (>= 2.5 um) -- the knob to iterate on
+                   "ROUTE_SCRIPT": "02_route_wafer6.py",
                    # the neck's polyimide widening follows the fan: it ends at the fan bottom (automatic)
                    # and now also starts 467 um lower (Rev4 -400 um), so the ramp keeps its length
                    "POLY_FAN_TAPER_START_Y_UM": -400 - (2580.0 - 2112.914695780087),
@@ -154,10 +157,14 @@ REVISIONS = {
                    "the small top vias become vertical capsules 3.5 x 5 um on a 5.5 x 7 um Metal1 pad (via_k0_h)",
                    "the top pad's lane sits one 4.5 um lane pitch from the next lane, like every lane, and jogs "
                    "45 deg into its via (top_lane_uniform)",
-                   "Phase-1 fan: lanes 6.5 um apart after the fan (Rev4: 7.0) -- the bundle and the polyimide "
-                   "neck ~384 um narrower -- and the fan reaches its full width 3.0 mm below the band (Rev4: "
-                   "2.53 mm); the via row and connector stay put; the polyimide neck's widening moves down with the "
-                   "fan by 467 um (FAN_TARGET_PITCH, FAN_LEN, VIA_ROW_GAP, POLY_FAN_TAPER_START_Y_UM)",
+                   "Phase-1 fan: lanes 4.54 um apart after the fan (Rev4: 7.0) -- 2 um wire + 2.54 um gap, the "
+                   "smallest pitch whose fan holds the 2.5 um floor; the neck no longer needs to flare -- and the "
+                   "fan is 3.0 mm long (band -> full width; Rev4 2.53 mm) (FAN_TARGET_PITCH, FAN_LEN)",
+                   "new connector routing (02_route_wafer6.py): Metal1 only, no via row; the band splits into "
+                   "quarters of 192 -- the outer ones turn off the neck, run along the board's raised top "
+                   "shoulders and down the side walls into blocks 1/3/5, the centre ones run down the middle "
+                   "into blocks 2/4/6, so the feed side alternates L/R round all 12 connectors; connector pads "
+                   "unchanged; this iteration stops each 64-wire group short of its pads (ROUTE_SCRIPT)",
                ]),
     },
 }
