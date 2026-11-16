@@ -12,15 +12,15 @@ interconnect wafer.
 Build it:
 
 ```bash
-python3 -m maskgen wafer wafer4_rev4
+python3 -m maskgen wafer wafer4 --rev 4
 ```
 
-That builds the Rev4 designs if they are missing (`build_designs.py --rev 4`), then runs
+That builds the Rev4 designs if they are missing (`build_designs.py --wafer wafer4 --rev 4`), then runs
 `maskgen/wafer/rebuild.py`. The rebuild places every cell exactly as recorded and checks the result
 against the fabricated Rev2 wafer. It passes only if every difference is on an expected layer
 (1, 3, 5, 7, 8) and lies inside the pads.
 
-- **Output:** `<root>/wafer/wafer4_rev4/wafer_wafer4_rev4.{gds,oas,lyp}`. Layer names, colours and
+- **Output:** `<root>/MEA1K_wafer4_12x_8x_8x_breakoutboards/Rev4/MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev4.{gds,oas,lyp}`. Layer names, colours and
   order come from `maskgen/core/layers.py`, layer set `IC_REV4`.
 - **Background:**
   - what each revision changes: `../HANDOVER.md` §4.6;

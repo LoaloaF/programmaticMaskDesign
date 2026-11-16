@@ -1,9 +1,10 @@
 """(design, revision) -> the settings a stage runs with. The order is catalog.py's docstring.
 
-    apply(cfg, design, rev, stage, band_ref=None, prov=None)   mutate an imported config module
-    run_stage(design, rev, stage, mid, final, band_ref=None)  in a FRESH process: import, apply, run
-    show(design, rev)                                         every setting + where it came from
+    apply(cfg, design, wafer, rev, stage, band_ref=None, prov=None)   mutate an imported config module
+    run_stage(design, wafer, rev, stage, mid, final, band_ref=None)  in a FRESH process: import, apply, run
+    show(design, wafer, rev)                                         every setting + where it came from
 
+A revision is (wafer, rev): wafer a maskgen/core/wafers.py key ("wafer4"), rev its revision number.
 A config module is imported once per process and mutated in place, so a process resolves ONE
 (design, revision): build_designs.py runs every stage in its own process.
 """
@@ -42,42 +43,43 @@ def _apply_via_edge_gap(cfg, gap, label, prov):
         prov[k] = label
 
 
-def apply(cfg, design, rev, stage, band_ref=None, prov=None):
+def apply(cfg, design, wafer, rev, stage, band_ref=None, prov=None):
     """Apply design + revision chain to the imported config module `cfg`, in catalog order.
     `prov` (a dict) collects, per setting, the step that set it last."""
     prov = {} if prov is None else prov
     d = catalog.DESIGNS[design]
     _apply(cfg, d.set, "design %s" % design, prov)
-    revs = catalog.chain(rev)
-    for r in revs:
-        _apply(cfg, r.set, "Rev%d" % r.n, prov)
-    for r in revs:
-        _apply(cfg, r.per_design.get(design, {}), "Rev%d per_design" % r.n, prov)
+    revs = catalog.chain(wafer, rev)
+    for w, r in revs:
+        _apply(cfg, r.set, catalog.label(w, r.n), prov)
+    for w, r in revs:
+        _apply(cfg, r.per_design.get(design, {}), catalog.label(w, r.n) + " per_design", prov)
     if d.base == "dummy":
-        for r in revs:
-            _apply(cfg, r.dummy_set, "Rev%d dummy_set" % r.n, prov)
-    gaps = [r for r in revs if r.via_edge_gap is not None]
+        for w, r in revs:
+            _apply(cfg, r.dummy_set, catalog.label(w, r.n) + " dummy_set", prov)
+    gaps = [(w, r) for w, r in revs if r.via_edge_gap is not None]
     if gaps:
-        _apply_via_edge_gap(cfg, gaps[-1].via_edge_gap, "Rev%d via_edge_gap=%g" % (gaps[-1].n, gaps[-1].via_edge_gap),
+        w, r = gaps[-1]
+        _apply_via_edge_gap(cfg, r.via_edge_gap, "%s via_edge_gap=%g" % (catalog.label(w, r.n), r.via_edge_gap),
                             prov)
     if band_ref and stage == "route":
         cfg.BAND_REF_DXF = band_ref
-        prov[BAND_REF] = "Rev%d band_ref_rev=%d" % (rev, catalog.REVISIONS[rev].band_ref_rev)
+        prov[BAND_REF] = "%s band_ref_rev=%s" % (catalog.label(wafer, rev), catalog.label(*catalog.band_ref(wafer, rev)))
     return prov
 
 
-def needs_band_ref(design, rev):
-    """The revision whose stage-01 band stage 02 routes around, or None (dummies have no router)."""
-    r = catalog.REVISIONS[rev].band_ref_rev
+def needs_band_ref(design, wafer, rev):
+    """(wafer, n) whose stage-01 band stage 02 routes around, or None (dummies have no router)."""
+    r = catalog.band_ref(wafer, rev)
     return r if r and catalog.DESIGNS[design].route != "02_make_dummy.py" else None
 
 
-def run_stage(design, rev, stage, mid, final, band_ref=None):
+def run_stage(design, wafer, rev, stage, mid, final, band_ref=None):
     """In a fresh process: import the config, apply the overrides, run one stage script."""
     os.chdir(HERE)
     d = catalog.DESIGNS[design]
     cfg = importlib.import_module("config_" + d.base)
-    apply(cfg, design, rev, stage, band_ref)
+    apply(cfg, design, wafer, rev, stage, band_ref)
     script = getattr(d, stage)
     argv = {"01_generate.py": ["--config", d.base], "02_route.py": ["--design", d.base]}.get(script, [])
     argv += ["--out", mid] if stage == "gen" else ["--in", mid, "--out", final]
@@ -99,13 +101,13 @@ def _flat(mod):
     return out
 
 
-def show(design, rev, stage="route", out=sys.stdout, changed_only=False):
-    """Print every setting of (design, rev) with its source. Imports the config: one call per process."""
+def show(design, wafer, rev, stage="route", out=sys.stdout, changed_only=False):
+    """Print every setting of (design, wafer, rev) with its source. Imports the config: one call per process."""
     d = catalog.DESIGNS[design]
     cfg = importlib.import_module("config_" + d.base)
     before = _flat(cfg)
-    ref = needs_band_ref(design, rev)
-    prov = apply(cfg, design, rev, stage, "<rev%d stage-01 DXF>" % ref if ref else None)
+    ref = needs_band_ref(design, wafer, rev)
+    prov = apply(cfg, design, wafer, rev, stage, "<%s stage-01 DXF>" % catalog.label(*ref) if ref else None)
     after = _flat(cfg)
 
     # Derived values are computed at import from the BASE config and not recomputed after the overrides
@@ -124,13 +126,13 @@ def show(design, rev, stage="route", out=sys.stdout, changed_only=False):
         derived = {}
     stale = {k: v for k, v in derived.items() if v != getattr(cfg, k)}
 
-    r = catalog.REVISIONS[rev]
+    r = catalog.get(wafer, rev)
     w = out.write
-    w("%s  at  Rev%d  (%s)\n" % (design, rev, r.status))
+    w("%s  at  %s  (%s)\n" % (design, catalog.label(wafer, rev), r.status))
     w("  base config     config_%s.py\n" % d.base)
     w("  stages          %s -> %s\n" % (d.gen, d.route))
-    w("  files           %s\n                  %s\n" % catalog.file_names(design, rev))
-    w("  revision chain  %s\n" % " -> ".join("Rev%d" % x.n for x in catalog.chain(rev)))
+    w("  files           devices/%s/: %s, %s\n" % ((design,) + catalog.file_names(design)))
+    w("  revision chain  %s\n" % " -> ".join(catalog.label(x, y.n) for x, y in catalog.chain(wafer, rev)))
     w("  wafer layers    %s\n" % r.layerset)
     w("  design note     %s\n\n" % d.note)
     w("  %-44s %-28s %s\n" % ("setting", "value", "set by"))
@@ -155,33 +157,70 @@ def show(design, rev, stage="route", out=sys.stdout, changed_only=False):
       "   fixed at import; none of the overrides above feeds them today)\n")
 
 
+def summary(design, wafer, rev):
+    """What device.json says about (design, wafer, rev): identity, revision chain, every setting a design
+    or revision changed (value + who set it), and the base geometry knobs. Imports the config: one call
+    per process."""
+    from maskgen.core import wafers
+    d = catalog.DESIGNS[design]
+    cfg = importlib.import_module("config_" + d.base)
+    ref = needs_band_ref(design, wafer, rev)
+    prov = apply(cfg, design, wafer, rev, "route", "ref" if ref else None)
+    flat = _flat(cfg)
+    r = catalog.get(wafer, rev)
+    gen, final = catalog.file_names(design)
+    out = {
+        "device": design, "note": d.note,
+        "wafer": wafer, "wafer_name": wafers.get(wafer)["name"], "rev": rev, "status": r.status,
+        "base_config": "config_%s.py" % d.base, "stages": [d.gen, d.route],
+        "files": {"device": final, "pad_grid": gen},
+        "revision_chain": [catalog.label(w, x.n) for w, x in catalog.chain(wafer, rev)],
+        "changes_this_revision": list(r.changes),
+        "wafer_layers": r.layerset,
+        "pad_grid": {k: flat.get("GEN_CONFIG." + k) for k in
+                     ("pad_side", "pad_side_extra", "gap", "n_rows", "n_cols", "pad_etch", "metal3")},
+        "changed_settings": {k: {"value": flat.get(k, getattr(cfg, k, None)), "set_by": v}
+                             for k, v in sorted(prov.items()) if k != BAND_REF},
+    }
+    for k in ("TOTAL_WIRES", "N_BLOCKS_PER_COLUMN"):
+        if hasattr(cfg, k):
+            out[k.lower()] = getattr(cfg, k)
+    if ref:
+        out["band_reference"] = {"revision": catalog.label(*ref),
+                                 "file": "ref_%s/%s" % (("rev%d" % ref[1]) if ref[0] == wafer else "%s_rev%d" % ref, gen)}
+    return out
+
+
 def _short(v):
     s = repr(v)
     return s if len(s) <= 28 else s[:25] + "..."
 
 
-def revisions(out=sys.stdout):
-    """Every revision: its chain, status, wafer layers and what it changes."""
-    for n in sorted(catalog.REVISIONS):
-        r = catalog.REVISIONS[n]
-        out.write("Rev%d  %s\n  built from: %s   files *%s   wafer layers: %s\n"
-                  % (n, r.status, "the base configs" if r.parent is None else "Rev%d" % r.parent,
-                     r.suffix or " (fabricated names)", r.layerset))
-        for c in r.changes:
-            out.write("  - %s\n" % c)
-        out.write("\n")
+def revisions(wafer=None, out=sys.stdout):
+    """Every revision (of `wafer`, or of every wafer): its parent, status, wafer layers and what it changes."""
+    for wk in ([wafer] if wafer else list(catalog.REVISIONS)):
+        for n in sorted(catalog.REVISIONS[wk]):
+            r = catalog.get(wk, n)
+            p = catalog._ref(wk, r.parent)
+            out.write("%s  %s\n  built from: %s   wafer layers: %s\n"
+                      % (catalog.label(wk, n), r.status, "the base configs" if p is None else catalog.label(*p),
+                         r.layerset))
+            for c in r.changes:
+                out.write("  - %s\n" % c)
+            out.write("\n")
     out.write("designs: %s\n" % ", ".join("%s (config_%s.py)" % (k, d.base) for k, d in catalog.DESIGNS.items()))
 
 
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser(description="every resolved setting of one design at one revision")
-    ap.add_argument("--rev", type=int, choices=sorted(catalog.REVISIONS))
+    ap.add_argument("--wafer", choices=sorted(catalog.REVISIONS))
+    ap.add_argument("--rev", type=int)
     ap.add_argument("--design", choices=sorted(catalog.DESIGNS))
     ap.add_argument("--stage", default="route", choices=("gen", "route"))
     ap.add_argument("--changed", action="store_true", help="only what the design / revisions change")
     a = ap.parse_args()
-    if a.rev is None or a.design is None:
-        revisions()
+    if a.rev is None or a.design is None or a.wafer is None:
+        revisions(a.wafer)
     else:
-        show(a.design, a.rev, a.stage, changed_only=a.changed)
+        show(a.design, a.wafer, a.rev, a.stage, changed_only=a.changed)

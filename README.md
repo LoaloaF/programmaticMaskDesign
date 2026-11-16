@@ -7,7 +7,8 @@ Nothing on a wafer is drawn by hand, except where noted.
 ```
 programmaticMaskDesign/
   maskgen/                  SHARED code, and the `maskgen` command
-    core/                   paths.py (output root), manifest.py (run records),
+    core/                   wafers.py (EVERY wafer: name, revisions, layout config),
+                            paths.py (output root + folder layout), manifest.py (run records),
                             layers.py (EVERY mask layer: DXF names, fab numbers, names, colours)
     wafer/                  wafer layout for both projects: nesters, export, marks, verify, rebuild
     review/                 review sheets: named features side by side
@@ -48,12 +49,42 @@ Generated files **never** go inside the repo. They go under one **output root**.
 `--out` option if given, otherwise `$MASKGEN_OUT`, otherwise the path written in `.maskgen_out`
 (git-ignored; KLayout started from the Dock sees this file too). A root inside the repo is refused.
 
+Under the root, everything is organised by **wafer**, then **revision** (see "Wafers and revisions"
+below):
+
 | What | Folder | Written by |
 |---|---|---|
-| interconnect designs | `<root>/interconnect/rev<N>/` (+ `logs/`, `ref_rev3/`, `draft/` for `--stage01`) | `mea1k_interconnects/build_designs.py --rev N` |
-| electrode designs | `<root>/electrode/<set>/shanks/` | `cd ufte_probes && python3 -m electrode_bundle.batch` |
-| wafers | `<root>/wafer/<tag>/` | `maskgen wafer <tag>` |
-| review sheets | `<root>/review/<name>/` | `maskgen review ...` |
+A wafer is made of single **devices** (an interconnect, a dummy, a probe geometry), each placed many
+times. Every device has its own folder with a `device.json` that says what it is and how it was made.
+
+```
+<root>/
+  MEA1K_wafer4_12x_8x_8x_breakoutboards/        a wafer
+    Rev4/                                       one revision of it
+      devices/
+        12block_56_15/                          one device
+          12block_56_15.dxf                     what the wafer places
+          12block_56_15_padgrid.dxf             stage-01 intermediate
+          device.json                           what it is, revision chain, changed settings, pad grid
+          logs/  ref_rev3/
+        8block_51_35/ ...  dummy_61_10/ ...
+        manifest.json                           the build: git commit, md5 of every file
+      MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev4.gds/.oas/.lyp    the wafer layout
+      nest/                                     footprints, poses (nested wafers)
+      review/<sheet>/                           review sheets of this revision
+  MEA1K_W5_64Ch_4Shankdesigns/Rev1/devices/U4/  a probe device: U4 + its barcoded variants U4C08..C11
+  _golden/                                      the regression harness's reference + scratch; not for reading
+  index.jsonl                                   every run
+```
+
+| What | Written by |
+|---|---|
+| `devices/` of an interconnect wafer | `mea1k_interconnects/build_designs.py --wafer W --rev N` (`--stage01`: `Rev<N>/draft/`) |
+| `devices/` of a probe wafer | `cd ufte_probes && python3 -m electrode_bundle.batch` |
+| the wafer layout, `nest/` | `maskgen wafer W --rev N` |
+| `review/` | `maskgen review ...` |
+
+The folder layout is `maskgen/core/paths.py`.
 
 Every run folder gets a `manifest.json` with:
 - the git commit;
@@ -65,26 +96,27 @@ Every run folder gets a `manifest.json` with:
 ## The commands
 
 ```bash
-maskgen where                          # the root, its layout, the last runs
-maskgen where interconnect 4           # one folder + what its last run wrote (also: electrode, wafer, review)
+maskgen where                          # the root, every wafer's folder, the last runs
+maskgen where wafer4 4                 # one wafer revision: its devices, its layout, its review sheets
 maskgen runs                           # the run index
 
-maskgen show                           # interconnect revisions: chain, status, what each changes
-maskgen show --rev 4 --design 12block --changed   # one design's resolved settings, and who set them
+maskgen show                           # interconnect revisions of every wafer: parent, status, changes
+maskgen show --wafer wafer4 --rev 4 --design 12block_56_15 --changed   # one design's resolved settings + who set them
 
-maskgen wafer                          # the wafers it knows
-maskgen wafer wafer4_rev4              # Rev4 designs if missing, then the wafer, checked against Rev2
-maskgen wafer 64Ch_4Shankdesigns       # probe designs if missing, nest if none yet, export, verify, map
+maskgen wafer                          # every wafer, its revisions, which have a layout
+maskgen wafer wafer4 --rev 4           # Rev4 designs if missing, then the wafer, checked against Rev2
+maskgen wafer wafer5                   # (latest revision) probe designs if missing, nest if none yet, export, verify, map
 
-maskgen review --rev 3 4               # every interconnect design, Rev3 next to Rev4, feature by feature
+maskgen review --wafer wafer4 --rev 3 4          # every interconnect design, Rev3 next to Rev4, feature by feature
+maskgen review --rev wafer4/4 wafer6/1 --xor     # across wafers
 maskgen review --probes                # the electrode geometries side by side
-maskgen review --wafers wafer4_rev4 rev2_fabricated 64Ch_4Shankdesigns   # alignment-mark slots
+maskgen review --wafers wafer4/4 rev2_fabricated wafer5   # alignment-mark slots
 maskgen review --rois                  # the named features
 ```
 
 **Designs.**
-- Interconnect designs: `cd mea1k_interconnects && python3 build_designs.py --rev 4`. It takes
-  about 2 minutes and builds all five designs.
+- Interconnect designs: `cd mea1k_interconnects && python3 build_designs.py --wafer wafer4 --rev 4`.
+  It takes about 2 minutes and builds all five designs (`--only 12block_56_15` for one).
 - Probe designs: `cd ufte_probes && python3 -m electrode_bundle.batch`.
 - `maskgen wafer` and `maskgen review` run these themselves when the designs are missing.
 
@@ -113,13 +145,36 @@ Each sheet writes four files:
 | `maskgen/wafer/` | wafer layout for both | [`ufte_probes/wafers/README.md`](ufte_probes/wafers/README.md) (nested wafers), [`mea1k_interconnects/wafers/README.md`](mea1k_interconnects/wafers/README.md) (fixed placements) |
 
 **Where things are defined.**
+- **Wafers:** `maskgen/core/wafers.py` (names, revisions, which config lays each revision out); the
+  layout configs are `<project>/wafers/config_*.py`.
 - **Interconnect designs and revisions:** `mea1k_interconnects/catalog.py`. A revision lists only
-  what it changes against its parent: Rev4 is Rev3 plus its own list.
+  what it changes against its parent: wafer4 Rev4 is wafer4 Rev3 plus its own list.
 - **Probe designs:** `ufte_probes/electrode_bundle/design_sets.py`.
 - **Mask layers:** `maskgen/core/layers.py`, one table for both projects.
-- **Wafers:** `maskgen/wafer/specs.py`.
 
-## Rev4 (current interconnect wafer)
+## Wafers and revisions
+
+A **wafer** is one mask set with its own devices and its own placement. Wafers are numbered across
+both projects:
+
+| Key | Name | Project | Revisions |
+|---|---|---|---|
+| `wafer4` | `MEA1K_wafer4_12x_8x_8x_breakoutboards` | interconnects | Rev2 (fabricated), Rev3, Rev4 (current) |
+| `wafer5` | `MEA1K_W5_64Ch_4Shankdesigns` | probes | Rev1 (shipped) |
+| `wafer6` | `MEA1K_wafer6_12x_8x_breakoutboards` | interconnects | Rev1 (in design) |
+
+A **revision** keeps the wafer's layout and changes only some masks (wafer4 Rev2 → Rev3 → Rev4).
+A new wafer starts again at Rev1. Its files carry the bare name; later revisions append `_Rev<N>`.
+An interconnect wafer's first revision names the revision of another wafer it starts from: wafer6
+Rev1 = wafer4 Rev4 + its own changes (`catalog.py`).
+
+To start a new wafer:
+1. add it to `maskgen/core/wafers.py`;
+2. add its revisions to `catalog.REVISIONS` (interconnects) or its design set to `design_sets.py`
+   (probes);
+3. add a layout config in `<project>/wafers/` and name it in `wafers.py`.
+
+## wafer4 Rev4 (current interconnect wafer)
 
 Rev4 is Rev3 plus the following:
 - every via sits 2.5 µm from the pad edge;
@@ -132,10 +187,10 @@ Rev4 is Rev3 plus the following:
 
 The connector side stays identical to Rev3 / Rev2. Details: `mea1k_interconnects/HANDOVER.md` §4.6.
 
-- **Rev3 band:** `build_designs.py --rev 4` regenerates the Rev3 band reference it needs, into
-  `rev4/ref_rev3/`.
-- **Output:** `<root>/wafer/wafer4_rev4/wafer_wafer4_rev4.{gds,oas,lyp}`. The layer names are
-  stored in the OAS and the colours in the `.lyp` (`klayout x.oas -l x.lyp`).
+- **Rev3 band:** `build_designs.py --wafer wafer4 --rev 4` regenerates the Rev3 band reference it
+  needs, into each device's `ref_rev3/`.
+- **Output:** `<root>/MEA1K_wafer4_12x_8x_8x_breakoutboards/Rev4/MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev4.{gds,oas,lyp}`.
+  The layer names are stored in the OAS and the colours in the `.lyp` (`klayout x.oas -l x.lyp`).
 - **Placements:** the Rev2 placements, measured once off the fabricated wafer and committed as
   `mea1k_interconnects/rev2_reference/wafer4_rev2_placements.json`.
 
@@ -167,6 +222,6 @@ MASKGEN_OUT=<root> python3 tests/golden/golden.py check --only all            # 
 - **Golden check.**
   - It rebuilds every interconnect, probe and wafer output in a copy of the working tree. It
     requires identical fingerprints, or per-layer XOR = 0, against commit 667ba2d.
-  - The reference files live in `<root>/golden/667ba2d/`. Do not delete them.
+  - The reference files live in `<root>/_golden/667ba2d/`. Do not delete them.
   - Run it after any change that could touch geometry. A change that is meant to change geometry
     becomes a new revision in the catalog, and the golden check is captured again from that commit.

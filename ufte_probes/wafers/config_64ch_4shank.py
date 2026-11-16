@@ -12,14 +12,17 @@ config for a different design set.
 import os, sys
 
 # =============================================================================
-# PATHS -- under the maskgen output root (maskgen/core/paths.py), outside the repo
+# WHICH WAFER -- maskgen/core/wafers.py; the outputs go under the maskgen output root, outside the repo
 # =============================================================================
-#     <root>/electrode/<TARGET_SET>/shanks/   <- electrode_bundle's output; the DXFs nested here
-#     <root>/wafer/<TARGET_SET>/              <- this stage's output; footprints, poses, wafer GDS
+#     <root>/MEA1K_W5_64Ch_4Shankdesigns/Rev1/devices/<geometry>/   <- electrode_bundle's output, one
+#                                                                      folder per geometry, its barcoded
+#                                                                      variants (the DXFs nested here) inside
+#     <root>/MEA1K_W5_64Ch_4Shankdesigns/Rev1/          <- this wafer: GDS/OAS/LYP, placement, map; nest/
 #
-# TARGET_SET must match electrode_bundle/config.py's constant of the same name: both halves
-# are named by it, so a wafer can never be built from shanks of another set.
-# `python3 -m maskgen where wafer 64Ch_4Shankdesigns` prints the folder.
+# TARGET_SET is electrode_bundle/config.py's design set; wafers.py names it as this wafer's design_set,
+# which is what sends the generator's output into this wafer's devices/ folder.
+# `python3 -m maskgen where wafer5` prints the folders.
+WAFER, REV = "wafer5", 1
 TARGET_SET = "64Ch_4Shankdesigns"
 
 HERE = os.path.dirname(os.path.abspath(__file__))     # .../ufte_probes/wafers
@@ -27,8 +30,8 @@ ROOT = os.path.dirname(HERE)                          # the common folder above 
 sys.path.insert(0, os.path.dirname(ROOT))             # the repo root: the maskgen package
 from maskgen.core import paths as _paths              # noqa: E402
 
-DESIGN_DIR = _paths.electrode_dir(TARGET_SET, create=False)
-OUT_DIR    = _paths.wafer_dir(TARGET_SET, create=False)
+DESIGN_DIR = _paths.devices_dir(WAFER, REV, create=False)
+assert _paths.electrode_dir(TARGET_SET, create=False) == DESIGN_DIR, "wafers.py: wafer5 Rev1 design_set"
 
 # Wafer outline + alignment marks: the one shared copy in maskgen/wafer/data/.
 from maskgen import wafer as _wafer                   # noqa: E402  -- maskgen/wafer/data/, shared
@@ -60,8 +63,6 @@ IONP_VARIANTS = {
     "U8":   ["C12", "C13", "C14", "C15"],
 }
 
-RUN_TAG = TARGET_SET
-
 
 def _split(total, n):
     """total shared over n variants, remainder going to the first few."""
@@ -69,7 +70,7 @@ def _split(total, n):
 
 
 DESIGNS = [
-    {"key": f"{kind}{v}", "dxf": f"electrode_bundle_{kind}{v}.dxf",
+    {"key": f"{kind}{v}", "dxf": f"{kind}/electrode_bundle_{kind}{v}.dxf",
      "kind": kind, "count": n}
     for kind, count in SHANK_COUNTS.items()
     for v, n in zip(IONP_VARIANTS[kind], _split(count, len(IONP_VARIANTS[kind])))

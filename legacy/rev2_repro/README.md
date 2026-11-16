@@ -10,7 +10,7 @@ The main workflow no longer depends on it:
 - Rev4 builds from the placements this folder measured once. They are committed as
   `mea1k_interconnects/rev2_reference/wafer4_rev2_placements.json`, with `<ROOT>` written for
   the repo root.
-- That data file is what `maskgen/wafer/rebuild.py` reads (config `config_rev4`, `python3 -m maskgen wafer wafer4_rev4`).
+- That data file is what `maskgen/wafer/rebuild.py` reads (config `config_rev4`, `python3 -m maskgen wafer wafer4 --rev 4`).
 
 ## Run
 
@@ -24,7 +24,7 @@ WAFERNEST_CONFIG=config_rev2 $KL -b -r legacy/rev2_repro/01d_rebuild_wafer.py   
 
 Outputs go to `$MASKGEN_OUT/wafer/wafer4_rev2/`: `placements.json` and `wafer_wafer4_rev2.gds`.
 
-**Rev3 wafer, and the Rev2/Rev3 overlay** (`01e`): run `build_designs.py --rev 3` first, then the
+**Rev3 wafer, and the Rev2/Rev3 overlay** (`01e`): run `build_designs.py --wafer wafer4 --rev 3` first, then the
 same commands with `config_rev3`.
 
 ## What changed against the originals

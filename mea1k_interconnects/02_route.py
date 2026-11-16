@@ -42,10 +42,10 @@ def _cli():
     p.add_argument("--design", choices=DESIGNS, default="12block",
                    help="which config_<design>.py to route with (default: %(default)s)")
     p.add_argument("--in", dest="in_dxf", default=None,
-                   help="interconnect DXF from stage 01; bare name -> <out root>/interconnect/adhoc/ "
+                   help="interconnect DXF from stage 01; bare name -> <out root>/adhoc/ "
                         "(default: config_<design>.DEFAULT_IN)")
     p.add_argument("--out", dest="out_dxf", default=None,
-                   help="routed output DXF; bare name -> <out root>/interconnect/adhoc/ "
+                   help="routed output DXF; bare name -> <out root>/adhoc/ "
                         "(default: config_<design>.DEFAULT_OUT)")
     return p.parse_args() if __name__ == "__main__" else p.parse_args([])
 

@@ -4,9 +4,12 @@ Parametric generator for the 64-channel flexible electrode probe (MEA1K connecto
 You give it numbers, it emits the CAD. **Nothing is drawn by hand and no input file is required**
 — the entire device geometry is computed from `design_sets.py` + `config.py`.
 
-All generated output goes to **`<TARGET_SET>/shanks/`** (`TARGET_SET` in `config.py`;
-currently `64Ch_4Shankdesigns`) — a sibling of this folder, not inside it. The path is
-resolved from the module's own location, so nothing needs editing on a new machine. The
+All generated output goes to the design set's folder under the maskgen output root (`TARGET_SET`
+in `config.py`, currently `64Ch_4Shankdesigns`): the `devices/` folder of the wafer revision made of
+it (`maskgen/core/wafers.py`: wafer5 Rev1 → `<root>/MEA1K_W5_64Ch_4Shankdesigns/Rev1/devices/`), else
+`<root>/electrode/<TARGET_SET>/`, with one DEVICE folder per geometry below it (`config.device_dir`:
+the geometry, its barcoded variants, their JSON, and a `device.json`). Below, `<TARGET_SET>/shanks/`
+means that folder. The
 only things inside `designs/` are shipped `…Example` sample files from an earlier
 generation; nothing reads them.
 

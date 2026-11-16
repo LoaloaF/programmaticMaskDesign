@@ -1,8 +1,9 @@
 """What a review column shows: one design's polygons per FAB layer, plus the LayerSet that names and colours them.
 
-    interconnect(design, rev)   the FINAL file of a mea1k_interconnects design (routed DXF / dummy GDS)
+    interconnect(design, wafer, rev)   the FINAL file of a mea1k_interconnects design (routed DXF / dummy GDS)
     probe(name)                 a ufte_probes electrode bundle DXF (a geometry "U4" or a variant "U4C08")
-    wafer(tag)                  a wafer GDS (maskgen/wafer/specs.py), or a reference wafer (REFERENCE_WAFERS)
+    wafer(tag)                  a wafer layout GDS ("wafer4/4", "wafer5" = its latest; maskgen/core/wafers.py),
+                                or a reference wafer (REFERENCE_WAFERS)
 
 Polygons are lists of rings, all in um: [outer, hole, hole, ...]. Most have a single ring. A DXF
 HATCH becomes one polygon with holes; LWPOLYLINEs and GDS polygons have no holes. Layers are keyed
@@ -24,11 +25,12 @@ import sys
 import numpy as np
 
 from maskgen.core import layers as L
-from maskgen.core import paths
+from maskgen.core import paths, wafers
 
 PROBE_SET = "64Ch_4Shankdesigns"
-REFERENCE_WAFERS = {        # tag -> (file in the repo, LayerSet key)
-    "rev2_fabricated": ("mea1k_interconnects/rev2_reference/MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds", "interconnect_rev2"),
+REFERENCE_WAFERS = {        # tag -> (file in the repo, LayerSet key, (wafer, rev) it is)
+    "rev2_fabricated": ("mea1k_interconnects/rev2_reference/MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev2.gds",
+                        "interconnect_rev2", ("wafer4", 2)),
 }
 
 
@@ -170,37 +172,42 @@ def interconnect_designs():
     return list(_ic_catalog().DESIGNS)
 
 
-def interconnect(design, rev, root=None):
+def interconnect(design, wafer, rev, root=None):
     cat = _ic_catalog()
     if design not in cat.DESIGNS:
         raise SystemExit("unknown design %r; known: %s" % (design, ", ".join(cat.DESIGNS)))
-    if rev not in cat.REVISIONS:
-        raise SystemExit("unknown revision %r; known: %s" % (rev, ", ".join(map(str, cat.REVISIONS))))
-    ls = L.LAYERSETS[cat.REVISIONS[rev].layerset]
-    path = os.path.join(paths.interconnect_dir(rev, root, create=False), cat.file_names(design, rev)[1])
+    ls = L.LAYERSETS[cat.get(wafer, rev).layerset]
+    path = os.path.join(paths.device_dir(wafer, rev, design, root, create=False), cat.file_names(design)[1])
     if not os.path.exists(path):
         raise Missing(path, (os.path.join(paths.REPO, "mea1k_interconnects"),
-                             [sys.executable, "build_designs.py", "--rev", str(rev)]))
+                             [sys.executable, "build_designs.py", "--wafer", wafer, "--rev", str(rev)]))
     if path.lower().endswith(".gds"):
         layers, dropped = read_gds(path, ls.dummy_map)
         kind = "dummy"
     else:
         layers, dropped = read_dxf(path, ls, reflect=True)
         kind = "routed"
-    return Column("%s Rev%d" % (design, rev), "interconnect", layers, ls, [path], group=design, kind=kind,
-                  dropped=dropped)
+    return Column("%s %s" % (design, cat.label(wafer, rev)), "interconnect", layers, ls, [path], group=design,
+                  kind=kind, dropped=dropped)
 
 
 def probe_designs(design_set=PROBE_SET, root=None):
-    """The geometries (U1.6, ...) and barcoded variants (U1.6C00, ...) present in the output root."""
+    """The geometries (U1.6, ...) and barcoded variants (U1.6C00, ...) present in the output root
+    (one device folder per geometry, its variants inside)."""
     d = paths.electrode_dir(design_set, root, create=False)
-    names = sorted(f[len("electrode_bundle_"):-4] for f in (os.listdir(d) if os.path.isdir(d) else ())
-                   if f.startswith("electrode_bundle_") and f.endswith(".dxf"))
-    return names
+    names = []
+    for g in (sorted(os.listdir(d)) if os.path.isdir(d) else ()):
+        if os.path.isdir(os.path.join(d, g)):
+            names += [f[len("electrode_bundle_"):-4] for f in os.listdir(os.path.join(d, g))
+                      if f.startswith("electrode_bundle_") and f.endswith(".dxf")]
+    return sorted(names)
 
 
 def probe(name, design_set=PROBE_SET, root=None):
-    path = os.path.join(paths.electrode_dir(design_set, root, create=False), "electrode_bundle_%s.dxf" % name)
+    import re
+    geometry = re.sub(r"C\d{2}$", "", name)                # a barcoded variant lives in its geometry's folder
+    path = os.path.join(paths.electrode_dir(design_set, root, create=False), geometry,
+                        "electrode_bundle_%s.dxf" % name)
     if not os.path.exists(path):
         raise Missing(path, (os.path.join(paths.REPO, "ufte_probes"),
                              [sys.executable, "-m", "electrode_bundle.batch", "--no-render"]))
@@ -208,17 +215,27 @@ def probe(name, design_set=PROBE_SET, root=None):
     return Column(name, "probe", layers, L.PROBE_64CH, [path], group=name, kind="probe", dropped=dropped)
 
 
+def wafer_rev(tag):
+    """(wafer key, rev) a --wafers tag belongs to (rev2_fabricated: wafer4 Rev2)."""
+    if tag in REFERENCE_WAFERS:
+        return REFERENCE_WAFERS[tag][2]
+    return wafers.parse(tag) if "/" in tag or ":" in tag else (tag, wafers.latest(tag, with_layout=True))
+
+
 def wafer(tag, root=None):
     from maskgen.wafer import specs
     if tag in REFERENCE_WAFERS:
-        f, ls = REFERENCE_WAFERS[tag]
+        f, ls, _ = REFERENCE_WAFERS[tag]
         path, ls = os.path.join(paths.REPO, f), L.LAYERSETS[ls]
-    elif tag in specs.WAFERS:
-        path = os.path.join(paths.wafer_dir(tag, root, create=False), "wafer_%s.gds" % tag)
-        ls = L.LAYERSETS[specs.WAFERS[tag]["layerset"]]
-        if not os.path.exists(path):
-            raise Missing(path, (paths.REPO, [sys.executable, "-m", "maskgen", "wafer", tag]))
     else:
-        raise SystemExit("unknown wafer %r; known: %s" % (tag, ", ".join(list(specs.WAFERS) + list(REFERENCE_WAFERS))))
+        if tag.replace(":", "/").split("/")[0] not in wafers.WAFERS:
+            raise SystemExit("unknown wafer %r; known: %s" % (tag, ", ".join(list(wafers.WAFERS) + list(REFERENCE_WAFERS))))
+        key, rev = wafer_rev(tag)
+        lay = specs.layout(key, rev)
+        path = os.path.join(paths.wafer_rev_dir(key, rev, root, create=False), wafers.stem(key, rev) + ".gds")
+        ls = L.LAYERSETS[lay["layerset"]]
+        tag = wafers.label(key, rev)
+        if not os.path.exists(path):
+            raise Missing(path, (paths.REPO, [sys.executable, "-m", "maskgen", "wafer", key, "--rev", str(rev)]))
     layers, dropped = read_gds(path, top_only=True)
     return Column(tag, "wafer", layers, ls, [path], group=tag, kind="wafer", dropped=dropped)

@@ -47,12 +47,12 @@ class Design(object):
 
 
 def in_designs(p):
-    """Bare filename -> <out root>/interconnect/adhoc/ (a stage run by hand); an absolute path is used
+    """Bare filename -> <out root>/adhoc/ (a stage run by hand); an absolute path is used
     as given (build_designs.py always passes absolute paths)."""
     if os.path.isabs(p):
         return p
     from maskgen.core import paths
-    return os.path.join(paths.interconnect_dir("adhoc"), p)
+    return os.path.join(paths.adhoc_dir(), p)
 
 
 def select(design, in_dxf=None, out_dxf=None):

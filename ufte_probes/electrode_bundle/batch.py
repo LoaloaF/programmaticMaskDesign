@@ -27,6 +27,7 @@ VARIANT in a row. The first says whether the shank shapes are right; the second 
 check that the 16 stripe patterns are distinguishable from one another.
 """
 import argparse
+import json
 from dataclasses import replace
 
 import numpy as np
@@ -34,7 +35,7 @@ import numpy as np
 from . import bundle as bundle_mod
 from . import dxf_io as io
 from . import shapes as sh
-from .config import (BundleConfig, IonpConfig, MappingConfig, bundle_dxf_path,
+from .config import (BundleConfig, IonpConfig, MappingConfig, bundle_dxf_path, device_dir,
                      ensure_out_dir, variant_tag)
 from .design_sets import BUNDLE_FOLD, DESIGNS
 from .lengths import solve_lengths
@@ -161,7 +162,8 @@ def _write_geometry_and_records(bcfg, result, spec, out_dir, render):
 
 
 def build_design(spec, out_dir: str, render: bool = True, geometry: bool = True):
-    """Build one DesignSpec: geometry always, plus the barcoded variant when it has an id.
+    """Build one DesignSpec into its DEVICE folder (`device_dir(spec.name)`): geometry always, plus the
+    barcoded variant when it has an id. `out_dir` is the design set's folder above the device folders.
 
     `geometry=False` skips the barcode-free artefacts because an earlier entry with the same
     `name` already wrote them. Every design ships four barcode variants, so without that the
@@ -169,6 +171,7 @@ def build_design(spec, out_dir: str, render: bool = True, geometry: bool = True)
     bcfg = config_for(spec)
     tag = variant_tag(spec.name, spec.ionp_pattern_id)
     print(f"\n=== {tag} ({spec.doc_id}) ===")
+    out_dir = device_dir(spec.name, create=True)
 
     if geometry:
         #the barcode-free artefacts first, so they exist even if the IONP pass rejects the id
@@ -191,6 +194,31 @@ def _build_one(args):
     spec, out_dir, render, geometry = args
     build_design(spec, out_dir, render, geometry=geometry)
     return variant_tag(spec.name, spec.ionp_pattern_id)
+
+
+def _write_device_json(out_dir):
+    """device.json in every device folder: what the device is (its DesignSpec), its barcoded variants,
+    its files, and the headline numbers of its electrode record."""
+    import os
+    from dataclasses import asdict, is_dataclass
+    from .config import TARGET_SET
+    by_name = {}
+    for s in DESIGNS:
+        by_name.setdefault(s.name, []).append(s)
+    for name, specs in by_name.items():
+        d = device_dir(name)
+        rec_path = os.path.join(d, f"{name}_electrodes.json")
+        rec = json.load(open(rec_path)) if os.path.exists(rec_path) else {}
+        info = {
+            "device": name, "design_set": TARGET_SET,
+            "doc_id": specs[0].doc_id,
+            "variants": [variant_tag(s.name, s.ionp_pattern_id) for s in specs if s.ionp_pattern_id is not None],
+            "files": sorted(f for f in os.listdir(d) if os.path.isfile(os.path.join(d, f)) and f != "device.json"),
+            "spec": asdict(specs[0]) if is_dataclass(specs[0]) else repr(specs[0]),
+            "summary": {k: v for k, v in rec.items() if not isinstance(v, (list, dict))},
+        }
+        with open(os.path.join(d, "device.json"), "w") as f:
+            json.dump(info, f, indent=1, default=repr)
 
 
 def run_batch(render: bool = True, side_by_side: bool = True, jobs: int = 1):
@@ -244,6 +272,7 @@ def _build_parser():
 def main(argv=None):
     args = _build_parser().parse_args(argv)
     run_batch(render=not args.no_render, side_by_side=not args.no_side_by_side, jobs=args.jobs)
+    _write_device_json(ensure_out_dir())
     _write_manifest(args)
 
 
@@ -255,7 +284,7 @@ def _write_manifest(args):
     from maskgen.core import manifest
     from .config import TARGET_SET
     out_dir = ensure_out_dir()
-    outs = sorted(p for p in glob.glob(f"{out_dir}/*") if os.path.isfile(p)
+    outs = sorted(p for p in glob.glob(f"{out_dir}/**/*", recursive=True) if os.path.isfile(p)
                   and not p.endswith("manifest.json"))
     spec = {"design_set": TARGET_SET, "render": not args.no_render,
             "side_by_side": not args.no_side_by_side,

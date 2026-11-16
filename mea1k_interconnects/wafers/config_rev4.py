@@ -26,11 +26,11 @@ Every piece keeps its Rev2 position, so this builds from Rev2's placements -- no
 Those placements were measured off the fabricated Rev2 wafer ONCE (legacy/rev2_repro, 01c) and are
 committed as ../rev2_reference/wafer4_rev2_placements.json; this config needs nothing from legacy/.
 
-    cd mea1k_interconnects
-    python3 build_designs.py --rev 4                    # -> <out root>/interconnect/rev4/
-    KL=/Applications/KLayout/klayout.app/Contents/MacOS/klayout
-    $KL -b -r ../maskgen/wafer/rebuild.py         # (config_rev4 is 01d's default)
-                                                        # -> <out root>/wafer/wafer4_rev4/
+    python3 -m maskgen wafer wafer4 --rev 4     # designs if missing, then this wafer
+    # = cd mea1k_interconnects; python3 build_designs.py --wafer wafer4 --rev 4
+    #                                 -> <out root>/MEA1K_wafer4_12x_8x_8x_breakoutboards/Rev4/devices/<device>/
+    #   $KLAYOUT -b -r ../maskgen/wafer/rebuild.py  (config_rev4 is its default)
+    #                                 -> <out root>/MEA1K_wafer4_12x_8x_8x_breakoutboards/Rev4/
 
 Pure standard library: KLayout's Python runs this.
 """
@@ -42,11 +42,14 @@ ROOT = os.path.dirname(HERE)                          # .../mea1k_interconnects
 sys.path.insert(0, os.path.dirname(ROOT))             # the repo root: the maskgen package
 from maskgen.core import paths as _paths              # noqa: E402
 
-REV4_DIR = _paths.interconnect_dir(4, create=False)   # build_designs.py --rev 4
+from maskgen.core import wafers as _wafers            # noqa: E402
 
-RUN_TAG = "wafer4_rev4"
-OUT_DIR = _paths.wafer_dir(RUN_TAG, create=False)
-WAFER_OUT = os.path.join(OUT_DIR, "wafer_%s.gds" % RUN_TAG)
+WAFER, REV = "wafer4", 4                              # maskgen/core/wafers.py
+REV4_DIR = _paths.devices_dir(WAFER, REV, create=False)  # build_designs.py --wafer wafer4 --rev 4: <device>/ each
+
+RUN_TAG = _wafers.stem(WAFER, REV)                    # MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev4
+OUT_DIR = _paths.wafer_rev_dir(WAFER, REV, create=False)
+WAFER_OUT = os.path.join(OUT_DIR, "%s.gds" % RUN_TAG)
 
 # Rev2's placements, measured off the fabricated wafer by legacy/rev2_repro/01c and committed. "<ROOT>"
 # in its paths stands for the repo root (01d substitutes it). It also names the wafer 01d checks
@@ -64,8 +67,7 @@ TEMPLATE_KEEP_RADIUS_MM = 50.0
 from maskgen.core import layers as _layers            # noqa: E402
 sys.path.insert(0, ROOT)                              # mea1k_interconnects: catalog.py (designs, revisions)
 import catalog as _catalog                            # noqa: E402
-REV = 4
-LAYERSET = _layers.LAYERSETS[_catalog.REVISIONS[REV].layerset]      # interconnect_rev4
+LAYERSET = _layers.LAYERSETS[_catalog.get(WAFER, REV).layerset]      # interconnect_rev4
 DXF_LAYER_MAP = LAYERSET.dxf_map         # mea1k_interconnects DXF layer (lower-cased) -> wafer GDS;
                                          # dropped: Polyimide (positive), 0, defpoints
 DUMMY_LAYER_MAP = LAYERSET.dummy_map     # 02_make_dummy.py GDS layer -> wafer GDS
@@ -90,16 +92,16 @@ MARK_SELFTEST_LAYER = (3, 0)     # already inverted in the template -- the trans
 # hatched; Metal1 at the back of the stack (KLayout draws entries further down the list in front).
 
 # The wafer's cells (named on the fabricated Rev2 wafer) -> the catalog design each one holds. File names
-# are the design's final output at REV (catalog.file_names), in REV4_DIR.
+# are the device's final file (catalog.file_names), in its folder REV4_DIR/<device>/.
 CELLS = {
-    "CONN_BIG_NEW": "12block",
+    "CONN_BIG_NEW": "12block_56_15",
     "CONN_SMALL_51_35_NEW": "8block_51_35",
     "CONN_SMALL_71_15_NEW": "8block_71_15",
     "dummy_61_10_NEW": "dummy_61_10",
     "dummy_35_36_NEW": "dummy_35_36",
 }
-SOURCES = {cell: {"file": os.path.join(REV4_DIR, _catalog.file_names(d, REV)[1]),
-                  "layers": DUMMY_LAYER_MAP if _catalog.file_names(d, REV)[1].endswith(".gds") else DXF_LAYER_MAP}
+SOURCES = {cell: {"file": os.path.join(REV4_DIR, d, _catalog.file_names(d)[1]),
+                  "layers": DUMMY_LAYER_MAP if _catalog.file_names(d)[1].endswith(".gds") else DXF_LAYER_MAP}
            for cell, d in CELLS.items()}
 
 # What 01d may find changed against Rev2, and where each change must lie (per device cell).

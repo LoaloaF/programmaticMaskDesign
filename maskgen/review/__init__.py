@@ -1,9 +1,10 @@
 """Review sheets: designs side by side, one named feature per row.
 
-    python3 -m maskgen review --rev 3 4                        # every interconnect design, Rev3 vs Rev4
-    python3 -m maskgen review --rev 4 --design 12block 8block_51_35 --roi "top pad" "connector pad"
+    python3 -m maskgen review --wafer wafer4 --rev 3 4         # every interconnect design, Rev3 vs Rev4
+    python3 -m maskgen review --rev wafer4/4 wafer6/1 --design 12block_56_15 --xor   # across wafers
+    python3 -m maskgen review --wafer wafer4 --rev 4 --design 12block_56_15 8block_51_35 --roi "top pad" "connector pad"
     python3 -m maskgen review --probes U1.6 U8                 # electrode geometries side by side
-    python3 -m maskgen review --wafers wafer4_rev4 rev2_fabricated   # alignment-mark slots
+    python3 -m maskgen review --wafers wafer4/4 rev2_fabricated wafer5   # alignment-mark slots
     python3 -m maskgen review --rois                           # list the named features
 
 A sheet is a grid:
@@ -16,7 +17,7 @@ A sheet is a grid:
   column's in the same window.
 - Each cell is titled "<column> -- <feature>", so a feature can be named in discussion.
 
-Output, under <root>/review/<name>/ (sheet.py):
+Output, under <root>/<wafer name>/Rev<N>/review/<name>/ -- the wafer revision of the LAST column (sheet.py):
 - sheet.png: the whole grid;
 - sheet.pdf: one page per feature, larger;
 - index.md: the rows, the columns, their source files and the per-cell measurements;

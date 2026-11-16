@@ -653,7 +653,7 @@ def main():
         set_edge(args.edge)
     if args.gap is not None:
         globals()["GAP"] = float(args.gap)
-    os.makedirs(C.OUT_DIR, exist_ok=True)
+    os.makedirs(C.NEST_DIR, exist_ok=True)
     print("wafer: usable r=%.1f mm (edge excl %.1f), flat y=%.2f, gap=%.3f mm"
           % (R, EDGE_EXCL, FLAT0, GAP))
     print("usable area %.0f mm2;  piece areas: %s"
@@ -710,7 +710,7 @@ def main():
             "pieces": [{"i": i, "kind": pl.kind, "theta": pl.theta % 360,
                         "x": pl.x, "y": pl.y, "reach_mm": pl.reach()}
                        for i, pl in enumerate(placed)],
-        }, open(os.path.join(C.OUT_DIR, "nest_report.json"), "w"), indent=1)
+        }, open(os.path.join(C.NEST_DIR, "nest_report.json"), "w"), indent=1)
         write_preview(placed, C.PREVIEW_PATH, sub)
         print("  *** %s" % sub)
         print("      SHANK_COUNTS = %s   <- put this in %s so export.py's "

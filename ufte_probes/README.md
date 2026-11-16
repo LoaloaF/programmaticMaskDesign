@@ -10,11 +10,12 @@ fab:
 electrode_bundle/design_sets.py        wafers/config_64ch_4shank.py
         │                                        │
         ▼                                        ▼
-<root>/electrode/<set>/shanks/  ─────►  <root>/wafer/<set>/
+<root>/<wafer>/Rev<N>/devices/ ──►  <root>/<wafer>/Rev<N>/
   the probe geometry                      as many as fit, nested, fab-ready
 ```
 
-`<root>` is the maskgen output root (top-level README; `python3 -m maskgen where` prints it).
+`<root>` is the maskgen output root (top-level README; `python3 -m maskgen where` prints it);
+`<wafer>` is the wafer's name in `maskgen/core/wafers.py` (`MEA1K_W5_64Ch_4Shankdesigns` for wafer5).
 Nothing is written into the repo.
 
 Full detail:
@@ -64,7 +65,9 @@ geometries (U1.6, U2.5, U4, U8) × four IONP barcodes each, so 16 variants.
 python3 -m electrode_bundle.batch [--jobs N]
 ```
 
-Everything lands in **`<root>/electrode/<TARGET_SET>/shanks/`**:
+Everything lands in **`<root>/<wafer name>/Rev<N>/devices/<geometry>/`** -- one device folder per
+geometry, its barcoded variants inside, plus a `device.json` (spec, variants, files, headline numbers);
+the side-by-side drawings sit in `devices/` itself:
 - **Per geometry** (`<name>`, e.g. `U4`):
   - `electrode_bundle_<name>.dxf` + `.png` (barcode-free);
   - `electrode_to_flex_mapping_<name>.json`;
@@ -115,7 +118,7 @@ Details: [`electrode_bundle/HANDOVER.md`](electrode_bundle/HANDOVER.md) §1.
 ## 2. Put it on a wafer
 
 ```bash
-python3 -m maskgen wafer 64Ch_4Shankdesigns      # from the repo root
+python3 -m maskgen wafer wafer5      # from the repo root
 ```
 
 The command:
@@ -123,8 +126,8 @@ The command:
 - nests if there is no nest yet;
 - exports, verifies and draws the map.
 
-The deliverable is `<root>/wafer/64Ch_4Shankdesigns/wafer_64Ch_4Shankdesigns.gds`.
-`wafer_map_64Ch_4Shankdesigns.png` labels every device with its variant. The stages one by one, and
+The deliverable is `<root>/MEA1K_W5_64Ch_4Shankdesigns/Rev1/MEA1K_W5_64Ch_4Shankdesigns.gds`.
+`MEA1K_W5_64Ch_4Shankdesigns_map.png` labels every device with its variant. The stages one by one, and
 the options, are in [`wafers/README.md`](wafers/README.md).
 
 **The shipped wafer is final.** It holds 59 devices, and its nest is verified. Run `--nest` only

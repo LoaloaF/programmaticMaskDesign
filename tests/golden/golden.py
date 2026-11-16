@@ -16,7 +16,7 @@ one-command check:
 current working tree (tracked + untracked, never ignored outputs). Both then run the SAME
 build commands (produce() below) in that tree, so nothing is ever written into the repo:
 
-    interconnect  build_designs.py --rev 2/3/4         -> interconnect/rev<N>/
+    interconnect  build_designs.py --wafer wafer4 --rev 2/3/4   -> interconnect/rev<N>/ (flattened, old names)
     wafer         maskgen/wafer/rebuild.py config_rev4 (committed Rev2 placements) -> wafer/wafer4_rev4/
     legacy        legacy/rev2_repro 01c (placements == frozen) + 01d config_rev2
                   (must end GEOMETRY IDENTICAL)       -> wafer/wafer4_rev2/
@@ -27,7 +27,7 @@ build commands (produce() below) in that tree, so nothing is ever written into t
 Each output is FINGERPRINTED (level A): DXF per layer as a sorted multiset of canonical
 entities, GDS/OAS per cell+layer as sorted polygons and references, JSON canonicalised,
 other text by content. The manifest (hashes only) is written to
-tests/golden/manifest_<sha>.json; the files themselves stay in $MASKGEN_OUT/golden/<sha>/.
+tests/golden/manifest_<sha>.json; the files themselves stay in $MASKGEN_OUT/_golden/<sha>/.
 A fingerprint mismatch on DXF/GDS falls back to a KLayout per-layer XOR (level B) against
 the golden file: XOR = 0 everywhere still passes (e.g. only the entity order changed).
 Logs are scanned (level C): crossings/pad_hits != 0 or a FAIL line fails.
@@ -55,6 +55,22 @@ FROZEN = os.path.join(HERE, "frozen")
 KL = os.environ.get("KLAYOUT", "/Applications/KLayout/klayout.app/Contents/MacOS/klayout")
 PY = sys.executable
 ROUND = 9                                    # decimals kept in fingerprints (um)
+GOLDEN_DIR = "_golden"                       # <root>/_golden/: <sha>/ (the reference), check/, tree_*/
+
+# The reference (667ba2d) predates device folders and device names: its artefacts are FLAT, under the
+# file names of that time. produce() builds with today's commands and copies every file to that name.
+_OLD_NAMES = {   # device -> (stage-01 stem, final file) at 667ba2d; the revision suffix is appended
+    "12block_56_15": ("new_interconnect_circular_12Block_56_15",
+                      "new_interconnect_with_connector_chamfered_12Block_56_15.dxf"),
+    "8block_51_35": ("new_interconnect_circular_8block_51_35",
+                     "new_interconnect_with_connector_8blocks_chamfered_1layer_51_35.dxf"),
+    "8block_71_15": ("new_interconnect_circular_8block_71_15",
+                     "new_interconnect_with_connector_8blocks_chamfered_1layer_71_15.dxf"),
+    "dummy_61_10": ("new_interconnect_circular_dummy_61_10", "dummy_new_interconnect_circular_dummy_61_10_padrows.gds"),
+    "dummy_35_36": ("new_interconnect_circular_dummy_35_36", "dummy_new_interconnect_circular_dummy_35_36_padrows.gds"),
+}
+_OLD_SUFFIX = {2: "", 3: "_rev3", 4: "_rev4"}
+_OLD_KEY = {"12block_56_15": "12block"}      # the config snapshots' file names
 
 
 # ----------------------------------------------------------------------------- paths
@@ -86,7 +102,7 @@ import json, os, re, runpy, sys
 sys.path.insert(0, os.getcwd())
 import catalog as c
 import resolve as r
-name, rev, stage, out, root = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4], sys.argv[5]
+name, rev, stage, out, root, wafer = sys.argv[1], int(sys.argv[2]), sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6]
 
 def clean(mod):
     return {k: v for k, v in vars(mod).items()
@@ -102,8 +118,8 @@ def dump(script, run_name=None):
     open(out, "w").write(s)
 
 r.runpy.run_path = dump
-band = "<band_ref>" if (stage == "route" and r.needs_band_ref(name, rev)) else None
-r.run_stage(name, rev, stage, "<mid>", "<final>", band)
+band = "<band_ref>" if (stage == "route" and r.needs_band_ref(name, wafer, rev)) else None
+r.run_stage(name, wafer, rev, stage, "<mid>", "<final>", band)
 '''
 
 
@@ -115,11 +131,23 @@ def _work(out):
     return {"MASKGEN_OUT": w}
 
 
-def _copy_wafer_files(src, dst, also=()):
+def _copy_wafer_files(src, stem, dst, tag, also=()):
+    """<src>/<stem>.gds/.oas/.lyp -> <dst>/wafer_<tag>.* (the manifest's names, from before wafers had names)."""
     os.makedirs(dst, exist_ok=True)
     for f in os.listdir(src):
-        if f.startswith("wafer_") and f.endswith((".gds", ".oas", ".lyp")) or f in also:
+        base, ext = os.path.splitext(f)
+        if base == stem and ext in (".gds", ".oas", ".lyp"):
+            shutil.copy2(os.path.join(src, f), os.path.join(dst, "wafer_%s%s" % (tag, ext)))
+        elif f in also:
             shutil.copy2(os.path.join(src, f), dst)
+
+
+def _wafer_paths(work, key, rev):
+    """(devices/ folder, layout folder, file stem) of a wafer revision under the work root."""
+    sys.path.insert(0, REPO)
+    from maskgen.core import wafers
+    d = os.path.join(work, wafers.get(key)["name"], "Rev%d" % rev)
+    return os.path.join(d, "devices"), d, wafers.stem(key, rev)
 
 
 # The three independent chains. Each produces the artefacts under the listed manifest prefixes;
@@ -133,40 +161,65 @@ JOBS = max(2, (os.cpu_count() or 4))
 
 
 def _snapshot(ic, snap, name, rev, stage, dst, tree, env):
-    subprocess.run([PY, snap, name, str(rev), stage, dst, tree], cwd=ic, check=True,
+    subprocess.run([PY, snap, name, str(rev), stage, dst, tree, "wafer4"], cwd=ic, check=True,
                    stdout=subprocess.DEVNULL, env=dict(os.environ, **env))
+
+
+def _flatten_interconnect(devices, dst, rev):
+    """devices/<device>/{<device>_padgrid.dxf, <device>.dxf|.gds, ref_rev3/...} -> dst/ under the 667ba2d names."""
+    os.makedirs(dst, exist_ok=True)
+    sfx = _OLD_SUFFIX[rev]
+    for dev in sorted(os.listdir(devices)):
+        ddir = os.path.join(devices, dev)
+        if not os.path.isdir(ddir):
+            continue
+        mid, final = _OLD_NAMES[dev]
+        stem, ext = final.rsplit(".", 1)
+        shutil.copy2(os.path.join(ddir, dev + "_padgrid.dxf"), os.path.join(dst, mid + sfx + ".dxf"))
+        shutil.copy2(os.path.join(ddir, "%s.%s" % (dev, ext)), os.path.join(dst, "%s%s.%s" % (stem, sfx, ext)))
+        for ref in sorted(f for f in os.listdir(ddir) if f.startswith("ref_rev")):
+            rn = int(ref[len("ref_rev"):])
+            os.makedirs(os.path.join(dst, ref), exist_ok=True)
+            shutil.copy2(os.path.join(ddir, ref, dev + "_padgrid.dxf"),
+                         os.path.join(dst, ref, mid + _OLD_SUFFIX[rn] + ".dxf"))
 
 
 def produce_interconnect(tree, out, self_check=False):
     ic = os.path.join(tree, "mea1k_interconnects")
     env = _work(out)
+    built = os.path.join(out, "_devices")                   # skipped by the fingerprint ("_")
     with cf.ThreadPoolExecutor(3) as ex:                    # the three revisions are independent
         list(ex.map(lambda rev: run(
-            [PY, "build_designs.py", "--rev", str(rev), "--out-dir", os.path.join(out, "interconnect", "rev%d" % rev)],
+            [PY, "build_designs.py", "--wafer", "wafer4", "--rev", str(rev),
+             "--out-dir", os.path.join(built, "rev%d" % rev)],
             ic, os.path.join(out, "logs", "build_rev%d.log" % rev), env=env), (2, 3, 4)))
+    for rev in (2, 3, 4):
+        _flatten_interconnect(os.path.join(built, "rev%d" % rev), os.path.join(out, "interconnect", "rev%d" % rev), rev)
     # config snapshots: what every stage sees after the catalog's overrides
     snap = os.path.join(out, "_snapshot.py")
     open(snap, "w").write(SNAPSHOT)
     lists = json.loads(subprocess.run(
-        [PY, "-c", "import json, catalog; print(json.dumps([sorted(catalog.REVISIONS), sorted(catalog.DESIGNS)]))"],
+        [PY, "-c", "import json, catalog; print(json.dumps([sorted(catalog.REVISIONS['wafer4']), sorted(catalog.DESIGNS)]))"],
         cwd=ic, capture_output=True, text=True, check=True).stdout)
     os.makedirs(os.path.join(out, "config"), exist_ok=True)
     with cf.ThreadPoolExecutor(JOBS) as ex:
         list(ex.map(lambda a: _snapshot(ic, snap, *a, tree, env),
-                    [(name, rev, stage, os.path.join(out, "config", "rev%d_%s_%s.json" % (rev, name, stage)))
+                    [(name, rev, stage, os.path.join(out, "config", "rev%d_%s_%s.json"
+                                                     % (rev, _OLD_KEY.get(name, name), stage)))
                      for rev in lists[0] for name in lists[1] for stage in ("gen", "route")]))
     os.remove(snap)
     work = env["MASKGEN_OUT"]
-    # Rev4 wafer: 01d (default config_rev4) reads <root>/interconnect/rev4 = the build above. Its own check
+    # Rev4 wafer: rebuild.py (default config_rev4) reads wafer4 Rev4's devices/ = the build above. Its own check
     # against the fabricated Rev2 wafer is skipped unless --self-checks: the golden wafer passed it, and
     # the fingerprint comparison proves this one is the same wafer.
-    os.makedirs(os.path.join(work, "interconnect"), exist_ok=True)
-    os.symlink(os.path.join(out, "interconnect", "rev4"), os.path.join(work, "interconnect", "rev4"))
+    devices, layout, stem = _wafer_paths(work, "wafer4", 4)
+    os.makedirs(layout, exist_ok=True)
+    os.symlink(os.path.join(built, "rev4"), devices)
     log = run([KL, "-b", "-r", os.path.join(tree, "maskgen", "wafer", "rebuild.py")], ic,
               os.path.join(out, "logs", "01d_wafer4_rev4.log"), env=dict(env, WAFER_CHECK="1" if self_check else "0"))
     if self_check and not re.search(r"IDENTICAL to .* except the expected", log):
         raise SystemExit("01d config_rev4 did not pass its own check")
-    _copy_wafer_files(os.path.join(work, "wafer", "wafer4_rev4"), os.path.join(out, "wafer", "wafer4_rev4"))
+    _copy_wafer_files(layout, stem, os.path.join(out, "wafer", "wafer4_rev4"), "wafer4_rev4")
 
 
 def produce_legacy(tree, out, self_check=False):
@@ -185,7 +238,8 @@ def produce_legacy(tree, out, self_check=False):
               os.path.join(out, "logs", "01d_wafer4_rev2.log"), env=env2)
     if "GEOMETRY IDENTICAL" not in log:
         raise SystemExit("legacy 01d config_rev2 did not end GEOMETRY IDENTICAL")
-    _copy_wafer_files(os.path.join(work, "wafer", "wafer4_rev2"), os.path.join(out, "wafer", "wafer4_rev2"))
+    _copy_wafer_files(os.path.join(work, "wafer", "wafer4_rev2"), "wafer_wafer4_rev2",     # legacy: own layout
+                      os.path.join(out, "wafer", "wafer4_rev2"), "wafer4_rev2")
 
 
 def produce_electrode(tree, out, self_check=False):
@@ -194,19 +248,24 @@ def produce_electrode(tree, out, self_check=False):
     work = env["MASKGEN_OUT"]
     run([PY, "-m", "electrode_bundle.batch", "--no-render", "--jobs", str(min(8, JOBS))], gpd,
         os.path.join(out, "logs", "electrode_batch.log"), env=env)
-    shanks = os.path.join(work, "electrode", "64Ch_4Shankdesigns", "shanks")
-    shutil.copytree(shanks, os.path.join(out, "electrode", "64Ch_4Shankdesigns", "shanks"),
-                    ignore=shutil.ignore_patterns("*.png", ".DS_Store", "manifest.json"))
-    wdir = os.path.join(work, "wafer", "64Ch_4Shankdesigns")
-    os.makedirs(wdir, exist_ok=True)
+    devices, wdir, stem = _wafer_paths(work, "wafer5", 1)
+    shanks = os.path.join(out, "electrode", "64Ch_4Shankdesigns", "shanks")    # the 667ba2d keys: flat
+    os.makedirs(shanks, exist_ok=True)
+    for d, _, fs in os.walk(devices):
+        for f in fs:
+            if not (f.endswith(".png") or f in (".DS_Store", "manifest.json", "device.json")):
+                shutil.copy2(os.path.join(d, f), os.path.join(shanks, f))
+    nest = os.path.join(wdir, "nest")
+    os.makedirs(nest, exist_ok=True)
     fz = os.path.join(FROZEN, "electrode_64ch_4shank_wafer")
     for f in os.listdir(fz):
         if f != "placement.json":                         # an OUTPUT of 03; it must make it again
-            shutil.copy2(os.path.join(fz, f), wdir)
+            shutil.copy2(os.path.join(fz, f), nest)
     run([KL, "-b", "-r", os.path.join(tree, "maskgen", "wafer", "export.py")], gpd,
         os.path.join(out, "logs", "electrode_03_export.log"),
         env=dict(env, WAFERNEST_CONFIG="config_64ch_4shank"))
-    _copy_wafer_files(wdir, os.path.join(out, "wafer", "e64ch_4shank"), also=("placement.json",))
+    _copy_wafer_files(wdir, stem, os.path.join(out, "wafer", "e64ch_4shank"), "64Ch_4Shankdesigns",
+                      also=("placement.json",))
 
 
 PRODUCERS = {"interconnect": produce_interconnect, "electrode": produce_electrode, "legacy": produce_legacy}
@@ -498,10 +557,10 @@ def cmd_capture(sha, root):
     full = subprocess.run(["git", "rev-parse", sha], cwd=REPO, capture_output=True, text=True,
                           check=True).stdout.strip()
     short = full[:7]
-    gold = os.path.join(root, "golden", short)
+    gold = os.path.join(root, GOLDEN_DIR, short)
     if os.path.exists(gold):
         raise SystemExit("%s exists -- delete it to capture again" % gold)
-    tree = os.path.join(root, "_tree_%s" % short)
+    tree = os.path.join(root, GOLDEN_DIR, "tree_%s" % short)
     shutil.rmtree(tree, ignore_errors=True)
     os.makedirs(tree)
     print("exporting %s -> %s" % (short, tree))
@@ -548,8 +607,8 @@ def cmd_check(root, manifest, keep, parts=tuple(PARTS), self_check=False):
         print("WARNING: tool versions differ from the capture:\n  golden %s\n  now    %s"
               % (G["tools"], tool_versions()))
     stamp = time.strftime("%Y%m%d_%H%M%S")
-    tree = os.path.join(root, "_tree_check_%s" % stamp)
-    cand = os.path.join(root, "check", stamp)
+    tree = os.path.join(root, GOLDEN_DIR, "tree_check_%s" % stamp)
+    cand = os.path.join(root, GOLDEN_DIR, "check", stamp)
     files = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "-z"], cwd=REPO,
                            capture_output=True, text=True, check=True).stdout.split("\0")
     for f in filter(None, files):
@@ -562,7 +621,7 @@ def cmd_check(root, manifest, keep, parts=tuple(PARTS), self_check=False):
     t0 = time.time()
     produce(tree, cand, parts, self_check)
     print("  built in %.0f s" % (time.time() - t0))
-    gold = os.path.join(root, "golden", G["sha"][:7])
+    gold = os.path.join(root, GOLDEN_DIR, G["sha"][:7])
     fails = compare(manifest, cand, gold, tree, parts)
     shutil.rmtree(tree)
     if not keep and not fails:
@@ -596,7 +655,7 @@ def main():
     else:
         manifest = a.manifest or _latest_manifest()
         G = json.load(open(manifest))
-        _report(compare(manifest, os.path.abspath(a.dir), os.path.join(root, "golden", G["sha"][:7])),
+        _report(compare(manifest, os.path.abspath(a.dir), os.path.join(root, GOLDEN_DIR, G["sha"][:7])),
                 manifest)
 
 

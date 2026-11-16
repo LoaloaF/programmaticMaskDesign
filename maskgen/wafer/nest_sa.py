@@ -38,7 +38,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from maskgen.wafer.configs import load as _load_config   # noqa: E402
 C = _load_config(None)
 
-os.makedirs(C.OUT_DIR, exist_ok=True)
+os.makedirs(C.NEST_DIR, exist_ok=True)
 random.seed(C.RNG_SEED); np.random.seed(C.RNG_SEED)
 
 R0, FLAT0 = C.WAFER_R, C.WAFER_FLAT_Y

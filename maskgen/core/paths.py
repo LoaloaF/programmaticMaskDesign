@@ -8,13 +8,21 @@ The root is, in this order:
 otherwise an error that says how to set it. A root inside the repo is refused: generated files never
 land in the code tree again.
 
-Layout under the root (`python3 -m maskgen where` prints it):
+Layout under the root (`python3 -m maskgen where` prints it). One folder per WAFER, one per revision
+(maskgen/core/wafers.py names them), and in it one folder per DEVICE -- a single piece that the wafer
+layout then places, many times:
 
-    <root>/interconnect/rev<N>/          build_designs.py --rev N   (DXF/GDS, logs/, ref_rev3/)
-    <root>/interconnect/adhoc/           a stage script run by hand with a bare output filename
-    <root>/electrode/<set>/shanks/       electrode_bundle.batch     (DXF/JSON/PNG of one design set)
-    <root>/wafer/<run tag>/              any wafer build            (GDS/OAS/LYP, poses, previews)
-    <root>/review/<name>/                comparison sheets
+    <root>/<wafer name>/Rev<N>/
+        devices/<device>/                ONE device: <device>.dxf|.gds (what goes on the wafer), its
+                                         intermediates, device.json (what it is, how it was made), logs/
+        devices/                         + the set-wide files (side-by-side drawings, manifest.json)
+        <wafer name>[_Rev<N>].gds/.oas/.lyp, placement.json, <...>_map.png    the wafer layout
+        nest/                            footprints, poses, nest preview (nested wafers)
+        review/<name>/                   review sheets of this wafer revision
+    <root>/electrode/<set>/              an electrode design set that belongs to no wafer
+    <root>/adhoc/                        a stage script run by hand with a bare output filename
+    <root>/_golden/                      the regression harness (tests/golden/golden.py): its reference
+                                         build and its check rebuilds -- not for reading
     <root>/index.jsonl                   one line per run (what, when, where, git sha)
 
 Every run folder also gets a manifest.json (maskgen.core.manifest).
@@ -70,25 +78,46 @@ def _sub(*parts, **kw):
     return p
 
 
-def interconnect_dir(rev, root=None, create=True):
-    """<root>/interconnect/rev<N>/ -- `rev` an int, or a name such as "adhoc"."""
-    return _sub("interconnect", "rev%d" % rev if isinstance(rev, int) else str(rev),
+def wafer_rev_dir(wafer, rev, root=None, create=True):
+    """<root>/<wafer name>/Rev<N>/ -- the wafer layout of `wafer` (a maskgen/core/wafers.py key) at `rev`."""
+    from maskgen.core import wafers
+    wafers.rev(wafer, rev)
+    return _sub(wafers.get(wafer)["name"], "Rev%d" % rev, root=root, create=create)
+
+
+def devices_dir(wafer, rev, root=None, create=True):
+    """<root>/<wafer name>/Rev<N>/devices/ -- every device of that wafer revision, one folder each."""
+    from maskgen.core import wafers
+    wafers.rev(wafer, rev)
+    return _sub(wafers.get(wafer)["name"], "Rev%d" % rev, "devices", root=root, create=create)
+
+
+def device_dir(wafer, rev, device, root=None, create=True):
+    """<root>/<wafer name>/Rev<N>/devices/<device>/ -- one device."""
+    return _sub(os.path.relpath(devices_dir(wafer, rev, root, False), out_root(root)), device,
                 root=root, create=create)
 
 
 def electrode_dir(design_set, root=None, create=True):
-    """<root>/electrode/<set>/shanks/"""
-    return _sub("electrode", design_set, "shanks", root=root, create=create)
+    """The folder of an electrode design set: its wafer revision's devices/ (wafers.py design_set), else
+    <root>/electrode/<set>/. Each geometry is a device folder below it."""
+    from maskgen.core import wafers
+    w = wafers.of_design_set(design_set)
+    if w:
+        return devices_dir(w[0], w[1], root, create)
+    return _sub("electrode", design_set, root=root, create=create)
 
 
-def wafer_dir(run_tag, root=None, create=True):
-    """<root>/wafer/<run tag>/"""
-    return _sub("wafer", run_tag, root=root, create=create)
+def adhoc_dir(root=None, create=True):
+    """<root>/adhoc/ -- a stage script run by hand with a bare output filename."""
+    return _sub("adhoc", root=root, create=create)
 
 
-def review_dir(name, root=None, create=True):
-    """<root>/review/<name>/"""
-    return _sub("review", name, root=root, create=create)
+def review_dir(name, wafer, rev, root=None, create=True):
+    """<root>/<wafer name>/Rev<N>/review/<name>/ -- a sheet belongs to the wafer revision it reviews."""
+    from maskgen.core import wafers
+    wafers.rev(wafer, rev)
+    return _sub(wafers.get(wafer)["name"], "Rev%d" % rev, "review", name, root=root, create=create)
 
 
 def index_path(root=None):

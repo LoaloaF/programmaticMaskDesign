@@ -1,7 +1,7 @@
 # ufte_probes/wafers — how to nest a design set onto a wafer
 
 ```bash
-python3 -m maskgen wafer 64Ch_4Shankdesigns        # from the repo root
+python3 -m maskgen wafer wafer5        # from the repo root
 ```
 
 The command:
@@ -34,7 +34,7 @@ The conservative per-kind envelopes the nester packs do touch in 4 places, by up
 `verify.py` passes on the exported wafer: per-layer contents match the sources, and all four
 dark-field masks carry the inverted vernier on both sides.
 
-`maskgen review --wafers 64Ch_4Shankdesigns wafer4_rev4` puts every alignment-mark slot of this
+`maskgen review --wafers wafer5 wafer4/4` puts every alignment-mark slot of this
 wafer next to the interconnect wafer's.
 
 Takes design DXFs, finds the densest legal arrangement on a 100 mm wafer, and writes the
@@ -52,25 +52,30 @@ generator that produces the DXFs nested here is documented in
 
 ## Layout
 
-One design set, two output folders under the maskgen output root (top-level README):
+This wafer is `wafer5` = `MEA1K_W5_64Ch_4Shankdesigns`, Rev1 (`maskgen/core/wafers.py`). Its two
+output folders under the maskgen output root (top-level README):
 
 ```
-<root>/electrode/64Ch_4Shankdesigns/shanks/   generator output: DXFs, PNGs, per-design JSON
-<root>/wafer/64Ch_4Shankdesigns/              nesting output: footprints, poses, preview, wafer GDS, map
+<root>/MEA1K_W5_64Ch_4Shankdesigns/Rev1/devices/<geometry>/   generator output, one device folder per
+                                                              geometry: its DXFs (+ barcoded variants),
+                                                              PNGs, JSON, device.json
+<root>/MEA1K_W5_64Ch_4Shankdesigns/Rev1/           the wafer: GDS/OAS/LYP, placement.json, map
+<root>/MEA1K_W5_64Ch_4Shankdesigns/Rev1/nest/      nesting: footprints, poses, preview
 ```
 
-The set's name lives in exactly two places, and they must agree:
+The design set's name lives in three places, and they must agree (the config asserts it):
 
 | File | Constant |
 |---|---|
+| `maskgen/core/wafers.py` | `wafer5` Rev1 `design_set="64Ch_4Shankdesigns"` -- sends the generator's output into this wafer's `devices/` |
 | `electrode_bundle/config.py` | `TARGET_SET = "64Ch_4Shankdesigns"` |
-| `wafers/config_64ch_4shank.py` | `TARGET_SET = "64Ch_4Shankdesigns"` |
+| `wafers/config_64ch_4shank.py` | `WAFER, REV = "wafer5", 1` and `TARGET_SET = "64Ch_4Shankdesigns"` |
 
 ---
 
 ## Running it
 
-`python3 -m maskgen wafer 64Ch_4Shankdesigns [--nest] [--force]` runs the stages below in order.
+`python3 -m maskgen wafer wafer5 [--nest] [--force]` runs the stages below in order.
 By hand:
 
 ```bash
@@ -78,7 +83,7 @@ cd ufte_probes
 export WAFERNEST_CONFIG=config_64ch_4shank
 KL=/Applications/KLayout/klayout.app/Contents/MacOS/klayout
 
-python3 -m electrode_bundle.batch            # 1. shanks  -> <root>/electrode/64Ch_4Shankdesigns/shanks/
+python3 -m electrode_bundle.batch            # 1. shanks  -> <root>/MEA1K_W5_64Ch_4Shankdesigns/Rev1/devices/<geometry>/
 python3 ../maskgen/wafer/check_setup.py       # 2. resolve every path, check packages
 python3 ../maskgen/wafer/extract_footprints.py   #    DXF -> collision silhouette
 python3 ../maskgen/wafer/nest_skyline.py --time 900   #    silhouettes -> poses.json  (the nest)
@@ -101,7 +106,7 @@ exact setting to edit. It changes nothing.
 | `verify.py` | re-checks the wafer against the sources | KLayout |
 | `wafer_map.py` | `placement.json` → labelled map PNG | python3 + matplotlib |
 
-### Outputs, all in `<root>/wafer/<TARGET_SET>/`
+### Outputs, in `<root>/<wafer name>/Rev<N>/` (the footprints, poses and previews in its `nest/`)
 
 | File | What |
 |---|---|
@@ -111,11 +116,11 @@ exact setting to edit. It changes nothing.
 | `poses.json` | `[kind, angle_deg, x_mm, y_mm]` per piece |
 | `nest_report.json` | per-piece kind / pose / radial reach, plus run settings |
 | `nest_preview.png` | the nest, with wafer rim, usable radius and marks |
-| `wafer_<TARGET_SET>.gds` | **the deliverable** |
-| `wafer_<TARGET_SET>.oas` | the same layout in OASIS, which stores the layer names in-file |
-| `wafer_<TARGET_SET>.lyp` | layer names for KLayout (GDS2 cannot store them) |
+| `<RUN_TAG>.gds` | **the deliverable** |
+| `<RUN_TAG>.oas` | the same layout in OASIS, which stores the layer names in-file |
+| `<RUN_TAG>.lyp` | layer names for KLayout (GDS2 cannot store them) |
 | `placement.json` | which design variant stage 03 put at which pose |
-| `wafer_map_<TARGET_SET>.png` | **the map** — every device coloured, numbered and named |
+| `<RUN_TAG>_map.png` | **the map** — every device coloured, numbered and named |
 
 `nest_skyline.py` refreshes `nest_preview.png` **every time the record improves**, so it can
 be watched live while the search runs. Useful flags:
@@ -133,10 +138,12 @@ be watched live while the search runs. Useful flags:
 
 ## Nesting a *new* design set
 
+0. **Name the wafer.** Add it to `maskgen/core/wafers.py` (next free wafer number, Rev1, its
+   `design_set`, `layout=dict(kind="nested", config="config_<your_set>", nester="skyline")`).
 1. **Generate the shanks.** Set `TARGET_SET` in `electrode_bundle/config.py`, add your
    geometries to `electrode_bundle/design_sets.py`, run `python3 -m electrode_bundle.batch`.
 2. **Copy `config_64ch_4shank.py`** to `config_<your_set>.py` and edit, in order:
-   - `TARGET_SET` — must match step 1.
+   - `WAFER, REV` — the wafers.py entry of step 0; `TARGET_SET` — must match step 1.
    - `SHANK_RATIO` — one entry per design, keyed by the DXF's name. **This is the mix the
      nester aims for**; only the proportions matter.
    - `SHANK_COUNTS` — the *result* of the last nest, pasted from the nester's printed
@@ -145,7 +152,8 @@ be watched live while the search runs. Useful flags:
      `SHANK_COUNTS` × these, so the filenames must match what the generator wrote.
    - `LAYER_MAP` / `LAYER_NAMES` (from the `PROBE_64CH` layer set in `maskgen/core/layers.py`) / `MARK_LAYERS_UNUSED` — see the layer map below. These
      depend on which alignment slots your wafer template carries.
-3. `export WAFERNEST_CONFIG=config_<your_set>` and run the pipeline above.
+3. `python3 -m maskgen wafer <wafer key>`, or `export WAFERNEST_CONFIG=config_<your_set>` and run the
+   pipeline above.
 
 Nothing is searched for. Each config states its input locations explicitly in its `PATHS`
 block, and `check_setup.py` names the line to edit when something is missing.
@@ -228,7 +236,7 @@ anchoring there spreads the labels apart.
    Note that `nest_skyline.py` does **not** read `GAP`: it defaults to 0 (pieces may touch)
    and takes `--gap` on the command line.
 8. **`export.py` refuses to overwrite an existing wafer GDS.** Delete
-   `wafer_<TARGET_SET>.gds` (or change `RUN_TAG` in the config) before re-exporting — and
+   `<RUN_TAG>.gds` (or change `RUN_TAG` in the config) before re-exporting — and
    then re-run 04 and 05, since both read what 03 wrote.
 
 ---
@@ -303,9 +311,9 @@ not on KLayout, so stage 03 writes three files:
 
 | file | what it is |
 |---|---|
-| `wafer_<TARGET_SET>.gds` | the deliverable. **GDS2 has no layer-name record** — there is no writer option for one, and a layout written with names and read back comes out unnamed. Layers here are `7/0`, `6/0`, … only. |
-| `wafer_<TARGET_SET>.oas` | the same layout in OASIS, which *does* have a `LAYERNAME` record. Open this if you want the names in the file itself. |
-| `wafer_<TARGET_SET>.lyp` | KLayout layer-properties sidecar that names the GDS's layers. *File → Load Layer Properties*. |
+| `<RUN_TAG>.gds` | the deliverable. **GDS2 has no layer-name record** — there is no writer option for one, and a layout written with names and read back comes out unnamed. Layers here are `7/0`, `6/0`, … only. |
+| `<RUN_TAG>.oas` | the same layout in OASIS, which *does* have a `LAYERNAME` record. Open this if you want the names in the file itself. |
+| `<RUN_TAG>.lyp` | KLayout layer-properties sidecar that names the GDS's layers. *File → Load Layer Properties*. |
 
 The GDS is written with `gds2_max_vertex_count = 4000`. The merged `Etching` mask is one
 ~20 000-vertex polygon per design, and GDS2 caps a `BOUNDARY` at 8191 points with a record

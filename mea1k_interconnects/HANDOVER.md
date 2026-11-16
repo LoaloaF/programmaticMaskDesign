@@ -4,7 +4,7 @@ This folder generates the MEA1K interconnect DXFs in two stages:
 - **Stage 01** builds the chip-side part: pad grid, per-column Metal1 routing, vias, polyimide.
 - **Stage 02** routes its wire band into a Molex 227044 connector.
 
-The output is the routed DXF in µm. The dummy's output is a GDS. `maskgen wafer wafer4_rev4` places
+The output is the routed DXF in µm. The dummy's output is a GDS. `maskgen wafer wafer4 --rev 4` places
 the outputs on the wafer (§1.1).
 
 The five designs on the wafer:
@@ -22,10 +22,16 @@ The defaults match the fabricated wafer, `rev2_reference/MEA1K_wafer4_12x_8x_8x_
 **Where things are defined.**
 - **Designs and revisions:** `catalog.py`.
 - **How they combine:** `resolve.py`.
-- **What a design and revision resolve to:** `python3 -m maskgen show --rev 4 --design 12block
+- **What a design and revision resolve to:** `python3 -m maskgen show --wafer wafer4 --rev 4 --design 12block
   [--changed]` prints every setting and the step that set it.
 
-**The revisions.**
+**Wafers and revisions.** Revisions belong to a wafer (`maskgen/core/wafers.py`): `catalog.REVISIONS`
+is `{wafer: {N: Rev}}`. A revision changes only some masks of its wafer; a new wafer (new devices, new
+placement) starts again at Rev1 and names the revision of another wafer it starts from.
+- **wafer4** = `MEA1K_wafer4_12x_8x_8x_breakoutboards`: Rev2, Rev3, Rev4 below.
+- **wafer6** = `MEA1K_wafer6_12x_8x_breakoutboards`: Rev1 = wafer4 Rev4 + its own changes (in design).
+
+**The wafer4 revisions.**
 - **Rev2:** the fabricated wafer. Its design files are committed in `rev2_reference/` and are read only by
   `legacy/rev2_repro/`.
 - **Rev3:** changes only the pad stack (§4.5).
@@ -36,8 +42,10 @@ The defaults match the fabricated wafer, `rev2_reference/MEA1K_wafer4_12x_8x_8x_
 `build_designs.py` builds all five designs of any revision.
 
 Inputs are in `assets/`, and outputs go under the maskgen output root (top-level README):
-- `build_designs.py --rev N` writes to `<root>/interconnect/rev<N>/`.
-- A single stage with a bare output name writes to `<root>/interconnect/adhoc/`.
+- `build_designs.py --wafer wafer4 --rev N` writes one folder per device, `<root>/<wafer name>/Rev<N>/devices/<device>/`:
+  `<device>.dxf|.gds` (what the wafer places), `<device>_padgrid.dxf` (stage 01), `device.json` (what it is,
+  revision chain, every changed setting and who set it, pad grid, wire count), `logs/`, `ref_rev3/`.
+- A single stage with a bare output name writes to `<root>/adhoc/`.
 
 Nothing is written into this folder.
 
@@ -46,8 +54,8 @@ Nothing is written into this folder.
 ```bash
 pip install ezdxf shapely numpy gdstk   # gdstk: the dummy (base conda python here; the `dxf` env lacks gdstk)
 
-python3 build_designs.py --rev 4         # ALL five designs of a revision, stage 01 + 02 (~2 min)
-python3 build_designs.py --rev 3 --stage01   # stage 01 only, into <root>/interconnect/rev3/draft/
+python3 build_designs.py --wafer wafer4 --rev 4         # ALL five designs of a revision, stage 01 + 02 (~2 min)
+python3 build_designs.py --wafer wafer4 --rev 3 --stage01   # stage 01 only, into <root>/MEA1K_wafer4_12x_8x_8x_breakoutboards/Rev3/draft/
 
 # or one stage of one design, with the configs' defaults (the default variant of each family):
 python3 00_preflight.py                  # env + pad-grid constraints (§4.2), no run
@@ -59,7 +67,7 @@ python3 01_generate.py --config dummy    # -> new_interconnect_circular_dummy_61
 python3 02_make_dummy.py                 # -> dummy_new_interconnect_circular_dummy_61_10_padrows.gds
 python3 03_inspect.py [file.dxf]         # per-layer entity/vertex census + bbox
 
-python3 -m maskgen review --rev 3 4      # (from the repo root) Rev3 next to Rev4, feature by feature
+python3 -m maskgen review --wafer wafer4 --rev 3 4      # (from the repo root) Rev3 next to Rev4, feature by feature
 ```
 
 **`build_designs.py`**
@@ -68,7 +76,8 @@ python3 -m maskgen review --rev 3 4      # (from the repo root) Rev3 next to Rev
   - each revision is its parent revision plus the changes in `REVISIONS` (§4.5, §4.6).
 - Every stage runs in its own process with the overrides applied in memory. No config is edited, and
   nothing leaks between designs.
-- Output is in `<root>/interconnect/rev<N>/`. Files are named `*_rev<N>.*`, except that Rev2 keeps the
+- Output is in `<root>/<wafer name>/Rev<N>/devices/<device>/`, files named after the device. (Before
+  2026-11-16 files were named `*_rev<N>.*`, except that Rev2 kept the
   shipped names. Logs go to `logs/`, and every run writes a `manifest.json`.
 - It **fails** (exit 1) when a stage errors, when a router prints `crossings` or `pad_hits` ≠ 0, or
   when a router prints a `FAIL` line. The routers themselves only print those.
@@ -82,7 +91,7 @@ python3 -m maskgen review --rev 3 4      # (from the repo root) Rev3 next to Rev
   - `02_make_dummy.py`: `--in` and `--out`.
 - Defaults come from the config, and each generator's default output is its stage 02's default
   input.
-- Bare file names resolve to `<root>/interconnect/adhoc/`; absolute paths are used as given.
+- Bare file names resolve to `<root>/adhoc/`; absolute paths are used as given.
 - The routers take no pad parameters; they measure the band off the input DXF.
 
 **What a run looks like**
@@ -97,13 +106,13 @@ python3 -m maskgen review --rev 3 4      # (from the repo root) Rev3 next to Rev
 ### 1.1 The wafer
 
 ```bash
-python3 -m maskgen wafer wafer4_rev4      # (repo root) Rev4 designs if missing, then the wafer
+python3 -m maskgen wafer wafer4 --rev 4      # (repo root) Rev4 designs if missing, then the wafer
 ```
 
 It places every Rev4 design at the Rev2 placements. Those were measured once off the fabricated
 wafer and committed as `rev2_reference/wafer4_rev2_placements.json`: the 12 connector devices and
 the 26 dummies, which were placed by hand into the gaps and are never nested.
-- **Writes:** `<root>/wafer/wafer4_rev4/wafer_wafer4_rev4.{gds,oas,lyp}`.
+- **Writes:** `<root>/MEA1K_wafer4_12x_8x_8x_breakoutboards/Rev4/MEA1K_wafer4_12x_8x_8x_breakoutboards_Rev4.{gds,oas,lyp}`.
 - **Then checks the wafer against Rev2.** The only allowed differences are the pad-stack layers,
   inside the pads, and the new mark.
 - **Config:** `wafers/config_rev4.py`.
@@ -134,7 +143,7 @@ The mark row sits at y = 0, x ≈ ±41…±46 mm:
   x ≈ ∓41.2 mm to ∓44.0 mm.
 - Every other layer puts its own mark in one slot, and repeats the coarse marks at x ≈ ∓45.9 and
   ∓44.7 mm.
-- `maskgen review --wafers wafer4_rev4 rev2_fabricated` shows every slot side by side.
+- `maskgen review --wafers wafer4/4 rev2_fabricated` shows every slot side by side.
 
 ## 2. Code layout
 
@@ -282,7 +291,7 @@ so the shipped `51_35` DXF was missing a bulb against the wafer (found by legacy
 
 This table is `DESIGNS` in `catalog.py`: each design is its base config plus those
 overrides, applied in memory, so the configs keep their defaults and nothing has to be edited
-and reverted. `python3 build_designs.py --rev 2 --out-dir <dir>` rebuilds all five with Rev2
+and reverted. `python3 build_designs.py --wafer wafer4 --rev 2 --out-dir <dir>` rebuilds all five with Rev2
 settings, geometry-identical to the files shipped in `rev2_reference/` (checked 2026-10-07, and by the
 golden check since), and those match the wafer (proven by `legacy/rev2_repro/01c`: XOR = 0 per
 cell). The `71_15` vias sit 33.75 µm from their pad centres in x and y, as in the wafer's
@@ -299,7 +308,7 @@ lists only what it changes against its parent: Rev3 = Rev2 + its list, Rev4 = Re
 |---|---|---|
 | `pad_etch` | `"square"`: one `pad_side_extra` square per pad on EtchingPad | `"vias"`: circles around the pad perimeter on Polyimide_Negative |
 | `metal3` | `False` | `True`: the pad squares again on Metal3, no wires |
-| output | `<root>/interconnect/rev2/` | `<root>/interconnect/rev3/*_rev3.*` |
+| output | `<root>/MEA1K_wafer4_12x_8x_8x_breakoutboards/Rev2/devices/` | `<root>/MEA1K_wafer4_12x_8x_8x_breakoutboards/Rev3/devices/` |
 
 **Rev3 etch vias** (`01_generate.py`; the layout is `etch_via_layout` in
 `lib/generate_helpers.py`, the knobs are in `lib/constants.py`, `GEN_CONFIG_FIXED`).
@@ -336,15 +345,15 @@ reads its LWPOLYLINEs only, not the band hatch. Against Rev2, every Rev3 design 
 exactly these layers and nothing else.
 
 To review a pad change before building everything:
-`python3 build_designs.py --rev 3 --stage01` (stage 01 only, into `<root>/interconnect/rev3/draft/`).
+`python3 build_designs.py --wafer wafer4 --rev 3 --stage01` (stage 01 only, into `<root>/MEA1K_wafer4_12x_8x_8x_breakoutboards/Rev3/draft/`).
 
 The design names (§4.3) still describe the Rev2 etch squares.
 
 ### 4.6 Rev4
 
-`REVISIONS[4]` in `catalog.py` (output `<root>/interconnect/rev4/*_rev4.*`). Rev4 is Rev3 plus the changes below.
+`REVISIONS["wafer4"][4]` in `catalog.py` (output `<root>/MEA1K_wafer4_12x_8x_8x_breakoutboards/Rev4/devices/`). Rev4 is Rev3 plus the changes below.
 Stage 02 builds around Rev3's wire band (`band_ref_rev=3`); `build_designs.py` regenerates that Rev3 stage-01 reference
-itself (into `rev4/ref_rev3/`), so no separate Rev3 build is needed.
+itself (into each device's `ref_rev3/`), so no separate Rev3 build is needed.
 
 - **Every via 2.5 µm from the pad edge** (`via_edge_gap`): routing via and etch circles alike (centre 5 µm in). The routing
   via stays in the top-left corner; the etch circles lose their extra 1 µm inset and `etch_via_spacing` becomes (9.5, 21).
@@ -352,7 +361,7 @@ itself (into `rev4/ref_rev3/`), so no separate Rev3 build is needed.
   (`m1_tear_fillet_r` 14 µm, capped to the last straight run).
 - **12-block and dummies:** the top pad of each column gets a 3.5 µm via on a 5.5 µm Metal1 pad, centred between the two
   lanes beside it (0.25 µm left); the lower pads' vias move 0.5 µm right. Metal1 then holds the 2.5 µm wire gap everywhere.
-  (`per_design` in `REVISIONS[4]`.) The polyimide outline is trimmed 2.25 µm (`trim_xmax`) to stay where Rev3 had it.
+  (`per_design` in `REVISIONS["wafer4"][4]`.) The polyimide outline is trimmed 2.25 µm (`trim_xmax`) to stay where Rev3 had it.
 - **Connector side unchanged.** The vias move the lane bundle by 2.0-2.25 µm; stage 02 therefore builds fan, layer-split
   vias, Metal2, connector pads and the polyimide neck around Rev3's band and jogs each wire onto it over `BAND_JOG_LEN` =
   300 µm. Below the jog the connector side is Rev3's, point for point; Metal2 does not change at all.
@@ -433,8 +442,8 @@ window, which is a spot check, not a DRC.
 - **Regression test:** the golden check (top-level README). It rebuilds every revision and
   requires per-layer XOR = 0 against commit 667ba2d. `--only all` also re-measures the fabricated
   wafer (legacy 01c/01d).
-- **Changes that are *meant* to alter geometry:** make a new revision in `catalog.py` and compare
-  it with `maskgen review --rev <old> <new> --xor`.
+- **Changes that are *meant* to alter geometry:** make a new revision in `catalog.py` (of the same
+  wafer, or Rev1 of a new wafer) and compare it with `maskgen review --rev <wafer>/<old> <wafer>/<new> --xor`.
 
 **Two runs never match byte for byte.** ezdxf stamps `$TDCREATE`/`$TDUPDATE`. Compare
 geometry.

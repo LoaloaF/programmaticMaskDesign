@@ -108,7 +108,7 @@ def build_side_by_side(specs, gap_um=GAP_UM, align="loop", ionp=False):
     x_cursor = 0.0
     for spec in specs:
         tag = source_tag(spec, ionp)
-        src = ezdxf.readfile(bundle_dxf_path(tag))
+        src = ezdxf.readfile(bundle_dxf_path(tag, spec.name))
         smsp = src.modelspace()
         ext = bbox.extents(smsp)
 

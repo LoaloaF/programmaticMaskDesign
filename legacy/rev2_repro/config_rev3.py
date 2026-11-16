@@ -12,7 +12,7 @@ nested. 01d checks the result against the Rev2 wafer and passes only if layers 3
 only ones that changed, and only inside the pad metal (layer 6):
 
     cd mea1k_interconnects
-    python3 build_designs.py --rev 3                    # <out root>/interconnect/rev3/
+    python3 build_designs.py --wafer wafer4 --rev 3     # <out root>/MEA1K_wafer4_12x_8x_8x_breakoutboards/Rev3/devices/
     KL=/Applications/KLayout/klayout.app/Contents/MacOS/klayout
     WAFERNEST_CONFIG=config_rev2 $KL -b -r ../legacy/rev2_repro/01c_extract_exact_placements.py
     WAFERNEST_CONFIG=config_rev3 $KL -b -r ../legacy/rev2_repro/01d_rebuild_wafer.py
@@ -26,7 +26,7 @@ import config_rev2 as _rev2
 HERE = _rev2.HERE
 ROOT = _rev2.ROOT
 # LEGACY (refactor Phase 1): Rev3 designs from `build_designs.py --rev 3`, now under the output root.
-REV3_DIR = os.path.join(_rev2._out_root(), "interconnect", "rev3")
+REV3_DIR = os.path.join(_rev2._out_root(), "MEA1K_wafer4_12x_8x_8x_breakoutboards", "Rev3", "devices")
 
 RUN_TAG = "wafer4_rev3"
 OUT_DIR = os.path.join(_rev2._out_root(), "wafer", RUN_TAG)
@@ -51,12 +51,12 @@ DUMMY_LAYER_MAP[(8, 0)] = METAL3
 # Etching's and PI's inverted marks) and the coarse marks every layer has; Rev2 dropped it.
 EXTRA_TOP_LAYERS = {"8/0": list(METAL3)}
 
-_REV3 = {
-    "CONN_BIG_NEW": "new_interconnect_with_connector_chamfered_12Block_56_15_rev3.dxf",
-    "CONN_SMALL_51_35_NEW": "new_interconnect_with_connector_8blocks_chamfered_1layer_51_35_rev3.dxf",
-    "CONN_SMALL_71_15_NEW": "new_interconnect_with_connector_8blocks_chamfered_1layer_71_15_rev3.dxf",
-    "dummy_61_10_NEW": "dummy_new_interconnect_circular_dummy_61_10_padrows_rev3.gds",
-    "dummy_35_36_NEW": "dummy_new_interconnect_circular_dummy_35_36_padrows_rev3.gds",
+_REV3 = {     # paths only (2026-11-16): one folder per device, <device>/<device>.dxf|.gds
+    "CONN_BIG_NEW": "12block_56_15/12block_56_15.dxf",
+    "CONN_SMALL_51_35_NEW": "8block_51_35/8block_51_35.dxf",
+    "CONN_SMALL_71_15_NEW": "8block_71_15/8block_71_15.dxf",
+    "dummy_61_10_NEW": "dummy_61_10/dummy_61_10.gds",
+    "dummy_35_36_NEW": "dummy_35_36/dummy_35_36.gds",
 }
 SOURCES = {cell: {"file": os.path.join(REV3_DIR, f),
                   "layers": DUMMY_LAYER_MAP if f.endswith(".gds") else DXF_LAYER_MAP}

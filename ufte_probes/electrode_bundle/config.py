@@ -15,13 +15,15 @@ from typing import Callable, Dict, List, Optional
 import numpy as np
 
 #One output folder per design set, OUTSIDE the repo, under the maskgen output root
-#(maskgen/core/paths.py: --out / $MASKGEN_OUT / <repo>/.maskgen_out):
+#(maskgen/core/paths.py: --out / $MASKGEN_OUT / <repo>/.maskgen_out). A design set that a wafer
+#revision is made of (maskgen/core/wafers.py design_set) goes into that wafer's folder:
 #
-#    <root>/electrode/<TARGET_SET>/shanks/   <- this generator's output: DXFs, PNGs, JSON
-#    <root>/wafer/<TARGET_SET>/              <- the wafer's: footprints, poses, wafer GDS
+#    <root>/MEA1K_W5_64Ch_4Shankdesigns/Rev1/devices/<geometry>/   <- this generator's output: one
+#                                     folder per device (geometry + its barcoded variants), device.json
+#    <root>/MEA1K_W5_64Ch_4Shankdesigns/Rev1/           <- the wafer's: footprints, poses, wafer GDS
 #
-#wafers/config_64ch_4shank.py derives its two paths from the SAME constant, so a new
-#design set is one edit here and one there -- and the shanks a wafer was nested from can
+#any other set into <root>/electrode/<TARGET_SET>/. A new probe wafer is one entry in wafers.py,
+#one edit here and a config in ufte_probes/wafers/ -- and the shanks a wafer was nested from can
 #never drift into a different folder than the wafer built from them.
 #The folder is resolved when something is WRITTEN (out_dir()), not at import, so importing
 #the package or building configs never needs the output root.
@@ -36,7 +38,7 @@ from maskgen.core import layers as _LY   # noqa: E402  -- every layer name: mask
 
 
 def out_dir(create: bool = False) -> str:
-    """<out root>/electrode/<TARGET_SET>/shanks. Raises with instructions if no root is set."""
+    """TARGET_SET's folder (maskgen.core.paths.electrode_dir). Raises with instructions if no root is set."""
     from maskgen.core import paths
     return paths.electrode_dir(TARGET_SET, create=create)
 
@@ -76,10 +78,22 @@ LOOP_DATUM_VAR = "LOOP_Y_UM"
 EXPORT_DROP_LAYERS = _LY.PROBE_BUILD_ONLY      # ('Electrodes', 'Ref_Electrodes', 'Polyimide')
 
 
-def bundle_dxf_path(tag: str) -> str:
-    """Where a tagged, IONP-free bundle DXF lives: written by batch.py, read by
-    side_by_side.py. One definition so the two cannot drift apart."""
-    return f"{out_dir()}/electrode_bundle_{tag}.dxf"
+def device_dir(name: str, create: bool = False) -> str:
+    """One DEVICE's folder: <design set folder>/<geometry name>/ (e.g. .../devices/U4/). A geometry and
+    its barcoded variants (U4C08..U4C11) are one device -- they differ only in the ID wells."""
+    import os
+    d = os.path.join(out_dir(create=create), name)
+    if create:
+        os.makedirs(d, exist_ok=True)
+    return d
+
+
+def bundle_dxf_path(tag: str, name: Optional[str] = None) -> str:
+    """Where a tagged bundle DXF lives -- the geometry `name` (IONP-free) or a barcoded variant `tag`
+    (`name` + Cnn), in the geometry's device folder: written by batch.py, read by side_by_side.py.
+    One definition so the two cannot drift apart. `name` defaults to `tag` without its Cnn."""
+    import re
+    return f"{device_dir(name or re.sub(r'C[0-9]{2}$', '', tag))}/electrode_bundle_{tag}.dxf"
 
 
 def variant_tag(name: str, ionp_pattern_id: Optional[int] = None) -> str:

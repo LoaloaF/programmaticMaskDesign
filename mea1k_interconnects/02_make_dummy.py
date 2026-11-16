@@ -317,9 +317,9 @@ def build_polyimide_outline(dev_bbox, seam=None):
 def main():
     p = argparse.ArgumentParser(description="Cap the dummy interconnect's wire band -> GDS.")
     p.add_argument("--in", dest="in_dxf", default=_cfg.DEFAULT_IN,
-                   help="stage-01 dummy DXF; bare name -> <out root>/interconnect/adhoc/ (default: %(default)s)")
+                   help="stage-01 dummy DXF; bare name -> <out root>/adhoc/ (default: %(default)s)")
     p.add_argument("--out", dest="out_gds", default=_cfg.DEFAULT_OUT,
-                   help="output GDS; bare name -> <out root>/interconnect/adhoc/ (default: %(default)s)")
+                   help="output GDS; bare name -> <out root>/adhoc/ (default: %(default)s)")
     a = p.parse_args()
     in_path = in_designs(a.in_dxf)
     out_gds = in_designs(a.out_gds)

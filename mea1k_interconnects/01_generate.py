@@ -6,7 +6,7 @@ from shapely.affinity import affine_transform
 from lib.generate_helpers import (create_rectangle, convert_rectangle_to_polyline, point_reflect,
                                   bulb_profile, circle_polyline, stroke_centerline_to_polygon,
                                   etch_via_layout, wire_with_end_pad)
-from lib.active import in_designs as _in_designs      # bare filename -> <out root>/interconnect/adhoc/
+from lib.active import in_designs as _in_designs      # bare filename -> <out root>/adhoc/
 
 # Stage 01 for EVERY interconnect design: the pad grid + per-column Metal1 routing + vias + polyimide.
 # Every knob lives in config_<name>.py (section 1) -- edit it there. Three base configs use this
@@ -56,7 +56,7 @@ def _apply_cli(config, argv=None):
     p.add_argument("--config", choices=CONFIGS, default="12block",
                    help="which config_<name>.py to build (default: %(default)s)")
     p.add_argument("--out", default=DEFAULT_OUT,
-                   help="output DXF; bare name -> <out root>/interconnect/adhoc/ (default: %(default)s)")
+                   help="output DXF; bare name -> <out root>/adhoc/ (default: %(default)s)")
     a = p.parse_args(argv)
     config["out_path"] = _in_designs(a.out)
     print("pad grid: %d x %d, pad_side=%g um, gap=%g um, extra=%g um -> %s"

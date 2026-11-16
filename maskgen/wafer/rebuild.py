@@ -31,7 +31,7 @@ then reports the difference, which is the point.
 RUN WITH KLAYOUT (WAFERNEST_CONFIG defaults to config_rev4):
     /Applications/KLayout/klayout.app/Contents/MacOS/klayout -b -r maskgen/wafer/rebuild.py
 
-Overwrites its own output (<out root>/wafer/<RUN_TAG>/wafer_<RUN_TAG>.gds, + manifest.json): it is
+Overwrites its own output (<out root>/<wafer name>/Rev<N>/<RUN_TAG>.gds, + manifest.json): it is
 fully determined by the placements and the sources, so there is nothing in it to lose.
 The Rev2 reproduction itself (01c, which measured the placements, and this script with
 config_rev2) is frozen in legacy/rev2_repro/.

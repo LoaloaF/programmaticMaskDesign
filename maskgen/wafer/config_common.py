@@ -17,32 +17,42 @@ import os
 import sys
 
 
-def _wafer_dir(run_tag):
-    """<out root>/wafer/<run_tag>/ -- maskgen.core.paths (pure stdlib, so KLayout's Python can import it)."""
+def _paths():
+    """maskgen.core.paths (pure stdlib, so KLayout's Python can import it)."""
     repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     if repo not in sys.path:
         sys.path.insert(0, repo)
-    from maskgen.core import paths
-    return paths.wafer_dir(run_tag, create=False)
+    from maskgen.core import paths, wafers
+    return paths, wafers
 
 
 def derive(mod):
     """Attach OUT_DIR, the output paths and the DESIGNS helpers to a config module.
 
-    A config may set OUT_DIR itself; anything that does not gets <out root>/wafer/<RUN_TAG>/
-    (maskgen/core/paths.py -- outside the repo).
+    A config names its wafer revision -- WAFER (a maskgen/core/wafers.py key) and REV -- and gets
+        OUT_DIR    <out root>/<wafer name>/Rev<N>/ (maskgen/core/paths.py -- outside the repo)
+        RUN_TAG    the wafer's file stem: <wafer name> for Rev1, <wafer name>_Rev<N> after
+        WAFER_OUT  OUT_DIR/<RUN_TAG>.gds (+ .oas, .lyp next to it)
+        NEST_DIR   OUT_DIR/nest/ -- the nest's working files: footprints, poses, previews
+    unless it sets them itself.
     """
+    paths, wafers = _paths()
+    if not hasattr(mod, "RUN_TAG"):
+        mod.RUN_TAG = wafers.stem(mod.WAFER, mod.REV)
     if not hasattr(mod, "OUT_DIR"):
-        mod.OUT_DIR = _wafer_dir(mod.RUN_TAG)
-    mod.POSES_PATH   = os.path.join(mod.OUT_DIR, "poses.json")
-    mod.PREVIEW_PATH = os.path.join(mod.OUT_DIR, "nest_preview.png")
-    mod.OVERLAY_PATH = os.path.join(mod.OUT_DIR, "footprints_overlay.png")
-    mod.WAFER_OUT    = os.path.join(mod.OUT_DIR, "wafer_%s.gds" % mod.RUN_TAG)
+        mod.OUT_DIR = paths.wafer_rev_dir(mod.WAFER, mod.REV, create=False)
+    if not hasattr(mod, "NEST_DIR"):
+        mod.NEST_DIR = os.path.join(mod.OUT_DIR, "nest")
+    mod.POSES_PATH   = os.path.join(mod.NEST_DIR, "poses.json")
+    mod.PREVIEW_PATH = os.path.join(mod.NEST_DIR, "nest_preview.png")
+    mod.OVERLAY_PATH = os.path.join(mod.NEST_DIR, "footprints_overlay.png")
+    if not hasattr(mod, "WAFER_OUT"):
+        mod.WAFER_OUT = os.path.join(mod.OUT_DIR, "%s.gds" % mod.RUN_TAG)
     #Which design variant stage 03 put at which pose. Written by 03 rather than recomputed
     #by anything that needs it: the variant->pose deal is a seeded shuffle, and a second
     #implementation of it is a second chance to disagree with the GDS that was shipped.
     mod.PLACEMENT_PATH = os.path.join(mod.OUT_DIR, "placement.json")
-    mod.MAP_PATH       = os.path.join(mod.OUT_DIR, "wafer_map_%s.png" % mod.RUN_TAG)
+    mod.MAP_PATH       = os.path.join(mod.OUT_DIR, "%s_map.png" % mod.RUN_TAG)
     mod.R_MAX_MM     = mod.WAFER_R - mod.EDGE_EXCL + 0.5
 
     def kinds():
@@ -64,17 +74,17 @@ def derive(mod):
         return p if os.path.isabs(p) else os.path.join(mod.DESIGN_DIR, p)
 
     def footprint_path(key):
-        return os.path.join(mod.OUT_DIR, "footprint_%s.json" % key)
+        return os.path.join(mod.NEST_DIR, "footprint_%s.json" % key)
 
     def offset_path(key):
-        return os.path.join(mod.OUT_DIR, "footprint_%s_offset.json" % key)
+        return os.path.join(mod.NEST_DIR, "footprint_%s_offset.json" % key)
 
     def kind_footprint_path(kind):
         """The polygon stage 02 nests a slot of this kind against."""
         ds = designs_of(kind)
         if len(ds) == 1:
             return footprint_path(ds[0]["key"])
-        return os.path.join(mod.OUT_DIR, "envelope_%s.json" % kind)
+        return os.path.join(mod.NEST_DIR, "envelope_%s.json" % kind)
 
     for fn in (kinds, designs_of, count_of, design_dxf,
                footprint_path, offset_path, kind_footprint_path):
