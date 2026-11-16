@@ -11,17 +11,18 @@ the ground truth: the connector pads sit on its pad drills, the polyimide outlin
 the neck and the neck -> board fillets), and its 4 corner mounting holes get a 0.8 mm keep-out.
 
 Lane pitch: WIDE (catalog wafer6 FAN_TARGET_PITCH, 6.5 um = 2 um wire + 4.5 um gap) wherever there is
-room; TIGHT (4.5 um, the 2.5 um gap floor) only where it is tight: the outer bundles' run along the top
-edge (between the mounting hole and block 1) and the start of the centre bundle (between the columns).
+room. Only the centre bundle narrows: to TIGHT (4.5 um, the 2.5 um gap floor) between the columns' first
+blocks, MID (5.5 um, 3.5 um gap) once block 2 has peeled off, LATE (7.5 um, 5.5 um gap) once blocks
+3 and 4 have.
 
-The 768 band wires, left to right, in 64-wire groups g0..g11:
+The 768 band wires, left to right, in 64-wire groups g0..g11; connectors numbered 1-6 down the left
+column and 7-12 up the right one. Connector k takes group g(k-1):
 
-    g0-g1    outer-left: off the neck to the left, along the top edge under the mounting hole, down
-             the side wall (clear of the wall notches, no jog), into blocks 1 (g1) and 3 (g0) of the
-             left column (counted from the top), from the wall side
-    g2-g5    centre-left: straight down the middle, peeling LEFT into blocks 2 (g2), 4, 5, 6 (g5)
-    g6-g9    centre-right: the mirror -- blocks 6 (g6), 5, 4, 2 (g9) of the right column
-    g10-g11  outer-right: the mirror -- blocks 1 (g10) and 3 (g11) of the right column
+    g0       outer-left: off the neck to the left (WIDE), along the top edge just above block 1 (well
+             clear of the mounting hole), down the side wall, into connector 1 (left block 1) from the wall
+    g1-g5    centre-left: fan in to TIGHT, straight down the middle, peeling LEFT into connectors 2-6
+    g6-g10   centre-right: the mirror -- connectors 7-11 (right blocks 6..2)
+    g11      outer-right: the mirror -- connector 12 (right block 1) from the wall
 
 Each 64 enters its block as two 32s, one per wide lane: rows 1-2 and rows 3-4 (2-3 is too narrow).
 THIS ITERATION: the 32s run 500 um into their lanes and stop; the pads are drawn, not connected yet.
@@ -31,6 +32,7 @@ import math
 import os
 import re
 
+import ezdxf
 import numpy as np
 from shapely.geometry import LineString, Point, Polygon, box
 from shapely.ops import nearest_points, polygonize, unary_union
@@ -63,27 +65,28 @@ BOARD_DIR = os.path.join(HERE, "assets", "board_12x64_2026-06-26")
 BOARD_FROM_CSV_MM = (0.35, 8.082)
 
 WIRE_W = 2.0              # every wire, the whole way
-TIGHT = 4.5               # lane pitch where it is tight (2.5 um gap)
+TIGHT = 4.5               # centre lane pitch between the first blocks (2.5 um gap)
+MID = 5.5                 # centre lane pitch once block 2 has peeled off (3.5 um gap)
+LATE = 7.5                # centre lane pitch once blocks 3 and 4 have peeled off (5.5 um gap)
+CENTRE_PAD_GAP = 150.0    # centre bundle edge -> the columns' pads, at least
 PI_CLEAR = 150.0          # wire edge -> polyimide edge
 NOTCH_CLEAR = 150.0       # wall-run wire edge -> the wall notches (the wall run never jogs for them)
-HOLE_KEEPOUT_D = 800.0    # keep-out circle round each corner mounting hole (the drill is 0.5 mm)
-HOLE_CLEAR = 100.0        # wire edge -> that keep-out
-PAD_CLEAR_MIN = 100.0     # top-run wire edge -> block 1's pad edge, at least
-L_FAN_IN = 3000.0         # neck fan-in WIDE -> TIGHT, ending just above the outer bundles' turn
+HOLE_D = 800.0            # cut through the polyimide at each corner mounting hole (the drill is 0.5 mm)
+TOP_RUN_PAD_GAP = 100.0   # top-run wire edge -> block 1's pad edge
+FAN_IN_PAD_GAP = 100.0    # the centre fan-in ends this far above block 1's pad edge
+L_FAN_IN = 3000.0         # centre fan-in WIDE -> TIGHT
 R_OFF_NECK = 1000.0       # outer bundle, neck -> top edge: radius of its innermost wire
 R_TO_WALL = 300.0         # outer bundle, top edge -> side wall: radius of its innermost wire
-L_WIDEN = 1500.0          # a fan-out TIGHT -> WIDE once there is room
+L_WIDEN = 1500.0          # a fan-out to a wider pitch (shorter where the next block comes sooner)
 R_INTO_LANE = 150.0       # a 32's turn into its lane: radius of its first-turning wire
 LANE_STUB = 500.0         # the 32s end this far past the block's outermost pad edge (not connected yet)
 PEEL_GAP = 20.0           # below a peeled group's lowest wire, before the rest change pitch
 FAN_RES = 96              # samples per eased fan
 SEG, SAGITTA = 10.0, 0.001  # arc sampling: max segment (um), max chord error (um)
-WALL_BLOCKS = (0, 2)      # blocks (0 = top) fed from the wall; the rest from the centre
-CENTRE_BLOCKS = (1, 3, 4, 5)
+FILLET_R = 2000.0         # neck -> board fillet (the old router's 3 mm, a little smaller)
 
 HELPER_OUTLINE = "HELPER_board_outline"
 HELPER_DRILL = "HELPER_board_drill"
-HELPER_KEEPOUT = "HELPER_mount_keepout"
 
 
 # ======================================================================================
@@ -226,34 +229,35 @@ def route_left(wide, xm, y_start, bd, wide_pitch):
     tight = {i: xm + (i - 383.5) * TIGHT for i in range(384)}
     paths, cur, geo = {}, {}, {}
 
-    # ---- the top run sits between the mounting-hole keep-out and block 1's top pads
+    # ---- outer-left, i = 0..63 (63 innermost), WIDE: off the neck, along the top just above block 1,
+    # down the wall (clear of the notches) and straight into block 1
+    n_out = 64
+    pad_top = blocks[0]["rows"][0] + padr
+    y_low_run = pad_top + TOP_RUN_PAD_GAP + WIRE_W / 2.0
+    y_top_run = y_low_run + (n_out - 1) * wide_pitch
     hole = bd["mounts"][(bd["mounts"][:, 0] < xm) & (bd["mounts"][:, 1] > bd["pads"][:, 1].max())][0]
-    y_top_run = hole[1] - HOLE_KEEPOUT_D / 2.0 - HOLE_CLEAR - WIRE_W / 2.0
-    n_out = 128
-    y_low_run = y_top_run - (n_out - 1) * TIGHT
-    pad_gap = y_low_run - WIRE_W / 2.0 - (blocks[0]["rows"][0] + padr)
-    if pad_gap < PAD_CLEAR_MIN:
-        raise RuntimeError("top run: only %.1f um to block 1's pads" % pad_gap)
+    hole_gap = hole[1] - HOLE_D / 2.0 - y_top_run - WIRE_W / 2.0
     yt = y_top_run + R_OFF_NECK                                     # the outer wires turn from here
-    y_fi0 = yt + L_FAN_IN                                           # neck fan-in: y_fi0 -> yt
-    geo.update(y_top_run=y_top_run, pad_gap=pad_gap, yt=yt, y_fi0=y_fi0)
-
-    for i in range(384):                                            # neck, then fan-in to TIGHT
-        paths[i] = [(wide[i], y_start), (wide[i], y_fi0)] + ease(wide[i], tight[i], y_fi0, L_FAN_IN)
-        cur[i] = tight[i]
-
-    # ---- outer-left, i = 0..127 (127 innermost): off the neck, along the top, down the wall
-    c1x = tight[0] - R_OFF_NECK
+    c1x = wide[0] - R_OFF_NECK
     x_out = bd["notch_l"] + NOTCH_CLEAR + WIRE_W / 2.0              # i = 0 on the wall: clear of the notches
-    c2x = x_out + R_TO_WALL + (n_out - 1) * TIGHT
+    c2x = x_out + R_TO_WALL + (n_out - 1) * wide_pitch
     c2y = y_low_run - R_TO_WALL
     for i in range(n_out):
-        r1 = tight[i] - c1x
+        r1 = wide[i] - c1x
         y_run = yt - r1
         r2 = y_run - c2y
-        paths[i] += arc(c1x, yt, r1, 0.0, -math.pi / 2) + [(c2x, y_run)] + arc(c2x, c2y, r2, math.pi / 2, math.pi)
+        paths[i] = ([(wide[i], y_start), (wide[i], yt)] + arc(c1x, yt, r1, 0.0, -math.pi / 2)
+                    + [(c2x, y_run)] + arc(c2x, c2y, r2, math.pi / 2, math.pi))
         cur[i] = c2x - r2
-    geo.update(x_out=x_out, notch_l=bd["notch_l"])
+
+    # ---- centre-left, i = 64..383: fan in to TIGHT below the outer turn, ending above block 1
+    y_fi1 = pad_top + FAN_IN_PAD_GAP
+    y_fi0 = y_fi1 + L_FAN_IN
+    for i in range(n_out, 384):
+        paths[i] = [(wide[i], y_start), (wide[i], y_fi0)] + ease(wide[i], tight[i], y_fi0, L_FAN_IN)
+        cur[i] = tight[i]
+    geo.update(y_top_run=y_top_run, y_low_run=y_low_run, hole_gap=hole_gap, yt=yt, x_out=x_out,
+               notch_l=bd["notch_l"], y_fi0=y_fi0, y_fi1=y_fi1)
 
     def into_lanes_from_wall(grp, blk):
         """grp (64, outer..inner) turns RIGHT into blk: the inner 32 into the upper lane, the outer 32
@@ -289,25 +293,37 @@ def route_left(wide, xm, y_start, bd, wide_pitch):
             low = ys - r_hi
         return low
 
-    def widen(idx, target, y0):
+    def widen(idx, target, y0, next_blk, pitch):
+        # as long as there is room above the next block's first turn (its upper 32 at this pitch)
+        y_turn = lanes_of(next_blk["rows"])[0] + 0.5 * (2 * R_INTO_LANE + 31 * pitch)
+        length = min(L_WIDEN, y0 - y_turn - 50.0)
         for i in idx:
-            paths[i] += [(cur[i], y0)] + ease(cur[i], target[i], y0, L_WIDEN)
+            paths[i] += [(cur[i], y0)] + ease(cur[i], target[i], y0, length)
             cur[i] = target[i]
+        return length
 
-    # wall side: block 1 takes the inner 64; the other 64 widen to WIDE (the outer wire stays put) and
-    # go on to block 3
-    low = into_lanes_from_wall(list(range(64, 128)), blocks[WALL_BLOCKS[0]])
-    rest = list(range(64))
-    widen(rest, {i: x_out + i * wide_pitch for i in rest}, low - WIRE_W / 2.0 - PEEL_GAP)
-    into_lanes_from_wall(rest, blocks[WALL_BLOCKS[1]])
+    into_lanes_from_wall(list(range(n_out)), blocks[0])
 
-    # ---- centre-left, i = 128..383: the first block at TIGHT, then WIDE (symmetric about the centre)
-    grp = list(range(128, 192))
-    low = into_lanes_from_centre(grp, blocks[CENTRE_BLOCKS[0]])
-    rest = list(range(192, 384))
-    widen(rest, {i: xm + (i - 383.5) * wide_pitch for i in rest}, low - WIRE_W / 2.0 - PEEL_GAP)
-    for k, b in enumerate(CENTRE_BLOCKS[1:]):
-        into_lanes_from_centre(rest[64 * k: 64 * k + 64], blocks[b])
+    # centre, always centred: block 2 at TIGHT; MID for blocks 3, 4; LATE for blocks 5, 6
+    edge_l = blocks[0]["xmax"] + padr                               # left column's pad edge
+    room = (2.0 * xm - edge_l) - edge_l - 2.0 * CENTRE_PAD_GAP - WIRE_W   # (right edge: the mirror)
+    rest = list(range(n_out, 384))
+    stages, pitch_now = [], TIGHT
+    for kind in (None, "mid", "late", "late"):
+        if kind is not None:
+            pitch = MID if kind == "mid" else LATE
+            if (2 * len(rest) - 1) * pitch > room:
+                raise RuntimeError("%d centre wires at %.1f um do not fit between the columns" % (2 * len(rest), pitch))
+            if pitch > pitch_now + 1e-9:
+                nxt = blocks[6 - len(rest) // 64]
+                length = widen(rest, {i: xm + (i - 383.5) * pitch for i in rest},
+                               low - WIRE_W / 2.0 - PEEL_GAP, nxt, pitch)
+                stages.append((6 - len(rest) // 64 + 1, pitch, length))
+                pitch_now = pitch
+        for _ in range(2 if kind == "mid" else 1):
+            low = into_lanes_from_centre(rest[:64], blocks[6 - len(rest) // 64])
+            rest = rest[64:]
+    geo["stages"] = stages
     return paths, geo
 
 
@@ -319,7 +335,7 @@ def polyimide_patches(bd):
     replacements for base.build_downward_polyimide, base.edge_bulbs and base.load_board_corner_features."""
     orig_build = base.build_downward_polyimide
     top = bd["outline"].bounds[3]
-    fr = base.POLYIMIDE["fillet_r_mm"] * 1000.0
+    fr = FILLET_R
 
     def build(*a, **kw):
         old = Polygon(orig_build(*a, **kw))                # only its neck (+ taper) is kept
@@ -396,13 +412,15 @@ def main():
         paths[767 - i] = mirror(p, xm)
     print("lane pitch: WIDE %.1f um (gap %.1f), TIGHT %.1f um (gap %.1f)"
           % (wide_pitch, wide_pitch - WIRE_W, TIGHT, TIGHT - WIRE_W))
-    print("neck fan-in to TIGHT: y %.0f -> %.0f um; outer bundles (128 each) turn off at y=%.0f, top run "
-          "y=%.0f..%.0f (under the mounting-hole keep-out, %.0f um above block 1's pads), wall run from "
-          "x=%.0f (notch tip %.0f)" % (geo["y_fi0"], geo["yt"], geo["yt"], geo["y_top_run"],
-                                       geo["y_top_run"] - 127 * TIGHT, geo["pad_gap"], geo["x_out"],
-                                       geo["notch_l"]))
-    print("blocks (top = 1): wall-fed %s, centre-fed %s, in both columns"
-          % ([b + 1 for b in WALL_BLOCKS], [b + 1 for b in CENTRE_BLOCKS]))
+    print("outer bundles (64 each, WIDE): turn off the neck at y=%.0f, top run y=%.0f..%.0f (%.0f um above "
+          "block 1's pads, %.0f um below the mounting-hole cut), wall run from x=%.0f (notch tip %.0f)"
+          % (geo["yt"], geo["y_top_run"], geo["y_low_run"], TOP_RUN_PAD_GAP, geo["hole_gap"], geo["x_out"],
+             geo["notch_l"]))
+    print("centre bundles (320 each): fan in to TIGHT (%.1f um) over y %.0f -> %.0f for block 2; then "
+          % (TIGHT, geo["y_fi0"], geo["y_fi1"])
+          + ", ".join("%.2f um from block %d (widened over %.0f um)" % (p, b, L) for b, p, L in geo["stages"]))
+    print("connector k <- band group g(k-1): 1-6 down the left column, 7-12 up the right; 1 and 12 from "
+          "the wall, the rest from the centre")
 
     # ---- emit
     ensure_layer(doc, WIRE_LAYER, 4)
@@ -419,26 +437,33 @@ def main():
                            dxfattribs={"layer": WIRE_LAYER})
         msp.add_lwpolyline(create_polygon_circle(x, y, (base.CONN_PAD_R or DSG.PADR) * 1000.0, CIRCLE_RES),
                            close=True, dxfattribs={"layer": CONN_PAD_LAYER})
-    for lay, col in ((HELPER_OUTLINE, 3), (HELPER_DRILL, 1), (HELPER_KEEPOUT, 6)):
+    for lay, col in ((HELPER_OUTLINE, 3), (HELPER_DRILL, 1)):
         ensure_layer(doc, lay, col)
-    for s in bd["segs"]:
-        msp.add_lwpolyline(s, dxfattribs={"layer": HELPER_OUTLINE})
+    for s_ in bd["segs"]:
+        msp.add_lwpolyline(s_, dxfattribs={"layer": HELPER_OUTLINE})
     for x, y, d in bd["drills"]:
         msp.add_lwpolyline(create_polygon_circle(x, y, d / 2.0, CIRCLE_RES), close=True,
                            dxfattribs={"layer": HELPER_DRILL})
-    for x, y, _d in bd["mounts"]:
-        msp.add_lwpolyline(create_polygon_circle(x, y, HOLE_KEEPOUT_D / 2.0, CIRCLE_RES), close=True,
-                           dxfattribs={"layer": HELPER_KEEPOUT})
-    print("helper layers (not on any mask): %s, %s, %s (%.1f mm round the %d mounting holes)"
-          % (HELPER_OUTLINE, HELPER_DRILL, HELPER_KEEPOUT, HOLE_KEEPOUT_D / 1000.0, len(bd["mounts"])))
+    print("helper layers (not on any mask): %s, %s" % (HELPER_OUTLINE, HELPER_DRILL))
 
     # ---- polyimide
     base.build_downward_polyimide, base.edge_bulbs, base.load_board_corner_features = polyimide_patches(bd)
     print("\n=== polyimide: Alexei's outline + neck + neck -> board fillets (r %.0f um) ==="
-          % (base.POLYIMIDE["fillet_r_mm"] * 1000.0))
+          % FILLET_R)
     merged, _holes = base.emit_polyimide(doc, msp, bd["pads"] / 1000.0, info, ic_pads_bbox=ic_pads_bbox)
     if merged.geom_type != "Polygon":
         raise RuntimeError("polyimide came out as %d pieces" % len(merged.geoms))
+    # the mounting holes: cut through the polyimide (an island in the Polyimide hatch + the disk on
+    # Polyimide_Negative, which is what etches it)
+    pi_hatch = max(msp.query('HATCH[layer=="%s"]' % base.POLYIMIDE_LAYER), key=lambda h: len(h.paths))
+    cuts = []
+    for x, y, _d in bd["mounts"]:
+        ring = create_polygon_circle(x, y, HOLE_D / 2.0, CIRCLE_RES)
+        pi_hatch.paths.add_polyline_path(ring, is_closed=True, flags=ezdxf.const.BOUNDARY_PATH_DEFAULT)
+        msp.add_lwpolyline(ring, close=True, dxfattribs={"layer": base.POLYIMIDE_NEG_LAYER})
+        cuts.append(Polygon(ring))
+    merged = merged.difference(unary_union(cuts))
+    print("mounting holes: %d x %.1f mm cut through the polyimide" % (len(cuts), HOLE_D / 1000.0))
 
     # ---- checks (centrelines; edge gap = distance - WIRE_W)
     tree = STRtree(lines)
@@ -453,16 +478,14 @@ def main():
     pads = [Point(x, y).buffer(padr, 64) for x, y in bd["pads"]]
     ptree = STRtree(pads)
     pad_min = min(ln.distance(pads[ptree.query_nearest(ln)[0]]) for ln in lines) - WIRE_W / 2.0
-    pi_min = min(ln.distance(merged.exterior) for ln in lines) - WIRE_W / 2.0
-    keep = unary_union([Point(x, y).buffer(HOLE_KEEPOUT_D / 2.0, 128) for x, y, _d in bd["mounts"]])
-    keep_min = min(ln.distance(keep) for ln in lines) - WIRE_W / 2.0
+    pi_min = min(ln.distance(merged.boundary) for ln in lines) - WIRE_W / 2.0
     pm = prep(merged.buffer(1e-6))
     outside = sum(1 for ln in lines if not pm.contains(ln))
     print("\nchecks: min wire gap %.3f um (wires %s at %.0f, %.0f), floor 2.5: %s"
           % (worst[0], worst[1], at.x, at.y, "OK" if worst[0] >= 2.5 - 5e-3 else "FAIL"))
-    print("        min wire -> connector pad edge %.1f um; -> polyimide edge %.1f um (target %.0f); "
-          "-> mount keep-out %.1f um; wires off the polyimide: %d"
-          % (pad_min, pi_min, PI_CLEAR, keep_min, outside))
+    print("        min wire -> connector pad edge %.1f um; -> polyimide edge (incl. the holes) %.1f um "
+          "(target %.0f); "
+          "wires off the polyimide: %d" % (pad_min, pi_min, PI_CLEAR, outside))
 
     doc.saveas(base.FINAL_DXF)
     print("wrote %s" % base.FINAL_DXF)
