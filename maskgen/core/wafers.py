@@ -17,6 +17,7 @@ fab convention: the first version has no suffix), later ones append _Rev<N>.
                           config = a module in <project>/wafers/
                layerset   maskgen/core/layers.py LAYERSETS key of the wafer's masks
                design_set electrode wafers: the electrode_bundle design set its devices come from
+               devices    interconnect wafers: which catalog.DESIGNS go on it (default: all of them)
 
 WHAT CHANGES in an interconnect wafer's designs from revision to revision is mea1k_interconnects/catalog.py,
 under the same wafer key and revision number.
@@ -51,7 +52,9 @@ WAFERS = {
         name="MEA1K_wafer6_12x_8x_breakoutboards", project="mea1k_interconnects",
         note="MEA1K interconnects, nested",
         revs={
-            1: dict(layout=None, layerset="interconnect_rev4", note="in design: wafer4 Rev4's designs + changes"),
+            1: dict(layout=dict(kind="nested", config="config_wafer6", nester="skyline"),
+                    layerset="interconnect_rev4", design_set="12x_8x_breakoutboards",
+                    note="in design: wafer4 Rev4's 12-block + changes"),
         }),
 }
 

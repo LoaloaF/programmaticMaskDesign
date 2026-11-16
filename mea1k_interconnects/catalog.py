@@ -129,11 +129,18 @@ REVISIONS = {
 
     "wafer6": {
         1: Rev(1, ("wafer4", 4), "interconnect_rev4",
-               set={}, per_design={}, dummy_set={}, via_edge_gap=None, band_ref_rev=("wafer4", 3),
+               set={},
+               per_design={}, dummy_set={}, via_edge_gap=None, band_ref_rev=("wafer4", 3),
                status="in design",
-               changes=[]),
+               changes=["lanes 3 um apart", "connector pads 220 um"]),
     },
 }
+
+# A revision always sits under its wafer: REVISIONS = {"wafer6": {1: Rev(...)}}.
+for _w, _revs in REVISIONS.items():
+    if not isinstance(_w, str) or not isinstance(_revs, dict):
+        raise SystemExit("catalog.REVISIONS: %r is not a wafer -- each revision goes inside its wafer's dict, "
+                         "e.g. \"wafer6\": {1: Rev(...)}" % (_w,))
 
 
 def _ref(wafer, x):
@@ -169,6 +176,14 @@ def chain(wafer, rev):
 def band_ref(wafer, rev):
     """(wafer, n) whose stage-01 band stage 02 routes around, or None."""
     return _ref(wafer, get(wafer, rev).band_ref_rev)
+
+
+def devices(wafer, rev):
+    """The designs on (wafer, rev): maskgen/core/wafers.py `devices`, else every design in DESIGNS."""
+    from maskgen.core import wafers
+    get(wafer, rev)
+    ds = wafers.rev(wafer, rev).get("devices")
+    return list(ds) if ds else list(DESIGNS)
 
 
 def file_names(design):

@@ -1,0 +1,10 @@
+Metadata-Version: 2.4
+Name: maskgen
+Version: 0.1.0
+Summary: MEA1K interconnect + electrode mask generation
+Requires-Python: >=3.8
+Requires-Dist: ezdxf==1.4.4
+Requires-Dist: gdstk==1.0.1
+Requires-Dist: shapely==2.1.2
+Requires-Dist: numpy==1.26.4
+Requires-Dist: matplotlib

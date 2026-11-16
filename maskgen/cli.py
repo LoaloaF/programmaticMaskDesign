@@ -96,7 +96,8 @@ def cmd_show(a):
     designs = [a.design] if a.design or a.rev is None else None
     if designs is None:                      # --rev without --design: every design
         designs = json.loads(subprocess.run(
-            [sys.executable, "-c", "import json, catalog; print(json.dumps(list(catalog.DESIGNS)))"],
+            [sys.executable, "-c", "import json, catalog; print(json.dumps(catalog.devices(%r, %d)))"
+             % (a.wafer, a.rev)],
             cwd=ic, capture_output=True, text=True, check=True).stdout)
     for d in designs:
         cmd = [sys.executable, "resolve.py", "--stage", a.stage]
@@ -149,7 +150,7 @@ def cmd_wafer(a):
         sys.path.insert(0, proj)
         import catalog
         folder = paths.devices_dir(a.wafer, rev, root, create=False)
-        missing = [f for d in catalog.DESIGNS for f in catalog.file_names(d)
+        missing = [f for d in catalog.devices(a.wafer, rev) for f in catalog.file_names(d)
                    if not os.path.exists(os.path.join(folder, d, f))]
         if missing or a.rebuild_designs:
             _run([sys.executable, "build_designs.py", "--wafer", a.wafer, "--rev", str(rev), "--out", root], proj, env)
@@ -229,7 +230,7 @@ def cmd_review(a):
         if not a.rev:
             raise SystemExit("review: which revisions? --wafer wafer4 --rev 3 4, or --rev wafer4/4 wafer6/1")
         revs = [wafers.parse(t, a.wafer) for t in a.rev]
-        designs = a.design or sources.interconnect_designs()
+        designs = a.design or sources.interconnect_designs(*revs[-1])
         columns = [load(lambda d=d, r=r: sources.interconnect(d, r[0], r[1], root=root))
                    for d in designs for r in revs]
         name = "ic_" + "_".join("%srev%d" % r for r in revs) + ("" if not a.design else "_" + "_".join(designs))

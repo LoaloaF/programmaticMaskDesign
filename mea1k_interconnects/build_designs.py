@@ -116,7 +116,8 @@ def main():
     ap.add_argument("--wafer", required=True, choices=sorted(catalog.REVISIONS),
                     help="the wafer (maskgen/core/wafers.py)")
     ap.add_argument("--rev", type=int, required=True, help="its revision (catalog.REVISIONS[wafer])")
-    ap.add_argument("--only", nargs="+", choices=sorted(catalog.DESIGNS), default=sorted(catalog.DESIGNS))
+    ap.add_argument("--only", nargs="+", choices=sorted(catalog.DESIGNS),
+                    help="these devices (default: the wafer revision's, maskgen/core/wafers.py devices)")
     ap.add_argument("--out", default=None,
                     help="output root (default: $MASKGEN_OUT, then <repo>/.maskgen_out)")
     ap.add_argument("--out-dir", default=None,
@@ -125,7 +126,8 @@ def main():
     ap.add_argument("--stage01", action="store_true",
                     help="stage 01 only (the pad grids), e.g. to review a pad change quickly")
     a = ap.parse_args()
-    catalog.get(a.wafer, a.rev)                       # a clear error for a revision that does not exist
+    on_wafer = catalog.devices(a.wafer, a.rev)        # (also a clear error for a revision that does not exist)
+    a.only = a.only or on_wafer
     stages = ("gen",) if a.stage01 else ("gen", "route")
     if a.out_dir:
         out_dir = os.path.abspath(a.out_dir)

@@ -168,8 +168,10 @@ def _ic_catalog():
     return catalog
 
 
-def interconnect_designs():
-    return list(_ic_catalog().DESIGNS)
+def interconnect_designs(wafer=None, rev=None):
+    """The designs on (wafer, rev), or every design."""
+    cat = _ic_catalog()
+    return cat.devices(wafer, rev) if wafer else list(cat.DESIGNS)
 
 
 def interconnect(design, wafer, rev, root=None):

@@ -169,7 +169,7 @@ An interconnect wafer's first revision names the revision of another wafer it st
 Rev1 = wafer4 Rev4 + its own changes (`catalog.py`).
 
 To start a new wafer:
-1. add it to `maskgen/core/wafers.py`;
+1. add it to `maskgen/core/wafers.py`, with the devices it carries (`devices=(...)`, default all);
 2. add its revisions to `catalog.REVISIONS` (interconnects) or its design set to `design_sets.py`
    (probes);
 3. add a layout config in `<project>/wafers/` and name it in `wafers.py`.
