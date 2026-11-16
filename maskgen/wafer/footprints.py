@@ -14,6 +14,7 @@ TWO ASSUMPTIONS THAT FAIL SILENTLY, worth checking on any new design:
 Neither raises; both produce a plausible-looking wrong footprint. Always compare the
 printed area and bbox against what you expect the design to be.
 """
+import os
 import ezdxf
 from ezdxf import path as ezpath
 from shapely.geometry import Polygon
@@ -84,3 +85,60 @@ def extract(dxf_path, layers=None, close_gap=0.08, simplify=0.03, verbose=True):
     f = f.simplify(simplify)
     cx, cy = f.centroid.x, f.centroid.y
     return translate(f, -cx, -cy), cx, cy
+
+
+def pi_outline_mm(path, dxf_layer="polyimide", gds_layer=(1, 0)):
+    """A design's POLYIMIDE OUTLINE (the flex itself, without the cutout band around it), in mm.
+
+    DXF: the filled `dxf_layer` geometry. GDS (a capped dummy, 02_make_dummy.py): it has no
+    outline layer -- its outline is the hole of the cutout ring on `gds_layer`.
+    """
+    if path.lower().endswith(".gds"):
+        import gdstk
+        cell = gdstk.read_gds(path).top_level()[0]
+        polys = [Polygon(p.points * UM_TO_MM).buffer(0)
+                 for p in cell.get_polygons(layer=gds_layer[0], datatype=gds_layer[1])]
+        holes = [Polygon(i) for p in polys for i in getattr(p, "interiors", [])]
+        if not holes:
+            raise ValueError("%s: no closed cutout ring on %d/%d -- no outline to nest on" % ((path,) + tuple(gds_layer)))
+        return max(holes, key=lambda h: h.area)
+    polys = read_polys_mm(path, {dxf_layer})
+    if not polys:
+        raise ValueError("%s: nothing on layer %r -- no outline to nest on" % (path, dxf_layer))
+    f = fill(unary_union(polys))
+    if f.geom_type == "MultiPolygon":
+        f = max(f.geoms, key=lambda g: g.area)
+    return f
+
+
+def cutout_mm(path, dxf_layer="polyimide_negative", gds_layer=(1, 0)):
+    """Everything on a design's cutout (PI etch) layer, unioned, in mm: the band around the outline."""
+    if path.lower().endswith(".gds"):
+        import gdstk
+        cell = gdstk.read_gds(path).top_level()[0]
+        polys = [Polygon(p.points * UM_TO_MM).buffer(0)
+                 for p in cell.get_polygons(layer=gds_layer[0], datatype=gds_layer[1])]
+    else:
+        polys = read_polys_mm(path, {dxf_layer})
+    return unary_union([p for p in polys if p.is_valid and not p.is_empty])
+
+
+def extract_outline(path, band_mm, simplify=0.005):
+    """Footprint = polyimide outline grown by HALF the cutout band (mitred), centred on its own centroid.
+
+    Two footprints that do not overlap keep the outlines ~band_mm apart, so a piece's cutout band may
+    overlap its neighbour's band but not its neighbour's polyimide. Only ~: a mitred band reaches
+    farther at a corner than band_mm, so the nester also tests the true shapes (silhouette of one vs
+    outline of the other) -- hence the two extra returns.
+
+    Returns (footprint, cx, cy, outline, silhouette), all centred by (cx, cy); silhouette = the outline
+    and its cutout band, outer boundary only.
+    """
+    outline = pi_outline_mm(path)
+    sil = fill(unary_union([outline, cutout_mm(path)]))
+    if sil.geom_type == "MultiPolygon":
+        sil = max(sil.geoms, key=lambda g: g.area)
+    # simplify may cut a corner inward by up to `simplify`: grow by it first, so the footprint still covers
+    f = outline.buffer(0.5 * band_mm + simplify, join_style=2).simplify(simplify)
+    cx, cy = f.centroid.x, f.centroid.y
+    return (translate(f, -cx, -cy), cx, cy, translate(outline, -cx, -cy), translate(sil, -cx, -cy))

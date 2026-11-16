@@ -56,6 +56,15 @@ def count_by_ld(layout, cell):
 def source_counts(dxf):
     """Per mapped (layer, datatype) shape counts for one source DXF, as stage 03 maps it."""
     ly = pya.Layout()
+    if dxf.lower().endswith(".gds"):        # a capped dummy: numbered layers, config.DUMMY_LAYER_MAP
+        ly.read(dxf)
+        for li in list(ly.layer_indexes()):
+            info = ly.get_info(li); ld = (info.layer, info.datatype)
+            if ld in C.DUMMY_LAYER_MAP:
+                ly.set_info(li, pya.LayerInfo(*C.DUMMY_LAYER_MAP[ld]))
+            else:
+                ly.clear_layer(li)
+        return count_by_ld(ly, ly.top_cell())
     opt = pya.LoadLayoutOptions(); opt.dxf_unit = 1.0; opt.dxf_polyline_mode = 2
     ly.read(dxf, opt)
     for li in list(ly.layer_indexes()):

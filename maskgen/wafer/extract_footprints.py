@@ -23,7 +23,11 @@ import sys, importlib
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))   # repo root: maskgen
 from maskgen.wafer.configs import load as _load_config   # noqa: E402
 C = _load_config('config_64ch_4shank')
-from maskgen.wafer.footprints import extract
+from maskgen.wafer.footprints import extract, extract_outline
+
+# PI_BAND_UM (config): nest on the polyimide OUTLINE + half the cutout band, so neighbours' cutout bands
+# may overlap (footprints.extract_outline). Without it: the whole silhouette, band included.
+BAND_UM = getattr(C, "PI_BAND_UM", None)
 
 os.makedirs(C.NEST_DIR, exist_ok=True)
 
@@ -36,7 +40,13 @@ for d in C.DESIGNS:
     dxf = C.design_dxf(d)
     if not os.path.exists(dxf):
         raise SystemExit("missing DXF: %s" % dxf)
-    fp, cx, cy = extract(dxf, close_gap=C.CLOSE_GAP, simplify=C.SIMPLIFY)
+    if BAND_UM:
+        fp, cx, cy, outline, sil = extract_outline(dxf, BAND_UM * 1e-3)
+        # the true shapes, for the nester's exact test (a band may not reach a neighbour's outline)
+        json.dump({"outline": list(outline.exterior.coords), "silhouette": list(sil.exterior.coords)},
+                  open(C.footprint_path(d["key"]).replace(".json", "_true.json"), "w"))
+    else:
+        fp, cx, cy = extract(dxf, close_gap=C.CLOSE_GAP, simplify=C.SIMPLIFY)
     mnx, mny, mxx, mxy = fp.bounds
     json.dump(list(fp.exterior.coords), open(C.footprint_path(d["key"]), "w"))
     json.dump({"cx": cx, "cy": cy}, open(C.offset_path(d["key"]), "w"))

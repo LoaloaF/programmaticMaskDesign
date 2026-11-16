@@ -407,7 +407,20 @@ _OLD_STAGE_SCRIPTS = {                       # old entry point -> (script now, a
 }
 
 
+# Settings added after the reference whose default is "off" (the old behaviour): a snapshot that has
+# them at that value is compared as if it did not have them. Any other value is a real change.
+_NEW_OFF_SETTINGS = {
+    "DUMMY": {"pair_180": False, "pair_gap_y": 0.0, "orient_chamfer": 0.0},   # wafer6 dummy pair, 2026-11-16
+}
+
+
 def stage_scripts_now(snap):
+    cfg = snap.get("config")
+    if isinstance(cfg, dict):
+        for d, off in _NEW_OFF_SETTINGS.items():
+            if isinstance(cfg.get(d), dict):
+                cfg = dict(cfg, **{d: {k: v for k, v in cfg[d].items() if not (k in off and v == off[k])}})
+        snap = dict(snap, config=cfg)
     old = _OLD_STAGE_SCRIPTS.get(snap.get("script"))
     if old:
         snap = dict(snap, script=old[0])

@@ -90,6 +90,13 @@ DUMMY = {
     "handle_radius":   0.0,     # tab radius = how far it sticks out of the outline's top edge (um)
     "handle_fillet":   150.0,   # concave fillet blending each root into the edge (um); 0 -> sharp
     "handle_x_frac":   0.62,    # tab centre along the top edge, 0 = left end, 1 = right end
+    # Pair (wafer6): the capped device plus a copy rotated 180 deg, its pad grid continuing this one's
+    # across the stepped bottom edge (the generator's part B), as ONE device: one polyimide outline
+    # (a rectangle around both + both handles) and one ring. False = a single device.
+    "pair_180":        False,
+    "orient_chamfer":  0.0,     # pair only: cut the outline's top-left corner by this at 45 deg (um), so the
+                                # pair shows which side faces up (it is otherwise mirror-symmetric); 0 = none
+    "pair_gap_y":      0.0,     # the copy this much lower than the exact fit (um), so the two grids stay distinct
 }
 
 import lib                                     # puts the repo root (maskgen) on sys.path

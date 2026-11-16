@@ -114,18 +114,29 @@ cells = {}
 for d in C.DESIGNS:
     dxf = C.design_dxf(d)
     conn = pya.Layout()
-    opt = pya.LoadLayoutOptions()
-    opt.dxf_unit = 1.0          # DXF coordinates are micrometres
-    opt.dxf_polyline_mode = 2   # traces become filled polygons
-    conn.read(dxf, opt)
     mapped, dropped = [], []
-    for li in list(conn.layer_indexes()):
-        nm = conn.get_info(li).name.lower()
-        if nm in C.LAYER_MAP:
-            conn.set_info(li, pya.LayerInfo(*C.LAYER_MAP[nm]))
-            mapped.append("%s->%d/%d" % (nm, C.LAYER_MAP[nm][0], C.LAYER_MAP[nm][1]))
-        else:
-            conn.clear_layer(li); dropped.append(nm)
+    if dxf.lower().endswith(".gds"):
+        # a GDS design (a capped dummy, 02_make_dummy.py): its numbered layers -> wafer, config.DUMMY_LAYER_MAP
+        conn.read(dxf)
+        for li in list(conn.layer_indexes()):
+            info = conn.get_info(li); ld = (info.layer, info.datatype)
+            if ld in C.DUMMY_LAYER_MAP:
+                conn.set_info(li, pya.LayerInfo(*C.DUMMY_LAYER_MAP[ld]))
+                mapped.append("%d/%d->%d/%d" % (ld + C.DUMMY_LAYER_MAP[ld]))
+            else:
+                conn.clear_layer(li); dropped.append("%d/%d" % ld)
+    else:
+        opt = pya.LoadLayoutOptions()
+        opt.dxf_unit = 1.0          # DXF coordinates are micrometres
+        opt.dxf_polyline_mode = 2   # traces become filled polygons
+        conn.read(dxf, opt)
+        for li in list(conn.layer_indexes()):
+            nm = conn.get_info(li).name.lower()
+            if nm in C.LAYER_MAP:
+                conn.set_info(li, pya.LayerInfo(*C.LAYER_MAP[nm]))
+                mapped.append("%s->%d/%d" % (nm, C.LAYER_MAP[nm][0], C.LAYER_MAP[nm][1]))
+            else:
+                conn.clear_layer(li); dropped.append(nm)
     cc = wafer.create_cell("CONN_%s" % d["key"].upper())
     cc.copy_tree(conn.top_cell())
     off = json.load(open(C.offset_path(d["key"])))
@@ -168,22 +179,31 @@ for li in list(wafer.layer_indexes()):
         print("  dropping empty layer %s" % wafer.get_info(li))
         wafer.delete_layer(li)
 
-COLORS = ["#ff00ff", "#00c8ff", "#ff4040", "#c8a000", "#40ff40", "#8080ff"]
-lyp = ['<?xml version="1.0" encoding="utf-8"?>', "<layer-properties>"]
-for i, li in enumerate(sorted(wafer.layer_indexes(), key=lambda j: wafer.get_info(j).layer)):
-    info = wafer.get_info(li)
-    lyp += ["  <properties>",
-            "    <frame-color>%s</frame-color>" % COLORS[i % len(COLORS)],
-            "    <fill-color>%s</fill-color>" % COLORS[i % len(COLORS)],
-            "    <dither-pattern>I%d</dither-pattern>" % (i % 8 + 1),
-            "    <visible>true</visible>", "    <transparent>false</transparent>",
-            "    <width>1</width>", "    <marked>false</marked>",
-            "    <name>%s (%d/%d)</name>" % (info.name or "unnamed", info.layer, info.datatype),
-            "    <source>%d/%d@1</source>" % (info.layer, info.datatype),
-            "  </properties>"]
-lyp.append("</layer-properties>")
 lyp_path = os.path.splitext(C.WAFER_OUT)[0] + ".lyp"
-open(lyp_path, "w").write("\n".join(lyp) + "\n")
+if getattr(C, "LYP_FROM_LAYERSET", False):
+    # the layer set's names, colours, stipples and drawing order (maskgen/core/layers.py), as rebuild.py
+    # writes them for the fixed wafers
+    from maskgen.core import layers as _layers   # noqa: E402
+    _layers.write_lyp(lyp_path, sorted({(wafer.get_info(li).layer, wafer.get_info(li).datatype)
+                                        for li in wafer.layer_indexes()}), C.LAYERSET)
+else:
+    # a generic palette (the shipped probe wafer's .lyp)
+    COLORS = ["#ff00ff", "#00c8ff", "#ff4040", "#c8a000", "#40ff40", "#8080ff"]
+    lyp = ['<?xml version="1.0" encoding="utf-8"?>', "<layer-properties>"]
+    for i, li in enumerate(sorted(wafer.layer_indexes(), key=lambda j: wafer.get_info(j).layer)):
+        info = wafer.get_info(li)
+        lyp += ["  <properties>",
+                "    <frame-color>%s</frame-color>" % COLORS[i % len(COLORS)],
+                "    <fill-color>%s</fill-color>" % COLORS[i % len(COLORS)],
+                "    <dither-pattern>I%d</dither-pattern>" % (i % 8 + 1),
+                "    <visible>true</visible>", "    <transparent>false</transparent>",
+                "    <width>1</width>", "    <marked>false</marked>",
+                "    <name>%s (%d/%d)</name>" % (info.name or "unnamed", info.layer, info.datatype),
+                "    <source>%d/%d@1</source>" % (info.layer, info.datatype),
+                "  </properties>"]
+    lyp.append("</layer-properties>")
+    lyp_path = os.path.splitext(C.WAFER_OUT)[0] + ".lyp"
+    open(lyp_path, "w").write("\n".join(lyp) + "\n")
 print("\nwrote %s  (layer names for KLayout; GDS2 cannot store them)"
       % os.path.basename(lyp_path))
 

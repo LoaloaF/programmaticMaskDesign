@@ -105,17 +105,33 @@ for _k in KINDS:
         raise SystemExit("missing %s -- run extract_footprints.py first" % _p)
     FP[_k] = Polygon(json.load(open(_p)))
 
+# True shapes (extract_footprints.py with PI_BAND_UM): the polyimide outline and the silhouette (outline +
+# cutout band) of each kind. Footprints may then touch with their bands overlapping; what may never happen is
+# one piece's silhouette entering another's outline -- tested exactly, on top of the footprints.
+TRUE = {}
+for _k in KINDS:
+    _ds = C.designs_of(_k)
+    _t = C.footprint_path(_ds[0]["key"]).replace(".json", "_true.json")
+    if len(_ds) == 1 and os.path.exists(_t):
+        _j = json.load(open(_t))
+        TRUE[_k] = (Polygon(_j["outline"]), Polygon(_j["silhouette"]))
+
+# Fill kinds (config FILL_KINDS): not part of the mix. Each layout is first packed to the mix, then
+# topped up with fill pieces only; layouts rank by (mix pieces, fill pieces).
+FILL = [k for k in getattr(C, "FILL_KINDS", []) if k in KINDS]
+MIX = [k for k in KINDS if k not in FILL]
+
 # Desired mix. SHANK_RATIO is the authority when the config states one, because
 # SHANK_COUNTS gets overwritten with each run's result -- pasting 22:15:14:9 back in would
 # make the NEXT run target 36.7/25/23.3/15 instead of the intended 37.5/25/25/12.5, and the
 # mix would drift a little further every time. Configs without SHANK_RATIO fall back to
 # the counts.
-_mix = getattr(C, "SHANK_RATIO", None) or {k: C.count_of(k) for k in KINDS}
-_missing = [k for k in KINDS if k not in _mix]
+_mix = getattr(C, "SHANK_RATIO", None) or {k: C.count_of(k) for k in MIX}
+_missing = [k for k in MIX if k not in _mix]
 if _missing:
     raise SystemExit("SHANK_RATIO in %s.py is missing %s" % (C.__name__, ", ".join(_missing)))
-_rsum = float(sum(_mix[k] for k in KINDS))
-RATIO = {k: _mix[k] / _rsum for k in KINDS}
+_rsum = float(sum(_mix[k] for k in MIX))
+RATIO = {k: (_mix[k] / _rsum if k in MIX else 0.0) for k in KINDS}
 
 
 # --- profiles -----------------------------------------------------------------
@@ -268,6 +284,22 @@ def to_world(phi, xf, yf):
 
 def place_poly(kind, theta, x, y):
     return shp_translate(shp_rotate(FP[kind], theta, origin=(0, 0)), x, y)
+
+
+def place_true(pose):
+    """(outline, silhouette) of a pose (kind, theta, x, y) in world coordinates, or None without TRUE."""
+    kind, theta, x, y = pose
+    if kind not in TRUE:
+        return None
+    return tuple(shp_translate(shp_rotate(g, theta, origin=(0, 0)), x, y) for g in TRUE[kind])
+
+
+def true_clash(ta, tb):
+    """Does either piece's silhouette (outline + cutout band) enter the other's polyimide outline?"""
+    if ta is None or tb is None:
+        return False
+    return (ta[1].intersection(tb[0]).area > OVERLAP_TOL or
+            tb[1].intersection(ta[0]).area > OVERLAP_TOL)
 
 
 class Placement:
@@ -430,11 +462,17 @@ def skyline_fill(frame, quota, placed, tree_state, rng, stride, tiebreak, counts
                 if not g.within(USABLE_EPS) or MARKS_PREP.intersects(g):
                     continue
                 hit = False
-                for idx in tree_state["tree"].query(g):
+                tg = None
+                for idx in tree_state["tree"].query(g.buffer(0.3)):
                     o = tree_state["geoms"][idx]
                     if g.intersection(o).area > OVERLAP_TOL:
                         hit = True
                         break
+                    if TRUE:
+                        tg = tg or place_true((kind, theta, wx, wy))
+                        if true_clash(tg, tree_state["true"][idx]):
+                            hit = True
+                            break
                     if GAP > 0 and g.distance(o) < GAP - 1e-9:
                         hit = True
                         break
@@ -455,6 +493,7 @@ def skyline_fill(frame, quota, placed, tree_state, rng, stride, tiebreak, counts
 
         placed.append(Placement(kind, theta, wx, wy, g))
         tree_state["geoms"].append(g)
+        tree_state["true"].append(place_true((kind, theta, wx, wy)))
         tree_state["tree"] = STRtree(tree_state["geoms"])
         quota[kind] -= 1
         counts[kind] += 1
@@ -511,7 +550,8 @@ def state_of(placed, budget):
     for pl in placed:
         counts[pl.kind] += 1
     quota = {k: max(int(round(RATIO[k] * budget)) - counts[k], 0) for k in KINDS}
-    tree_state = {"geoms": [pl.geom for pl in placed], "tree": STRtree([pl.geom for pl in placed])}
+    tree_state = {"geoms": [pl.geom for pl in placed], "tree": STRtree([pl.geom for pl in placed]),
+                  "true": [place_true(pl.pose()) for pl in placed]}
     return counts, quota, tree_state
 
 
@@ -542,13 +582,93 @@ def pack(params):
     quota = dict(params["quota"])
     placed = []
     counts = {k: 0 for k in KINDS}
-    tree_state = {"geoms": [], "tree": STRtree([])}
+    tree_state = {"geoms": [], "tree": STRtree([]), "true": []}
     skyline_fill(Frame(params["phi"], USABLE), quota, placed, tree_state, rng,
                  params["stride"], params["tiebreak"], counts, params["slack"])
     if params["rr_rounds"]:
         placed = improve(placed, params, rng, params["rr_rounds"])
 
     return placed
+
+
+# --- fill pieces: raster search ------------------------------------------------
+def fits(kind, theta, x, y, tree_state):
+    """The exact accept test of skyline_fill for one pose; returns the footprint or None."""
+    g = place_poly(kind, theta, x, y)
+    if not g.within(USABLE_EPS) or MARKS_PREP.intersects(g):
+        return None
+    tg = place_true((kind, theta, x, y))
+    for idx in tree_state["tree"].query(g.buffer(0.3)):
+        o = tree_state["geoms"][idx]
+        if g.intersection(o).area > OVERLAP_TOL or (GAP > 0 and g.distance(o) < GAP - 1e-9):
+            return None
+        if TRUE and true_clash(tg, tree_state["true"][idx]):
+            return None
+    return g
+
+
+def raster_fill(placed, res=0.1, max_tries=60):
+    """Top a layout up with FILL pieces anywhere they fit, holes between pieces included (a skyline only
+    reaches what is open from one side). The free space is rasterised at `res` mm, every feasible origin
+    of every fill kind at 0/90/180/270 deg found by one FFT correlation, the lowest-then-leftmost tried
+    with the exact test. Mutates and returns `placed`."""
+    import shapely
+    from scipy.signal import correlate
+    lim = R + 1.0
+    n = int(math.ceil(2 * lim / res))
+    c = -lim + (np.arange(n) + 0.5) * res
+    X, Y = np.meshgrid(c, c)                      # [row = y, col = x]
+
+    def cover(geom):
+        return shapely.contains_xy(geom, X, Y)
+
+    occ = ~cover(USABLE_EPS.buffer(-0.5 * res)) | cover(MARKS.buffer(0.5 * res))
+    if placed:
+        occ |= cover(unary_union([pl.geom for pl in placed]).buffer(0.5 * res))
+    kern = {}
+    for k in FILL:
+        for th in (0, 90, 180, 270):
+            g = shp_rotate(FP[k], th, origin=(0, 0))
+            h = int(math.ceil(max(abs(v) for v in g.bounds) / res)) + 1
+            o = (np.arange(-h, h + 1)) * res
+            KX, KY = np.meshgrid(o, o)
+            kern[(k, th)] = shapely.contains_xy(g, KX, KY).astype(float)
+    counts, _, tree_state = state_of(placed, 0)
+    dead = np.zeros_like(occ)
+    while True:
+        cands = []
+        for (k, th), K in kern.items():
+            free = correlate(occ.astype(float), K, mode="same", method="fft") < 0.5
+            free &= ~dead
+            iy, ix = np.nonzero(free)
+            if iy.size:
+                order = np.lexsort((ix, iy))[:max_tries]
+                cands += [(int(iy[j]), int(ix[j]), k, th) for j in order]
+        if not cands:
+            break
+        cands.sort()
+        done = False
+        for iy, ix, k, th in cands[:max_tries]:
+            g = fits(k, th, float(c[ix]), float(c[iy]), tree_state)
+            if g is None:
+                dead[iy, ix] = True
+                continue
+            placed.append(Placement(k, th, float(c[ix]), float(c[iy]), g))
+            tree_state["geoms"].append(g)
+            tree_state["true"].append(place_true((k, th, float(c[ix]), float(c[iy]))))
+            tree_state["tree"] = STRtree(tree_state["geoms"])
+            occ |= cover(g.buffer(0.5 * res))
+            done = True
+            break
+        # not done: every candidate tried failed the exact test and is blacklisted -- look again
+    return placed
+
+
+def score_of(placed):
+    """(complete mix sets, mix pieces, all pieces): layouts rank by this."""
+    cnt = {k: sum(1 for pl in placed if pl.kind == k) for k in KINDS}
+    sets = min(cnt[k] // _mix[k] for k in MIX)
+    return (sets, sum(cnt[k] for k in MIX), len(placed))
 
 
 # --- verification -------------------------------------------------------------
@@ -566,6 +686,12 @@ def verify(placed):
             worst_ov = max(worst_ov, g.intersection(geoms[j]).area)
     if worst_ov > OVERLAP_TOL:
         return False, "overlap %.6f mm2" % worst_ov, {}
+    if TRUE:
+        trues = [place_true(pl.pose()) for pl in placed]
+        for i, g in enumerate(geoms):
+            for j in tree.query(g.buffer(0.3)):
+                if j > i and true_clash(trues[i], trues[j]):
+                    return False, "cutout band of %s enters the outline of %s" % (placed[i].kind, placed[j].kind), {}
     oob = max(g.difference(USABLE).area for g in geoms)
     if oob > 1e-7:
         return False, "out of bounds %.6f mm2" % oob, {}
@@ -666,7 +792,7 @@ def main():
           "run ~55-65%%)\n" % ceiling)
 
     master = random.Random(args.seed)
-    best_n, best = 0, None
+    best_n, best, best_score = 0, None, (0, 0, 0)
     t_start = time.time()
 
     for trial in range(args.trials):
@@ -675,7 +801,7 @@ def main():
             break
         # Generous quota so the mix, not the quota, is what limits the fill.
         budget = max(int(best_n * 1.6), 120)
-        quota = {k: max(int(round(RATIO[k] * budget)), 1) for k in KINDS}
+        quota = {k: (max(int(round(RATIO[k] * budget)), 1) if k in MIX else 0) for k in KINDS}
         params = {
             "seed": master.randrange(1 << 30),
             "phi": master.choice([0, 0, 0, 180, 180, 180, 90, 270]),
@@ -687,6 +813,11 @@ def main():
         }
         t0 = time.time()
         placed = pack(params)
+        if FILL:
+            # fill only layouts that can still win on the mix (the raster fill costs seconds)
+            sc = score_of(placed)
+            if best is None or sc[:2] >= best_score[:2]:
+                placed = raster_fill(placed)
         n = len(placed)
         dt = time.time() - t0
         ok, why, m = verify(placed)
@@ -694,9 +825,11 @@ def main():
         print("trial %3d  phi=%3d %-6s slack=%.1f rr=%2d  n=%3d  %.1fs%s"
               % (trial, params["phi"], params["tiebreak"], params["slack"],
                  params["rr_rounds"], n, dt, flag), flush=True)
-        if not ok or n <= best_n:
+        score = score_of(placed)
+        if not ok or (best is not None and score <= best_score):
             continue
-        best_n, best = n, (placed, params, m)
+        best_score = score
+        best_n, best = score[1], (placed, params, m)
         poses = [pl.pose() for pl in placed]
         json.dump(poses, open(C.POSES_PATH, "w"))
         counts = {k: sum(1 for p in poses if p[0] == k) for k in KINDS}

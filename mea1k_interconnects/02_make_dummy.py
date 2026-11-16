@@ -311,6 +311,56 @@ def build_polyimide_outline(dev_bbox, seam=None):
     return ring
 
 
+def pair_centre(polygons, gap):
+    """Centre of the 180-deg rotation that seats a copy's pad grid in this one's stepped bottom edge:
+    the pad grid's x centre, half a pad above the lowest pad's bottom (the generator's part B), less
+    half of pair_gap_y (the copy pair_gap_y lower). Checked: no pad overlaps one of the copy's, and no
+    two are closer than `gap`."""
+    ml, md = LAYER_MAP[_layers.IC.METAL2]
+    pads = [p for p in polygons if p.layer == ml and p.datatype == md]
+    boxes = [p.bounding_box() for p in pads]
+    side = boxes[0][1][0] - boxes[0][0][0]
+    x0 = min(b[0][0] for b in boxes); x1 = max(b[1][0] for b in boxes)
+    y0 = min(b[0][1] for b in boxes)
+    # pair_gap_y: the copy that much lower, so the two grids stay apart in the MEA pattern (centre half of it)
+    c = (0.5 * (x0 + x1), y0 + 0.5 * side - 0.5 * CONFIG.get("pair_gap_y", 0.0))
+    rot = [p.copy().rotate(math.pi, c) for p in pads]
+    if gdstk.boolean(pads, rot, "and"):
+        raise SystemExit("pair_180: the rotated copy's pads overlap this one's -- the grid does not interlock")
+    grown = gdstk.offset(pads, 0.5 * gap - 1e-3, join="miter")
+    if gdstk.boolean(grown, gdstk.offset(rot, 0.5 * gap - 1e-3, join="miter"), "and"):
+        raise SystemExit("pair_180: pads of the two copies closer than the %g um pad gap" % gap)
+    return c
+
+
+def build_pair_outline(dev_bbox, c):
+    """The pair's polyimide outline as a ring: a rectangle `polyimide_margin` around both copies, with
+    a handle on the top and the bottom edge at the same x, stroked outward by
+    `polyimide_width` (as build_polyimide_outline)."""
+    dx_lo, dy_lo, dx_hi, dy_hi = dev_bbox
+    m, w = CONFIG["polyimide_margin"], CONFIG["polyimide_width"]
+    ox_lo, ox_hi, oy_lo, oy_hi = dx_lo - m, dx_hi + m, dy_lo - m, dy_hi + m
+    outer = gdstk.rectangle((ox_lo, oy_lo), (ox_hi, oy_hi))
+    ch = CONFIG.get("orient_chamfer", 0.0)
+    if ch > 0:
+        # one corner (top left) cut at 45 deg: the only feature the 180-deg copy does not repeat, so the
+        # outline has no mirror symmetry and shows which side faces up
+        outer = gdstk.boolean(outer, gdstk.Polygon([(ox_lo - 1, oy_hi + 1), (ox_lo - 1, oy_hi - ch - 1),
+                                                     (ox_lo + ch + 1, oy_hi + 1)]), "not")[0]
+        print(f"orientation mark: top-left corner chamfered {ch:.0f} um at 45 deg")
+    if CONFIG.get("handle_radius", 0.0) > 0:
+        r, f = CONFIG["handle_radius"], CONFIG["handle_fillet"]
+        hx = ox_lo + CONFIG["handle_x_frac"] * (ox_hi - ox_lo)
+        top = handle_polygon(hx, oy_hi, r, f)
+        # the bottom handle: the top one turned over onto the bottom edge, at the SAME x (handle_x_frac)
+        bot = handle_polygon(hx, oy_lo, r, f).rotate(math.pi, (hx, oy_lo))
+        outer = gdstk.boolean(gdstk.boolean(outer, top, "or"), bot, "or")[0]
+        print(f"polyimide handles: r={r:.0f} um, fillet {f:.0f} um, top and bottom edge at x={hx:.1f}")
+    etch_l, etch_d = RECT_ETCH_LAYER
+    grown = gdstk.offset(outer, w, join="miter", use_union=True)
+    return gdstk.boolean(grown, outer, "not", layer=etch_l, datatype=etch_d)
+
+
 # ======================================================================================
 # Main
 # ======================================================================================
@@ -331,6 +381,14 @@ def main():
     extensions = build_band_extensions(band_polylines, band_y)
     targets, (tx_lo, ty_lo, tx_hi, ty_hi) = build_dummy_targets(band_y, x_lo, x_hi, band_polylines)
 
+    pair = CONFIG.get("pair_180", False)
+    if pair:
+        c = pair_centre(polygons, _cfg.GEN_CONFIG["gap"])
+        for group in (polygons, extensions, targets):
+            group.extend([p.copy().rotate(math.pi, c) for p in list(group)])
+        print(f"pair_180: + a copy rotated 180 deg about ({c[0]:.2f}, {c[1]:.2f}): its pad grid continues "
+              f"this one's, {CONFIG.get('pair_gap_y', 0.0):g} um lower; pads >= {_cfg.GEN_CONFIG['gap']:g} um apart")
+
     outline = []
     if CONFIG["polyimide_outline"]:
         # device bounding box over all emitted geometry (interconnect + extensions + targets)
@@ -338,7 +396,8 @@ def main():
         boxes = [p.bounding_box() for p in dev]
         dx_lo = min(b[0][0] for b in boxes); dy_lo = min(b[0][1] for b in boxes)
         dx_hi = max(b[1][0] for b in boxes); dy_hi = max(b[1][1] for b in boxes)
-        outline = build_polyimide_outline((dx_lo, dy_lo, dx_hi, dy_hi), seam)
+        outline = (build_pair_outline((dx_lo, dy_lo, dx_hi, dy_hi), c) if pair
+                   else build_polyimide_outline((dx_lo, dy_lo, dx_hi, dy_hi), seam))
         # The band sits OUTSIDE the outline, so it must not touch a pad/wire/target. Checking
         # containment in the outline is not enough -- that passes even while the band eats them.
         clash = gdstk.boolean(dev, outline, "and")
