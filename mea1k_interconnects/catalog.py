@@ -130,9 +130,23 @@ REVISIONS = {
     "wafer6": {
         1: Rev(1, ("wafer4", 4), "interconnect_rev4",
                set={},
-               per_design={}, dummy_set={}, via_edge_gap=None, band_ref_rev=("wafer4", 3),
+               per_design={"12block_56_15": {"GEN_ROUTING": {
+                   "m1_margin": 2.0, "via_k0_where": "needed", "via_k0_h": 5.0, "top_lane_uniform": True},
+                   # the shifted lanes reach up to 5.25 um from Rev3's band; stage 02's sanity limit on that
+                   # step (02_route.py, default 5 um) -- the step itself is a 300 um S-curve, checked for gaps
+                   "BAND_REF_MAX_DX": 6.0}},
+               dummy_set={}, via_edge_gap=None, band_ref_rev=("wafer4", 3),
                status="in design",
-               changes=["lanes 3 um apart", "connector pads 220 um"]),
+               changes=[
+                   "one via rule: every Metal1 landing pad 2.0 um from the Metal2 pad's left and top edges, "
+                   "every via edge 3.0 um (Rev4: 0.5-2.0 um in x, 1.5 um in y, by via kind) (m1_margin)",
+                   "top-row vias: the full 5 um via on a 7 um Metal1 pad wherever it fits -- that column's lanes "
+                   "move 1.5 um right to pass it; the small via only in the columns that carry 15 lanes (the "
+                   "left half of the finished device), whose lanes cannot move (via_k0_where)",
+                   "the small top vias become vertical capsules 3.5 x 5 um on a 5.5 x 7 um Metal1 pad (via_k0_h)",
+                   "the top pad's lane sits one 4.5 um lane pitch from the next lane, like every lane, and jogs "
+                   "45 deg into its via (top_lane_uniform)",
+               ]),
     },
 }
 

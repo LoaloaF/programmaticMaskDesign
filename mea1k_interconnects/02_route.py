@@ -956,7 +956,7 @@ def main():
               f"{BAND_JOG_LEN:.0f} um jog")
         _rd, ref_msp, _rc = load_and_rotate_interconnect(DSG, BAND_REF_DXF)
         ref_endpoints = extract_band_endpoints(ref_msp)
-        check_band_pairing(endpoints, ref_endpoints)
+        check_band_pairing(endpoints, ref_endpoints, max_dx=globals().get("BAND_REF_MAX_DX", 5.0))
         actual_endpoints, endpoints = endpoints, ref_endpoints
     # Capture the MEA1K bond-pad footprint now, while msp holds ONLY the rotated interconnect
     # (it caps the polyimide flare).

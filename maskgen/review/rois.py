@@ -30,21 +30,24 @@ ROI = namedtuple("ROI", "name family find size margin cell metric note")
 M1, M2, PI = 7, 6, 3
 
 
-def _pads(col):
-    """(pad side, x of the middle pad column, pad y's of that column, bottom to top) -- cached."""
-    if "pads" not in col.cache:
+def _pads(col, frac=0.5):
+    """(pad side, x of the pad column at `frac` of the width (0.5: the middle one), pad y's of that column,
+    bottom to top) -- cached. The frame is stage 01's (sources.py): pads below the band; on the 12-block the
+    columns RIGHT of the middle (frac > 0.5) carry 15 lanes -- the LEFT half of the finished device."""
+    key = "pads" if frac == 0.5 else "pads%g" % frac
+    if key not in col.cache:
         sq = [q for q in col.outer(M2)
               if abs(np.ptp(q[:, 0]) - np.ptp(q[:, 1])) < 1e-6 and np.ptp(q[:, 0]) > 10]
         if not sq:
-            col.cache["pads"] = None
+            col.cache[key] = None
             return None
         side = Counter(round(float(np.ptp(q[:, 0])), 3) for q in sq).most_common(1)[0][0]
         pads = np.array([q.min(0) for q in sq if abs(np.ptp(q[:, 0]) - side) < 1e-6])
         xs = np.unique(pads[:, 0].round(3))
-        x0 = xs[len(xs) // 2]
+        x0 = xs[min(int(len(xs) * frac), len(xs) - 1)]
         ys = sorted(pads[np.abs(pads[:, 0] - x0) < 1e-3][:, 1])
-        col.cache["pads"] = (side, x0, ys)
-    return col.cache["pads"]
+        col.cache[key] = (side, x0, ys)
+    return col.cache[key]
 
 
 def _pad(pick):
@@ -58,13 +61,22 @@ def _pad(pick):
     return find
 
 
-def _via_corner(col):
+def _via_corner(col, frac=0.5):
     """The top-left corner of the column's top pad: routing via + Metal1 landing pad + teardrop."""
-    p = _pads(col)
+    p = _pads(col, frac)
     if not p:
         return None
     side, x0, ys = p
     return (x0, ys[-1] + side - 24.0, x0 + 24.0, ys[-1] + side)
+
+
+def _via_corner_wide(col, frac=0.5):
+    """The top-left corner of the top pad WITH the previous column's last lanes left of it (50 x 30 um)."""
+    p = _pads(col, frac)
+    if not p:
+        return None
+    side, x0, ys = p
+    return (x0 - 22.0, ys[-1] + side - 26.0, x0 + 28.0, ys[-1] + side + 4.0)
 
 
 def _band_above(col):
@@ -149,6 +161,13 @@ INTERCONNECT = [
         "bottom pad of the column (nearest the connector)"),
     ROI("top-pad via", "interconnect", _via_corner, (0, 0), 3, 2.4, True,
         "top-left corner of the top pad: routing via, Metal1 landing pad and teardrop"),
+    ROI("top-pad via 15-lane side", "interconnect", lambda c: _via_corner(c, 0.75), (0, 0), 3, 2.4, True,
+        "the same corner in a column whose left neighbour carries 15 lanes (12-block: left half of the "
+        "finished device; the tightest top via)"),
+    ROI("top via + neighbour lanes", "interconnect", _via_corner_wide, (0, 0), 3, 2.4, True,
+        "the middle column's top via with the previous column's last lanes beside it (14-lane side)"),
+    ROI("top via + neighbour lanes 15-lane side", "interconnect", lambda c: _via_corner_wide(c, 0.75), (0, 0), 3,
+        2.4, True, "the same on the 15-lane side: the small via between its two neighbour lanes"),
     ROI("band above column", "interconnect", _band_above, (100, 360), 0, 3.6, True,
         "the wire band leaving the column's top pad (Rev4: the wires step onto Rev3's path here)"),
     ROI("connector pad", "interconnect", _connector(False), (0, 0), 60, 2.4, True,

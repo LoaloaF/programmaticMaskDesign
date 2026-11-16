@@ -3,7 +3,7 @@ import ezdxf
 from shapely.geometry import Polygon, MultiPolygon
 from shapely.affinity import affine_transform
 
-from lib.generate_helpers import (create_rectangle, convert_rectangle_to_polyline, point_reflect,
+from lib.generate_helpers import (capsule_polyline, create_rectangle, convert_rectangle_to_polyline, point_reflect,
                                   bulb_profile, circle_polyline, stroke_centerline_to_polygon,
                                   etch_via_layout, wire_with_end_pad)
 from lib.active import in_designs as _in_designs      # bare filename -> <out root>/adhoc/
@@ -161,6 +161,31 @@ if __name__ == "__main__":
         print(f"WARNING: via_pitch ({via_pitch}) > wire_pitch ({wire_pitch}); lower vias will land "
               f"to the RIGHT of their trace. Keep via_pitch <= wire_pitch to keep the via left.")
 
+    #m1_margin (wafer6): ONE rule for every routing via of a 12-block-style grid -- its Metal1 landing pad
+    #sits m1_margin from the Metal2 pad's left and top edges (so the via edge sits m1_margin + m1_pad_enc
+    #from them). It replaces three Rev4 numbers that each set one side of that distance: via_offset_y (from
+    #via_edge_gap), via_rest_dx (lower vias) and via_k0_dx (small top via). The full top via gets the same
+    #margin; via_k0_where="needed" then shifts that column's lanes right just enough to pass it.
+    m1m = ROUTING.get("m1_margin")
+    if m1m is not None:
+        if not (S["k0_via"] and ROUTING["m1_pad"]) or ROUTING["via_pitch"]:
+            raise SystemExit("m1_margin needs the 12-block lane geometry (k0_via), m1_pad and via_pitch = 0")
+        _enc = ROUTING["m1_pad_enc"]
+        _R_f = ROUTING["via_radius"] + _enc
+        _r_s = ROUTING["via_k0_radius"] if ROUTING["via_k0_radius"] is not None else ROUTING["via_radius"]
+        ROUTING["via_offset_y"] = pad_side / 2.0 - (m1m + _R_f)
+        ROUTING["via_rest_dx"] = m1m + _R_f - ROUTING["via_offset_x"]
+        ROUTING["via_k0_dx"] = m1m + _r_s + _enc - ROUTING["via_offset_x"]
+        _h = ROUTING.get("via_k0_h")
+        if _h and abs((_h / 2.0 + _enc) - _R_f) > 1e-9:
+            print(f"NOTE: the small top via's pad is {_h + 2 * _enc:g} um tall, the full one {2 * _R_f:g} um: "
+                  f"their top margins differ")
+        print(f"m1_margin {m1m:g} um: Metal1 pad edge {m1m:g} um, via edge {m1m + _enc:g} um from the Metal2 "
+              f"pad's left/top edge -> via_offset_y {ROUTING['via_offset_y']:g}, lower vias dx "
+              f"{ROUTING['via_rest_dx']:+g}, small top via dx {ROUTING['via_k0_dx']:+g}")
+    elif ROUTING.get("via_k0_where", "all") == "needed":
+        raise SystemExit("via_k0_where='needed' needs m1_margin (the margin the full top via must keep)")
+
     #FINAL PI ETCH. "square": one pad_side_extra square per pad on EtchingPad (Rev2). "vias": via-sized
     #circles around the pad perimeter on Polyimide_Negative (Rev3), etch_via_inset_extra further in from
     #the pad edge than the routing via. No circle sits in a corner: each corner gets two neighbours, one
@@ -184,10 +209,18 @@ if __name__ == "__main__":
                        pad_side / 2.0 + ROUTING["via_offset_y"])
         else:
             via_rel = (ROUTING["via_offset_x"], pad_side / 2.0 + ROUTING["via_offset_y"])
+        extra_vias = []
+        if S["k0_via"] and ROUTING.get("via_k0_h"):
+            #capsule top vias (wafer6): the etch vias must also clear its two end circles
+            _rk = ROUTING["via_k0_radius"] if ROUTING["via_k0_radius"] is not None else ROUTING["via_radius"]
+            _d = max(ROUTING["via_k0_h"] / 2.0 - _rk, 0.0)
+            _x, _y = ROUTING["via_offset_x"] + ROUTING["via_k0_dx"], pad_side / 2.0 + ROUTING["via_offset_y"]
+            extra_vias = [(_x, _y + _d, _rk), (_x, _y - _d, _rk)]
         etch_rel, etch_info = etch_via_layout(pad_side, etch_inset, etch_r, etch_gap, via_rel,
-                                              CONFIG["etch_via_spacing"])
+                                              CONFIG["etch_via_spacing"], extra_vias)
 
     m1_pad_kinds = {}      # Rev4: how many wire-end pads got a teardrop / only a circle
+    k0_counts = {}         # wafer6 via_k0_where="needed": top vias kept small / made full
 
     def build_shapes(row_start, short_pairs=()):
         """Generate one design instance's geometry as a list of (points, layer). row_start(col)
@@ -239,7 +272,14 @@ if __name__ == "__main__":
         if S["k0_via"]:
             k0_r = ROUTING["via_k0_radius"] if ROUTING["via_k0_radius"] is not None else ROUTING["via_radius"]
             k0_dx, rest_dx = ROUTING["via_k0_dx"], ROUTING["via_rest_dx"]
+            k0_where, k0_h = ROUTING.get("via_k0_where", "all"), ROUTING.get("via_k0_h")
+            top_uniform = ROUTING.get("top_lane_uniform", False)
+            if k0_where not in ("all", "needed"):
+                raise SystemExit(f"via_k0_where must be 'all' or 'needed', got {k0_where!r}")
             via_x, lane_x, via_r = {}, {}, {}
+            via_h = {}                                   # elongated top vias: total height (um)
+            top_jog = set()                              # top pads whose lane jogs into the via (top_lane_uniform)
+            last_lane = {}                               # column -> x of its last (rightmost) lane
         else:
             via_x, lane_x = {}, {}
         clamped_cols = 0
@@ -253,15 +293,46 @@ if __name__ == "__main__":
                 if S["k0_via"]:
                     via_r[i] = ROUTING["via_radius"]
                 if k == 0:
-                    if S["k0_via"]:
-                        lane_x[i] = nat_via + k0_dx          # top pad: straight down over the via
-                        via_x[i] = lane_x[i]
+                    col_shift = 0.0
+                    full = False
+                    if S["k0_via"] and k0_where == "needed":
+                        #the full via + pad at m1_margin; this column's lanes move right by s_f so its next
+                        #lane keeps wire_gap from that pad. Full only if the pad keeps wire_gap from the
+                        #previous column's last lane AND the shifted bundle keeps it from the next column's
+                        #top via (taken as the small one, which sits furthest left) -- the last column stays small
+                        enc = ROUTING["m1_pad_enc"]
+                        R_f, R_s = ROUTING["via_radius"] + enc, k0_r + enc
+                        dx_f = m1m + R_f - ROUTING["via_offset_x"]
+                        s_f = max(0.0, dx_f + R_f + wire_gap + wire_width / 2.0 - (via_pitch + jog0))
+                        last_f = nat_via + jog0 + s_f + max(len(members) - 2, 0) * wire_pitch
+                        prev = last_lane.get(col - 1)
+                        ok_prev = prev is None or \
+                            (nat_via + dx_f - R_f) - (prev + wire_width / 2.0) >= wire_gap - 1e-9
+                        ok_next = col + 1 < CONFIG["n_cols"] and \
+                            (nat_via + pitch + k0_dx - R_s) - (last_f + wire_width / 2.0) >= wire_gap - 1e-9
+                        full = ok_prev and ok_next
+                        if full:
+                            via_x[i], col_shift = nat_via + dx_f, s_f
+                            k0_counts["full"] = k0_counts.get("full", 0) + 1
+                    if S["k0_via"] and not full:
+                        via_x[i] = nat_via + k0_dx
                         via_r[i] = k0_r
+                        if k0_h:
+                            via_h[i] = k0_h
+                        if k0_where == "needed":
+                            k0_counts["small"] = k0_counts.get("small", 0) + 1
+                    if S["k0_via"]:
+                        #top_lane_uniform: the top pad's lane sits one wire_pitch left of the next lane, like
+                        #every other lane, and jogs 45 deg into its via; else it runs straight down onto it (Rev4)
+                        lane1 = nat_via + via_pitch + jog0 + col_shift
+                        lane_x[i] = lane1 - wire_pitch if (top_uniform and len(members) > 1) else via_x[i]
+                        if lane_x[i] != via_x[i]:
+                            top_jog.add(i)
                     else:
                         lane_x[i] = nat_via                  # top pad: straight down over the via
                         via_x[i] = nat_via
                 else:
-                    lane_x[i] = max(nat_via + jog0, prev_lane + wire_pitch)
+                    lane_x[i] = max(nat_via + jog0 + col_shift, prev_lane + wire_pitch)
                     #Pull the via LEFT so the trace clears it by min_wire_via_margin; keep on the pad.
                     want = min(nat_via, lane_x[i] - min_jog)
                     via_x[i] = max(want, vx0)
@@ -270,6 +341,8 @@ if __name__ == "__main__":
                     if S["k0_via"]:
                         via_x[i] += rest_dx
                 prev_lane = lane_x[i]
+            if S["k0_via"]:
+                last_lane[col] = prev_lane
         if clamped_cols:
             size_knob = "via_radius" if ROUTING["via_shape"] == "circle" else "via_w"
             print(f"WARNING: {clamped_cols} vias hit the pad's left edge before reaching the "
@@ -307,7 +380,9 @@ if __name__ == "__main__":
             #rectangle or a via_radius circle, both centred at (vx, vcy) so the wire jogs into the same
             #point; a circular via is emitted as a closed polyline so design B's 180-deg reflection and
             #the add_lwpolyline pipeline handle it identically to the rectangle.
-            if ROUTING["via_shape"] == "circle":
+            if ROUTING["via_shape"] == "circle" and S["k0_via"] and i in via_h:
+                vpts = capsule_polyline(vx, vcy, 2 * via_r[i], via_h[i], ROUTING["via_arc"])
+            elif ROUTING["via_shape"] == "circle":
                 vpts = circle_polyline(vx, vcy, via_r[i] if S["k0_via"] else ROUTING["via_radius"],
                                        ROUTING["via_arc"])
             else:
@@ -321,7 +396,9 @@ if __name__ == "__main__":
                 x0 = pad_info[i][3]; y0 = cy - pad_side / 2.0
                 for rx, ry in etch_rel:
                     ex, ey = x0 + rx, y0 + ry
-                    if np.hypot(ex - vx, ey - vcy) < (etch_r + via_r[i] + etch_gap - 1e-6 if S["k0_via"]
+                    _d = max(via_h.get(i, 0) / 2.0 - via_r[i], 0.0) if S["k0_via"] else 0.0
+                    if np.hypot(ex - vx, max(abs(ey - vcy) - _d, 0.0)) < (etch_r + via_r[i] + etch_gap
+                                                      - 1e-6 if S["k0_via"]
                                                       else 2 * etch_r + etch_gap - 1e-6):
                         raise SystemExit(f"etch via ({ex:.3f}, {ey:.3f}) closer than {etch_gap} um to the "
                                          f"routing via of pad {i} -- check via_offset_x/y")
@@ -336,7 +413,47 @@ if __name__ == "__main__":
             ring = stroke_centerline_to_polygon(centerline, [wire_width] * 3)
             if ring is not None:
                 ring = np.asarray(ring, dtype=float)
-                if ROUTING["m1_pad"]:      #Rev4: round Metal1 landing pad + teardrop at the via
+                if ROUTING["m1_pad"] and S["k0_via"] and i in top_jog:
+                    #top_lane_uniform (wafer6): the lane steps into its via by a 45-deg jog shorter than the
+                    #pad radius, so a teardrop along it would overshoot the bend. Instead the wire and the pad
+                    #(circle or capsule) are merged and their junction rounded by a closing of radius
+                    #m1_tear_fillet_r, inside a window around the pad and within their convex hull -- it only
+                    #fills the notches between wire and pad, never reaches past them
+                    from shapely.geometry import Polygon, box
+                    enc = ROUTING["m1_pad_enc"]
+                    pad_r = via_r[i] + enc
+                    half_h = (via_h[i] / 2.0 + enc) if i in via_h else pad_r
+                    pad = (capsule_polyline(vx, vcy, 2 * pad_r, 2 * half_h, ROUTING["via_arc"]) if i in via_h
+                           else circle_polyline(vx, vcy, pad_r, ROUTING["via_arc"]))
+                    f = ROUTING["m1_tear_fillet_r"]
+                    wire_p, pad_p = Polygon(ring).buffer(0), Polygon(pad).buffer(0)
+                    win = box(vx - pad_r - 1.0, vcy - half_h - 1.0, lane_x[i] + wire_width, vcy + half_h + 3.0 * f)
+                    local = wire_p.intersection(win).union(pad_p)
+                    closed = local.buffer(f, quad_segs=32).buffer(-f, quad_segs=32).intersection(local.convex_hull)
+                    merged_pad = wire_p.union(pad_p).union(closed)
+                    if merged_pad.geom_type != "Polygon" or merged_pad.interiors:
+                        raise ValueError("wire + top-via pad did not merge into one simple polygon")
+                    ring = np.asarray(merged_pad.exterior.coords, dtype=float)
+                    kind = ("capsule" if i in via_h else "circle") + " jog fillet"
+                    m1_pad_kinds[kind] = m1_pad_kinds.get(kind, 0) + 1
+                elif ROUTING["m1_pad"] and S["k0_via"] and i in via_h:
+                    #elongated top via (wafer6): the wire comes straight down onto it, so the tear blends
+                    #into the capsule pad's TOP half circle, and the capsule is merged in below
+                    from shapely.geometry import Polygon
+                    pad_r = via_r[i] + ROUTING["m1_pad_enc"]
+                    off = max(via_h[i] - 2 * via_r[i], 0.0) / 2.0
+                    vcy_c = vcy + off                    # the capsule pad's TOP half-circle centre
+                    cl_c = [(lane_x[i], y_top), (lane_x[i], vcy_c + (lane_x[i] - vx)), (vx, vcy_c)]
+                    ring = np.asarray(stroke_centerline_to_polygon(cl_c, [wire_width] * 3), dtype=float)
+                    ring, kind = wire_with_end_pad(ring, cl_c, wire_width, pad_r, ROUTING["m1_tear_fillet_r"])
+                    cap = capsule_polyline(vx, vcy, 2 * pad_r, via_h[i] + 2 * ROUTING["m1_pad_enc"],
+                                           ROUTING["via_arc"])
+                    merged_pad = Polygon(ring).buffer(0).union(Polygon(cap).buffer(0))
+                    if merged_pad.geom_type != "Polygon" or merged_pad.interiors:
+                        raise ValueError("wire + capsule pad did not merge into one simple polygon")
+                    ring = np.asarray(merged_pad.exterior.coords, dtype=float)
+                    m1_pad_kinds["capsule " + kind] = m1_pad_kinds.get("capsule " + kind, 0) + 1
+                elif ROUTING["m1_pad"]:      #Rev4: round Metal1 landing pad + teardrop at the via
                     ring, kind = wire_with_end_pad(ring, centerline, wire_width,
                                                    (via_r[i] if S["k0_via"] else ROUTING["via_radius"])
                                                    + ROUTING["m1_pad_enc"],
@@ -620,6 +737,9 @@ if __name__ == "__main__":
     if S["k0_via"] and (ROUTING["via_k0_radius"] is not None or ROUTING["via_rest_dx"] or ROUTING["via_k0_dx"]):
         print(f"top-row vias: r{ROUTING['via_k0_radius']} um at dx {ROUTING['via_k0_dx']:+g}; lower rows dx "
               f"{ROUTING['via_rest_dx']:+g} um (vs the lane bundle, Rev4)")
+        if ROUTING.get("via_k0_where", "all") != "all" or ROUTING.get("via_k0_h"):
+            print(f"top-row vias (wafer6): where={ROUTING.get('via_k0_where', 'all')}, small-via height "
+                  f"{ROUTING.get('via_k0_h')} um; top vias over both instances (A + B): {k0_counts}")
     if ROUTING["m1_pad"]:
         print(f"Metal1 landing pads: {2 * (ROUTING['via_radius'] + ROUTING['m1_pad_enc']):g} um circle at each "
               f"routing via, teardrop fillet r{ROUTING['m1_tear_fillet_r']:g} um (capped to the last straight "

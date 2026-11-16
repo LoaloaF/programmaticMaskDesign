@@ -73,6 +73,16 @@ GEN_ROUTING_FIXED = {
     "via_k0_radius": None,
     "via_k0_dx": 0.0,
     "via_rest_dx": 0.0,
+    # wafer6: two more top-via knobs, read with .get() so they are absent from every older revision:
+    #   via_k0_where  "all" (Rev4: every column's top via is the small one) | "needed": the full via at
+    #                 m1_margin wherever its column's lanes can shift right to pass it (01_generate.py);
+    #                 the small via elsewhere (12-block: the 15-lane columns)
+    #   via_k0_h      total height (um) of the small via: a vertical capsule via_k0_radius*2 wide; its
+    #                 Metal1 pad keeps m1_pad_enc all round. None = a circle (Rev4)
+    #   m1_margin     um from every Metal1 landing pad to the Metal2 pad's left/top edge (sets via_offset_y,
+    #                 via_rest_dx, via_k0_dx); needed by via_k0_where="needed". None = Rev4's numbers
+    #   top_lane_uniform  the top pad's lane one wire pitch left of the next lane, jogging into its via
+    #                 (True), instead of straight down onto it (Rev4)
     "m1_tear_fillet_r": 14.0, # teardrop fillet radius (um); larger = longer, gentler blend. Capped
                               # per wire so the tip stays on the last straight run
 }

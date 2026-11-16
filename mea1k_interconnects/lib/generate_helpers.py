@@ -65,7 +65,18 @@ def circle_polyline(cx, cy, r, n):
     return np.array([(cx + r * np.cos(t), cy + r * np.sin(t)) for t in thetas])
 
 
-def etch_via_layout(side, inset, r, gap, via_rel, spacing_range):
+def capsule_polyline(cx, cy, w, h, n):
+    """Closed Nx2 point array of a VERTICAL stadium (capsule) w wide and h tall, centred at (cx, cy):
+    two half circles of radius w/2 joined by straight sides (h <= w gives a plain circle). Units: um."""
+    r, d = w / 2.0, max(h - w, 0.0) / 2.0
+    half = max(n // 2, 2)
+    top = [(cx + r * np.cos(t), cy + d + r * np.sin(t)) for t in np.linspace(0.0, np.pi, half + 1)]
+    bot = [(cx + r * np.cos(t), cy - d + r * np.sin(t)) for t in np.linspace(np.pi, 2 * np.pi, half + 1)]
+    pts = top + bot
+    return np.array(pts + [pts[0]])
+
+
+def etch_via_layout(side, inset, r, gap, via_rel, spacing_range, extra_vias=()):
     """
     Rev3 PI-etch via centres for one square pad, relative to its lower-left corner. Units: um.
 
@@ -79,6 +90,9 @@ def etch_via_layout(side, inset, r, gap, via_rel, spacing_range):
     four corners. k is the count whose spacing (side run between the neighbours) / (k + 1) lies
     in spacing_range = (lo, hi) and is nearest its middle; k = 0 is allowed.
 
+    extra_vias: more (x, y, radius) circles, relative to the same corner, that every etch via must also
+    keep `gap` from -- e.g. the two end circles of a capsule-shaped top via (wafer6). None by default.
+
     Returns (centres, info) with info = dict(a, k, step, per_side, n).
     """
     pitch = 2.0 * r + gap                      # centre distance that leaves `gap` between edges
@@ -86,15 +100,15 @@ def etch_via_layout(side, inset, r, gap, via_rel, spacing_range):
     a = pitch / np.sqrt(2.0)                   # the two neighbours of one corner
     # The routing via sits near one corner point C. A neighbour at C + t*u (u along a side, into
     # the pad) keeps `pitch` from it for t >= the larger root of |C - V + t*u| = pitch.
-    vx, vy = via_rel
     corners = [(inset, inset), (side - inset, inset), (side - inset, side - inset), (inset, side - inset)]
-    cx, cy = min(corners, key=lambda c: np.hypot(c[0] - vx, c[1] - vy))
-    w = np.array([cx - vx, cy - vy])
-    for u in (np.array([1.0 if cx == inset else -1.0, 0.0]), np.array([0.0, 1.0 if cy == inset else -1.0])):
-        b = float(w @ u)
-        disc = b * b - float(w @ w) + pitch * pitch
-        if disc > 0:
-            a = max(a, -b + np.sqrt(disc))
+    for vx, vy, need in [(via_rel[0], via_rel[1], pitch)] + [(x, y, r + vr + gap) for x, y, vr in extra_vias]:
+        cx, cy = min(corners, key=lambda c: np.hypot(c[0] - vx, c[1] - vy))
+        w = np.array([cx - vx, cy - vy])
+        for u in (np.array([1.0 if cx == inset else -1.0, 0.0]), np.array([0.0, 1.0 if cy == inset else -1.0])):
+            b = float(w @ u)
+            disc = b * b - float(w @ w) + need * need
+            if disc > 0:
+                a = max(a, -b + np.sqrt(disc))
     a = np.ceil(a * 1000.0) / 1000.0           # up to the 1 nm grid
     inner = run - 2.0 * a                      # between the two corner neighbours of a side
     if inner < pitch:
