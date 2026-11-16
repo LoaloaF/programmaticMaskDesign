@@ -8,7 +8,9 @@ fixed in this file on purpose -- the numbers below ARE the design.
 
 The board is Alexei's 12x64 (assets/board_12x64_2026-06-26/, Gerber outline + Excellon drills). It is
 the ground truth: the connector pads sit on its pad drills, the polyimide outline IS its outline (plus
-the neck and the neck -> board fillets), and its 4 corner mounting holes get a 0.8 mm keep-out.
+the neck and its 2 mm neck -> board fillets), and each of its 4 corner mounting holes is cut through the
+polyimide as a 0.8 mm hole (Polyimide_Negative). His outline and drills are also drawn on two HELPER_
+layers (on no mask) for reference.
 
 Lane pitch: WIDE (catalog wafer6 FAN_TARGET_PITCH, 6.5 um = 2 um wire + 4.5 um gap) wherever there is
 room. Only the centre bundle narrows: to TIGHT (4.5 um, the 2.5 um gap floor) between the columns' first
@@ -19,13 +21,16 @@ The 768 band wires, left to right, in 64-wire groups g0..g11; connectors numbere
 column and 7-12 up the right one. Connector k takes group g(k-1):
 
     g0       outer-left: off the neck to the left (WIDE), along the top edge just above block 1 (well
-             clear of the mounting hole), down the side wall, into connector 1 (left block 1) from the wall
+             clear of the mounting hole), down the side wall (well clear of the notches, no jog), into
+             connector 1 (left block 1) from the wall
     g1-g5    centre-left: fan in to TIGHT, straight down the middle, peeling LEFT into connectors 2-6
     g6-g10   centre-right: the mirror -- connectors 7-11 (right blocks 6..2)
     g11      outer-right: the mirror -- connector 12 (right block 1) from the wall
 
 Each 64 enters its block as two 32s, one per wide lane: rows 1-2 and rows 3-4 (2-3 is too narrow).
-THIS ITERATION: the 32s run 500 um into their lanes and stop; the pads are drawn, not connected yet.
+In a lane, the top 16 wires go to the pad row above it and the bottom 16 to the row below: the outermost
+wire takes the pad nearest the lane entry, the next wire the next pad, and so on. Each turns 90 deg, widens
+to PAD_TW and joins its pad with a teardrop.
 """
 import importlib.util
 import math
@@ -49,6 +54,7 @@ from lib.constants import CIRCLE_RES, CONN_PAD_LAYER, WIRE_LAYER  # noqa: E402
 from lib.connector import _load_extended_sig  # noqa: E402
 from lib.geometry import (create_polygon_circle, ensure_layer, filleted_bulb,  # noqa: E402
                           stroke_centerline_to_polygon)
+from lib.teardrop import teardrop_ring, teardrop_tip_dist  # noqa: E402
 
 DSG = base.DSG
 
@@ -70,7 +76,8 @@ MID = 5.5                 # centre lane pitch once block 2 has peeled off (3.5 u
 LATE = 7.5                # centre lane pitch once blocks 3 and 4 have peeled off (5.5 um gap)
 CENTRE_PAD_GAP = 150.0    # centre bundle edge -> the columns' pads, at least
 PI_CLEAR = 150.0          # wire edge -> polyimide edge
-NOTCH_CLEAR = 150.0       # wall-run wire edge -> the wall notches (the wall run never jogs for them)
+NOTCH_CLEAR = 450.0       # wall-run wire edge -> the wall notches' tips (the wall run never jogs for them;
+                          # ~675 um from the wall itself)
 HOLE_D = 800.0            # cut through the polyimide at each corner mounting hole (the drill is 0.5 mm)
 TOP_RUN_PAD_GAP = 100.0   # top-run wire edge -> block 1's pad edge
 FAN_IN_PAD_GAP = 100.0    # the centre fan-in ends this far above block 1's pad edge
@@ -79,7 +86,9 @@ R_OFF_NECK = 1000.0       # outer bundle, neck -> top edge: radius of its innerm
 R_TO_WALL = 300.0         # outer bundle, top edge -> side wall: radius of its innermost wire
 L_WIDEN = 1500.0          # a fan-out to a wider pitch (shorter where the next block comes sooner)
 R_INTO_LANE = 150.0       # a 32's turn into its lane: radius of its first-turning wire
-LANE_STUB = 500.0         # the 32s end this far past the block's outermost pad edge (not connected yet)
+R_TO_PAD = 30.0           # in the lane, each wire turns 90 deg up/down to its pad with this radius ...
+PAD_TW = 15.0             # ... widens from WIRE_W to this ...
+TEAR_FILLET = 100.0       # ... and joins its pad with a teardrop (fillet radius; tip 175 um from the centre)
 PEEL_GAP = 20.0           # below a peeled group's lowest wire, before the rest change pitch
 FAN_RES = 96              # samples per eased fan
 SEG, SAGITTA = 10.0, 0.001  # arc sampling: max segment (um), max chord error (um)
@@ -198,20 +207,22 @@ def board_geometry():
     v = np.array(outline.exterior.coords)
     mid = (v[:, 1] > y0 + 3000.0) & (v[:, 1] < y1 - 3000.0)
     notch_l = v[mid & (v[:, 0] < x0 + 1500.0)][:, 0].max()
+    notch_r = v[mid & (v[:, 0] > x1 - 1500.0)][:, 0].min()
     return dict(outline=outline, segs=segs, drills=drills, pads=pads, mounts=mounts, notch_l=notch_l,
+                notch_r=notch_r,
                 pad_shift=(shift[csv_um[:, 0] < csv_um[:, 0].mean()].max(),
                            shift[csv_um[:, 0] >= csv_um[:, 0].mean()].max()))
 
 
-def blocks_of(pads, left):
-    """The 6 blocks of one connector column, top to bottom: dict(xmin, xmax, rows = 4 row ys top to
-    bottom). A block's rows come as 1 | 2 3 | 4: the wide lanes (740 um) are between rows 1-2 and 3-4."""
-    xm = 0.5 * (pads[:, 0].min() + pads[:, 0].max())
-    col = pads[pads[:, 0] < xm] if left else pads[pads[:, 0] >= xm]
+def blocks_of(col):
+    """The 6 blocks of one connector column (its 384 pads), top to bottom: dict(xmin, xmax, rows = 4 row
+    ys top to bottom, pads). A block's rows come as 1 | 2 3 | 4: the wide lanes (740 um) are between rows
+    1-2 and 3-4."""
     ys = np.unique(np.round(col[:, 1], 3))[::-1]
     if len(ys) != 24:
         raise RuntimeError("expected 24 pad rows per column, got %d" % len(ys))
-    return [dict(xmin=col[:, 0].min(), xmax=col[:, 0].max(), rows=ys[4 * b: 4 * b + 4]) for b in range(6)]
+    return [dict(xmin=col[:, 0].min(), xmax=col[:, 0].max(), rows=ys[4 * b: 4 * b + 4], pads=col)
+            for b in range(6)]
 
 
 def lanes_of(rows):
@@ -220,14 +231,34 @@ def lanes_of(rows):
 
 
 # ======================================================================================
-# The left half; the right half is its mirror
+# One half, drawn as the LEFT half; the right half is routed the same way against its own pads, mirrored
+# into this frame, and mirrored back (so it lands on Alexei's right column, which is not an exact mirror)
 # ======================================================================================
-def route_left(wide, xm, y_start, bd, wide_pitch):
-    """{band index: path from (wide lane, y_start) down} for indices 0..383, plus numbers for the log."""
+def route_side(wide, xm, y_start, side, wide_pitch):
+    """For band indices 0..383 of this half: paths {i: centreline from (wide lane, y_start) to the end of
+    its turn towards its pad}, tails {i: (centreline, widths) from there into the pad centre}, tears
+    [(px, py, uy)], and numbers for the log. `side`: pads (this column's 384, in the left frame), mount
+    (the top mounting hole), notch (the wall notch tip x)."""
     padr = DSG.PADR * 1000.0
-    blocks = blocks_of(bd["pads"], left=True)
+    blocks = blocks_of(side["pads"])
     tight = {i: xm + (i - 383.5) * TIGHT for i in range(384)}
-    paths, cur, geo = {}, {}, {}
+    paths, cur, geo, tails, tears = {}, {}, {}, {}, []
+    tip = teardrop_tip_dist(padr, TEAR_FILLET, PAD_TW)
+
+    def to_pads(wires, rows2, s):
+        """wires [(i, y)] of one lane, travelling in x direction s (+1 right, -1 left); rows2 = (row above,
+        row below). Top 16 -> the row above, bottom 16 -> the row below, outermost first, nearest pad first."""
+        wires = sorted(wires, key=lambda w: -w[1])
+        for half, row_y, v in ((wires[:16], rows2[0], +1), (wires[16:][::-1], rows2[1], -1)):
+            row = side["pads"][np.abs(side["pads"][:, 1] - row_y) < 1.0]
+            row = row[np.argsort(s * row[:, 0])]                    # nearest the entry first
+            if len(row) != len(half):
+                raise RuntimeError("lane at y=%.0f: %d wires for %d pads" % (row_y, len(half), len(row)))
+            for (i, y), (px, py) in zip(half, row):
+                cx, cy = px - s * R_TO_PAD, y + v * R_TO_PAD
+                paths[i] += [(cx, y)] + arc(cx, cy, R_TO_PAD, -v * math.pi / 2, 0.0 if s > 0 else -v * math.pi)
+                tails[i] = ([(px, cy), (px, py - v * tip), (px, py)], [WIRE_W, PAD_TW, PAD_TW])
+                tears.append((px, py, -v))
 
     # ---- outer-left, i = 0..63 (63 innermost), WIDE: off the neck, along the top just above block 1,
     # down the wall (clear of the notches) and straight into block 1
@@ -235,11 +266,11 @@ def route_left(wide, xm, y_start, bd, wide_pitch):
     pad_top = blocks[0]["rows"][0] + padr
     y_low_run = pad_top + TOP_RUN_PAD_GAP + WIRE_W / 2.0
     y_top_run = y_low_run + (n_out - 1) * wide_pitch
-    hole = bd["mounts"][(bd["mounts"][:, 0] < xm) & (bd["mounts"][:, 1] > bd["pads"][:, 1].max())][0]
+    hole = side["mount"]
     hole_gap = hole[1] - HOLE_D / 2.0 - y_top_run - WIRE_W / 2.0
     yt = y_top_run + R_OFF_NECK                                     # the outer wires turn from here
     c1x = wide[0] - R_OFF_NECK
-    x_out = bd["notch_l"] + NOTCH_CLEAR + WIRE_W / 2.0              # i = 0 on the wall: clear of the notches
+    x_out = side["notch"] + NOTCH_CLEAR + WIRE_W / 2.0              # i = 0 on the wall: clear of the notches
     c2x = x_out + R_TO_WALL + (n_out - 1) * wide_pitch
     c2y = y_low_run - R_TO_WALL
     for i in range(n_out):
@@ -257,14 +288,14 @@ def route_left(wide, xm, y_start, bd, wide_pitch):
         paths[i] = [(wide[i], y_start), (wide[i], y_fi0)] + ease(wide[i], tight[i], y_fi0, L_FAN_IN)
         cur[i] = tight[i]
     geo.update(y_top_run=y_top_run, y_low_run=y_low_run, hole_gap=hole_gap, yt=yt, x_out=x_out,
-               notch_l=bd["notch_l"], y_fi0=y_fi0, y_fi1=y_fi1)
+               notch_l=side["notch"], y_fi0=y_fi0, y_fi1=y_fi1)
 
     def into_lanes_from_wall(grp, blk):
         """grp (64, outer..inner) turns RIGHT into blk: the inner 32 into the upper lane, the outer 32
         into the lower one. Returns the lowest wire y."""
-        x_end = blk["xmin"] - padr + LANE_STUB
         low = None
-        for sub, y_lane in zip((grp[32:], grp[:32]), lanes_of(blk["rows"])):
+        for sub, y_lane, rows2 in zip((grp[32:], grp[:32]), lanes_of(blk["rows"]),
+                                      (blk["rows"][:2], blk["rows"][2:])):
             cx = cur[sub[-1]] + R_INTO_LANE
             r_lo = cx - cur[sub[0]]
             ys = y_lane + 0.5 * (R_INTO_LANE + r_lo)                # the 32 centred on the lane
@@ -272,16 +303,17 @@ def route_left(wide, xm, y_start, bd, wide_pitch):
                 raise RuntimeError("no room to turn into the lane at y=%.0f" % y_lane)
             for i in sub:
                 r = cx - cur[i]
-                paths[i] += [(cur[i], ys)] + arc(cx, ys, r, math.pi, 1.5 * math.pi) + [(x_end, ys - r)]
+                paths[i] += [(cur[i], ys)] + arc(cx, ys, r, math.pi, 1.5 * math.pi)
+            to_pads([(i, ys - (cx - cur[i])) for i in sub], rows2, +1)
             low = ys - r_lo
         return low
 
     def into_lanes_from_centre(grp, blk):
         """grp (64, left..right) turns LEFT into blk: the left 32 into the upper lane, the right 32 into
         the lower one. Returns the lowest wire y."""
-        x_end = blk["xmax"] + padr - LANE_STUB
         low = None
-        for sub, y_lane in zip((grp[:32], grp[32:]), lanes_of(blk["rows"])):
+        for sub, y_lane, rows2 in zip((grp[:32], grp[32:]), lanes_of(blk["rows"]),
+                                      (blk["rows"][:2], blk["rows"][2:])):
             cx = cur[sub[0]] - R_INTO_LANE
             r_hi = cur[sub[-1]] - cx
             ys = y_lane + 0.5 * (R_INTO_LANE + r_hi)
@@ -289,7 +321,8 @@ def route_left(wide, xm, y_start, bd, wide_pitch):
                 raise RuntimeError("no room to turn into the lane at y=%.0f" % y_lane)
             for i in sub:
                 r = cur[i] - cx
-                paths[i] += [(cur[i], ys)] + arc(cx, ys, r, 0.0, -math.pi / 2) + [(x_end, ys - r)]
+                paths[i] += [(cur[i], ys)] + arc(cx, ys, r, 0.0, -math.pi / 2)
+            to_pads([(i, ys - (cur[i] - cx)) for i in sub], rows2, -1)
             low = ys - r_hi
         return low
 
@@ -324,7 +357,7 @@ def route_left(wide, xm, y_start, bd, wide_pitch):
             low = into_lanes_from_centre(rest[:64], blocks[6 - len(rest) // 64])
             rest = rest[64:]
     geo["stages"] = stages
-    return paths, geo
+    return paths, tails, tears, geo
 
 
 # ======================================================================================
@@ -406,10 +439,25 @@ def main():
           "%.1f um, right column %.1f um vs the CSV)" % ([round(v) for v in bd["outline"].bounds],
                                                            len(bd["drills"]), *bd["pad_shift"]))
 
-    left, geo = route_left(lanes, xm, info["y_fan"], bd, wide_pitch)
-    paths = dict(left)
-    for i, p in left.items():
-        paths[767 - i] = mirror(p, xm)
+    pads = bd["pads"]
+    is_l = pads[:, 0] < xm
+    top_mounts = bd["mounts"][bd["mounts"][:, 1] > pads[:, 1].max()]
+    left_side = dict(pads=pads[is_l], mount=top_mounts[top_mounts[:, 0] < xm][0], notch=bd["notch_l"])
+    m_r = top_mounts[top_mounts[:, 0] > xm][0]
+    right_side = dict(pads=np.column_stack([2 * xm - pads[~is_l][:, 0], pads[~is_l][:, 1]]),
+                      mount=(2 * xm - m_r[0], m_r[1]), notch=2 * xm - bd["notch_r"])
+    paths, tails, geo = {}, {}, None
+    tears = []
+    for side, flip in ((left_side, False), (right_side, True)):
+        p_, t_, tr_, g_ = route_side(lanes, xm, info["y_fan"], side, wide_pitch)
+        geo = geo or g_
+        for i in p_:
+            j = 767 - i if flip else i
+            paths[j] = mirror(p_[i], xm) if flip else p_[i]
+            tails[j] = (mirror(t_[i][0], xm) if flip else t_[i][0], t_[i][1])
+        tears += [((2 * xm - px) if flip else px, py, uy) for px, py, uy in tr_]
+    if len(tears) != 768:
+        raise RuntimeError("%d of 768 pads connected" % len(tears))
     print("lane pitch: WIDE %.1f um (gap %.1f), TIGHT %.1f um (gap %.1f)"
           % (wide_pitch, wide_pitch - WIRE_W, TIGHT, TIGHT - WIRE_W))
     print("outer bundles (64 each, WIDE): turn off the neck at y=%.0f, top run y=%.0f..%.0f (%.0f um above "
@@ -426,15 +474,26 @@ def main():
     ensure_layer(doc, WIRE_LAYER, 4)
     ensure_layer(doc, CONN_PAD_LAYER, 2)
     lines = []
+    own = []
     for i in range(768):
         poly = list(info["m1_polys"][i]) + paths[i][1:]
-        lines.append(LineString(poly))
+        tail, widths = tails[i]
+        lines.append(LineString(poly + tail[1:]))
+        own.append(tail[-1])
         msp.add_lwpolyline(stroke_centerline_to_polygon(poly, [WIRE_W] * len(poly)), close=True,
                            dxfattribs={"layer": WIRE_LAYER})
-    padr = DSG.PADR * 1000.0
-    for x, y in bd["pads"]:
-        msp.add_lwpolyline(create_polygon_circle(x, y, padr, CIRCLE_RES), close=True,
+        msp.add_lwpolyline(stroke_centerline_to_polygon(tail, widths), close=True,
                            dxfattribs={"layer": WIRE_LAYER})
+    padr = DSG.PADR * 1000.0
+    tear_polys = []
+    for px, py, uy in tears:
+        ring = teardrop_ring(px, py, padr, 0.0, uy, TEAR_FILLET, PAD_TW, res=64)
+        msp.add_lwpolyline([tuple(q) for q in ring], close=True, dxfattribs={"layer": WIRE_LAYER})
+        tear_polys.append((Polygon(ring), (px, py)))
+    print("connector pads: all %d joined -- 90 deg turn (r %.0f um), widened to %.0f um, teardrop (fillet %.0f um, "
+          "tip %.0f um from the centre)" % (len(tears), R_TO_PAD, PAD_TW, TEAR_FILLET,
+                                            teardrop_tip_dist(padr, TEAR_FILLET, PAD_TW)))
+    for x, y in bd["pads"]:
         msp.add_lwpolyline(create_polygon_circle(x, y, (base.CONN_PAD_R or DSG.PADR) * 1000.0, CIRCLE_RES),
                            close=True, dxfattribs={"layer": CONN_PAD_LAYER})
     for lay, col in ((HELPER_OUTLINE, 3), (HELPER_DRILL, 1)):
@@ -475,15 +534,18 @@ def main():
                 if d < worst[0]:
                     worst = (d, (i, j))
     at = nearest_points(lines[worst[1][0]], lines[worst[1][1]])[0]
-    pads = [Point(x, y).buffer(padr, 64) for x, y in bd["pads"]]
-    ptree = STRtree(pads)
-    pad_min = min(ln.distance(pads[ptree.query_nearest(ln)[0]]) for ln in lines) - WIRE_W / 2.0
+    ttree = STRtree([t for t, _c in tear_polys])
+    pad_min = 1e9
+    for i, ln in enumerate(lines):
+        for j in ttree.query(ln, predicate="dwithin", distance=400.0):
+            if math.hypot(tear_polys[j][1][0] - own[i][0], tear_polys[j][1][1] - own[i][1]) > 1.0:
+                pad_min = min(pad_min, ln.distance(tear_polys[j][0]) - WIRE_W / 2.0)
     pi_min = min(ln.distance(merged.boundary) for ln in lines) - WIRE_W / 2.0
     pm = prep(merged.buffer(1e-6))
     outside = sum(1 for ln in lines if not pm.contains(ln))
     print("\nchecks: min wire gap %.3f um (wires %s at %.0f, %.0f), floor 2.5: %s"
           % (worst[0], worst[1], at.x, at.y, "OK" if worst[0] >= 2.5 - 5e-3 else "FAIL"))
-    print("        min wire -> connector pad edge %.1f um; -> polyimide edge (incl. the holes) %.1f um "
+    print("        min wire -> another wire's pad/teardrop %.1f um; -> polyimide edge (incl. the holes) %.1f um "
           "(target %.0f); "
           "wires off the polyimide: %d" % (pad_min, pi_min, PI_CLEAR, outside))
 

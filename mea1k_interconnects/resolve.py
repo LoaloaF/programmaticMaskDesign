@@ -140,7 +140,7 @@ def show(design, wafer, rev, stage="route", out=sys.stdout, changed_only=False):
     w = out.write
     w("%s  at  %s  (%s)\n" % (design, catalog.label(wafer, rev), r.status))
     w("  base config     config_%s.py\n" % d.base)
-    w("  stages          %s -> %s\n" % (d.gen, d.route))
+    w("  stages          %s -> %s\n" % (d.gen, getattr(cfg, "ROUTE_SCRIPT", None) or d.route))
     w("  files           devices/%s/: %s, %s\n" % ((design,) + catalog.file_names(design)))
     w("  revision chain  %s\n" % " -> ".join(catalog.label(x, y.n) for x, y in catalog.chain(wafer, rev)))
     w("  wafer layers    %s\n" % r.layerset)
@@ -182,7 +182,7 @@ def summary(design, wafer, rev):
     out = {
         "device": design, "note": d.note,
         "wafer": wafer, "wafer_name": wafers.get(wafer)["name"], "rev": rev, "status": r.status,
-        "base_config": "config_%s.py" % d.base, "stages": [d.gen, d.route],
+        "base_config": "config_%s.py" % d.base, "stages": [d.gen, getattr(cfg, "ROUTE_SCRIPT", None) or d.route],
         "files": {"device": final, "pad_grid": gen},
         "revision_chain": [catalog.label(w, x.n) for w, x in catalog.chain(wafer, rev)],
         "changes_this_revision": list(r.changes),

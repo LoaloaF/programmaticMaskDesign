@@ -29,7 +29,10 @@ The defaults match the fabricated wafer, `rev2_reference/MEA1K_wafer4_12x_8x_8x_
 is `{wafer: {N: Rev}}`. A revision changes only some masks of its wafer; a new wafer (new devices, new
 placement) starts again at Rev1 and names the revision of another wafer it starts from.
 - **wafer4** = `MEA1K_wafer4_12x_8x_8x_breakoutboards`: Rev2, Rev3, Rev4 below.
-- **wafer6** = `MEA1K_wafer6_12x_8x_breakoutboards`: Rev1 = wafer4 Rev4 + its own changes (in design).
+- **wafer6** = `MEA1K_wafer6_12x_8x_breakoutboards`: Rev1 = wafer4 Rev4 + its own changes (in design;
+  `catalog.py` lists them). Its 12-block has its own stage 02, `02_route_wafer6.py` (Metal1 only, no via
+  row, routed onto Alexei's 12x64 board in `assets/board_12x64_2026-06-26/`); `02_route.py` is unchanged
+  and still builds every wafer4 design.
 
 **The wafer4 revisions.**
 - **Rev2:** the fabricated wafer. Its design files are committed in `rev2_reference/` and are read only by

@@ -19,7 +19,11 @@ How a (design, revision) is resolved -- resolve.py, in this order, every step ov
     4.                    .per_design[d]
     5.                    .dummy_set  (dummy designs only)
     6. the newest via_edge_gap        moves every via so its EDGE is that far from the pad edge
-    7. stage 02 only: band_ref_rev    builds around that revision's band (BAND_REF_DXF)
+    7. REDERIVE (a setting)           if set, the derived values of step 1 are recomputed from the
+                                      resolved knobs (opt-in: the fabricated designs keep theirs)
+    8. stage 02 only: band_ref_rev    builds around that revision's band (BAND_REF_DXF)
+                                      ROUTE_SCRIPT (a setting) runs another stage-02 script than the
+                                      design's (wafer6's 12-block: 02_route_wafer6.py)
 
     python3 -m maskgen show --wafer wafer4 --rev 4 --design 12block_56_15   every resolved setting + its source
 
@@ -135,16 +139,15 @@ REVISIONS = {
                    # the shifted lanes reach up to 5.25 um from Rev3's band; stage 02's sanity limit on that
                    # step (02_route.py, default 5 um) -- the step itself is a 300 um S-curve, checked for gaps
                    "BAND_REF_MAX_DX": 6.0,
-                   # Phase-1 fan: lanes 6.5 um apart (was 7.0), band -> fan end 3.0 mm (NECK_LEN 420 + fan);
-                   # the via row stays where it was (VIA_ROW_GAP shortened by what the fan grew: Rev4's
-                   # auto fan was 2112.915 um), so the device keeps its length
+                   # Phase-1 fan: lanes 6.5 um apart (was 7.0), band -> fan end 3.0 mm (NECK_LEN 420 + fan)
                    "FAN_TARGET_PITCH": 6.5, "FAN_LEN": 2580.0,
-                   # the new routing (02_route_wafer6.py): Metal1 only, quarters, raised shoulders. Its lane
-                   # pitch is FAN_TARGET_PITCH = 2 um wire + the gap (>= 2.5 um) -- the knob to iterate on
+                   # stage 02 is the new router, 02_route_wafer6.py: its geometry is fixed in that file;
+                   # FAN_TARGET_PITCH is its WIDE lane pitch
                    "ROUTE_SCRIPT": "02_route_wafer6.py",
                    # the neck's polyimide widening follows the fan: it ends at the fan bottom (automatic)
                    # and now also starts 467 um lower (Rev4 -400 um), so the ramp keeps its length
                    "POLY_FAN_TAPER_START_Y_UM": -400 - (2580.0 - 2112.914695780087),
+                   # FAN_TARGET_PITCH changed: recompute the values derived from it (resolve.py)
                    "REDERIVE": True}},
                dummy_set={}, via_edge_gap=None, band_ref_rev=("wafer4", 3),
                status="in design",
@@ -161,12 +164,18 @@ REVISIONS = {
                    "the polyimide neck ~384 um narrower -- and the fan is 3.0 mm long (band -> full width; Rev4 "
                    "2.53 mm); the neck's widening moves down with it by 467 um (FAN_TARGET_PITCH, FAN_LEN, "
                    "POLY_FAN_TAPER_START_Y_UM)",
-                   "new connector routing (02_route_wafer6.py): Metal1 only, no via row; Alexei's 12x64 board is the "
-                   "ground truth -- connector pads on his drills (right column +15 um), the polyimide is his outline "
-                   "+ neck + 3 mm neck fillets; lanes 4.5 um only where tight (top run, start of the centre), else "
-                   "6.5; 128 wires per side run along the top edge under the mounting hole and down the wall into "
-                   "blocks 1 and 3, 256 per side down the centre into blocks 2, 4, 5, 6; each 64 enters its "
-                   "block's two wide lanes as 2 x 32; this iteration stops them short of the pads (ROUTE_SCRIPT)",
+                   "new stage 02 (02_route_wafer6.py): Metal1 only, no via row. Alexei's 12x64 board is the ground "
+                   "truth: connector pads on his drills (right column +15 um vs the CSV), polyimide = his outline + "
+                   "the neck with 2 mm neck fillets (Rev4: 3 mm), a 0.8 mm hole at each corner mounting hole "
+                   "(ROUTE_SCRIPT)",
+                   "connector k takes band group k-1 (64 wires; 1-6 down the left column, 7-12 up the right): "
+                   "1 and 12 from the side walls -- off the neck, along the top edge just above block 1, down the "
+                   "wall clear of the notches; 2-11 down the centre, peeling off block by block",
+                   "lane gaps: 4.5 um in the neck and the wall bundles; the centre fans in to 2.5 um between the "
+                   "first blocks, then 3.5 um after block 2 and 5.5 um after blocks 3-4",
+                   "into a block: two 32s, one per wide lane (rows 1-2, 3-4); top 16 to the row above, bottom 16 "
+                   "to the row below, outermost wire to the nearest pad; 90 deg turn, 15 um approach, teardrop "
+                   "with a 100 um fillet",
                ]),
     },
 }
