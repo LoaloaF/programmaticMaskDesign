@@ -176,6 +176,9 @@ def cmd_wafer(a):
             _run(nest, proj, env)
         else:
             print("\nusing the existing nest %s (--nest to nest again)" % C.POSES_PATH)
+            if not all(os.path.exists(C.offset_path(d["key"])) for d in C.DESIGNS):
+                # a design added to a nested kind (a variant): its footprint/offset, the nest stays
+                _run([sys.executable, specs.STAGE["extract_footprints"], "--keep-frames"], proj, env)
         if os.path.exists(C.WAFER_OUT):
             if not a.force:
                 raise SystemExit("%s exists -- --force to export again" % C.WAFER_OUT)

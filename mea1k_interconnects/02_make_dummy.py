@@ -335,7 +335,7 @@ def pair_centre(polygons, gap):
 
 def build_pair_outline(dev_bbox, c):
     """The pair's polyimide outline as a ring: a rectangle `polyimide_margin` around both copies, with
-    a handle on the top and the bottom edge at the same x, stroked outward by
+    a handle on the top and (unless pair_bottom_handle is False) the bottom edge at the same x, stroked outward by
     `polyimide_width` (as build_polyimide_outline)."""
     dx_lo, dy_lo, dx_hi, dy_hi = dev_bbox
     m, w = CONFIG["polyimide_margin"], CONFIG["polyimide_width"]
@@ -353,9 +353,13 @@ def build_pair_outline(dev_bbox, c):
         hx = ox_lo + CONFIG["handle_x_frac"] * (ox_hi - ox_lo)
         top = handle_polygon(hx, oy_hi, r, f)
         # the bottom handle: the top one turned over onto the bottom edge, at the SAME x (handle_x_frac)
-        bot = handle_polygon(hx, oy_lo, r, f).rotate(math.pi, (hx, oy_lo))
-        outer = gdstk.boolean(gdstk.boolean(outer, top, "or"), bot, "or")[0]
-        print(f"polyimide handles: r={r:.0f} um, fillet {f:.0f} um, top and bottom edge at x={hx:.1f}")
+        outer = gdstk.boolean(outer, top, "or")[0]
+        if CONFIG.get("pair_bottom_handle", True):
+            bot = handle_polygon(hx, oy_lo, r, f).rotate(math.pi, (hx, oy_lo))
+            outer = gdstk.boolean(outer, bot, "or")[0]
+            print(f"polyimide handles: r={r:.0f} um, fillet {f:.0f} um, top and bottom edge at x={hx:.1f}")
+        else:
+            print(f"polyimide handle: r={r:.0f} um, fillet {f:.0f} um, top edge only at x={hx:.1f} (no bottom handle)")
     etch_l, etch_d = RECT_ETCH_LAYER
     grown = gdstk.offset(outer, w, join="miter", use_union=True)
     return gdstk.boolean(grown, outer, "not", layer=etch_l, datatype=etch_d)

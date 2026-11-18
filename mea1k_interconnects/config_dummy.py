@@ -97,6 +97,7 @@ DUMMY = {
     "orient_chamfer":  0.0,     # pair only: cut the outline's top-left corner by this at 45 deg (um), so the
                                 # pair shows which side faces up (it is otherwise mirror-symmetric); 0 = none
     "pair_gap_y":      0.0,     # the copy this much lower than the exact fit (um), so the two grids stay distinct
+    "pair_bottom_handle": True, # pair only: False drops the bottom-edge handle (marks the non-shorted variant)
 }
 
 import lib                                     # puts the repo root (maskgen) on sys.path

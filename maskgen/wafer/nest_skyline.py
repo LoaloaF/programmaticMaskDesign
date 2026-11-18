@@ -111,10 +111,11 @@ for _k in KINDS:
 TRUE = {}
 for _k in KINDS:
     _ds = C.designs_of(_k)
-    _t = C.footprint_path(_ds[0]["key"]).replace(".json", "_true.json")
-    if len(_ds) == 1 and os.path.exists(_t):
-        _j = json.load(open(_t))
-        TRUE[_k] = (Polygon(_j["outline"]), Polygon(_j["silhouette"]))
+    _ts = [C.footprint_path(_d["key"]).replace(".json", "_true.json") for _d in _ds]
+    if all(os.path.exists(_t) for _t in _ts) and (len(_ds) == 1 or getattr(C, "VARIANTS_SHARE_CENTRE", False)):
+        # variants in one frame (VARIANTS_SHARE_CENTRE): the slot's true shapes are their union
+        _js = [json.load(open(_t)) for _t in _ts]
+        TRUE[_k] = tuple(unary_union([Polygon(_j[_n]) for _j in _js]) for _n in ("outline", "silhouette"))
 
 # Fill kinds (config FILL_KINDS): not part of the mix. Each layout is first packed to the mix, then
 # topped up with fill pieces only; layouts rank by (mix pieces, fill pieces).

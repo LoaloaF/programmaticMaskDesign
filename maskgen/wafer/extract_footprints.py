@@ -16,6 +16,7 @@ and the overlay PNG must show a single closed outline with no spurious lobes.
 import json, os
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
+from shapely.affinity import translate
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -36,12 +37,28 @@ print("out dir   : %s" % C.NEST_DIR)
 print()
 
 shapes = {}
+SHARE = getattr(C, "VARIANTS_SHARE_CENTRE", False) and BAND_UM
+# --keep-frames (maskgen wafer on an existing nest): a design that already has an offset keeps it -- its poses
+# were nested in that frame, even if its outline has changed since (only ever shrunk, or nest again)
+KEEP = "--keep-frames" in sys.argv[1:]
+first_centre = {}                       # kind -> (cx, cy) of its first design (VARIANTS_SHARE_CENTRE)
 for d in C.DESIGNS:
     dxf = C.design_dxf(d)
     if not os.path.exists(dxf):
         raise SystemExit("missing DXF: %s" % dxf)
     if BAND_UM:
         fp, cx, cy, outline, sil = extract_outline(dxf, BAND_UM * 1e-3)
+        frame = None
+        if KEEP and os.path.exists(C.offset_path(d["key"])):
+            o = json.load(open(C.offset_path(d["key"])))
+            frame = (o["cx"], o["cy"])
+        elif SHARE and d["kind"] in first_centre:
+            # every variant of a kind in its first design's frame: the same pose puts all of them in one place
+            frame = first_centre[d["kind"]]
+        if frame:
+            fp, outline, sil = (translate(g, cx - frame[0], cy - frame[1]) for g in (fp, outline, sil))
+            cx, cy = frame
+        first_centre.setdefault(d["kind"], (cx, cy))
         # the true shapes, for the nester's exact test (a band may not reach a neighbour's outline)
         json.dump({"outline": list(outline.exterior.coords), "silhouette": list(sil.exterior.coords)},
                   open(C.footprint_path(d["key"]).replace(".json", "_true.json"), "w"))
@@ -64,7 +81,9 @@ for kind in C.kinds():
         print("kind %-6s: single design %s, nested against its own footprint"
               % (kind, ds[0]["key"]))
         continue
-    env = unary_union([shapes[d["key"]] for d in ds]).buffer(C.ENVELOPE_PAD).simplify(C.ENVELOPE_SIMPLIFY)
+    env = unary_union([shapes[d["key"]] for d in ds])
+    if not SHARE:                       # shared frame: the plain union (= the first's when it covers the rest)
+        env = env.buffer(C.ENVELOPE_PAD).simplify(C.ENVELOPE_SIMPLIFY)
     if env.geom_type == "MultiPolygon":
         env = max(env.geoms, key=lambda g: g.area)
     env = Polygon(env.exterior)

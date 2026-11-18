@@ -1,4 +1,5 @@
-"""Config -- wafer6 Rev1: 8x64 + 12-block devices at 2:1, dummy pairs as fill, nested (python3 -m maskgen wafer wafer6)."""
+"""Config -- wafer6 Rev1: 8x64 + 12-block devices at 2:1, dummy pairs as fill (2/3 shorted, 1/3 not), nested
+(python3 -m maskgen wafer wafer6)."""
 import os, sys
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.dirname(ROOT)); sys.path.insert(0, ROOT)
@@ -19,8 +20,15 @@ SHANK_COUNTS = {"8x64_56_15": 8, "12block_56_15": 4, "dummy_2x768_56_15": 18}   
 # nest on the polyimide outline + half the cutout band: neighbours' cutout bands may overlap, a band never
 # reaches a neighbour's polyimide (maskgen/wafer/footprints.py extract_outline; checked exactly in the nester)
 PI_BAND_UM = 200.0
-DESIGNS = [{"key": k, "kind": k, "count": n, "dxf": "%s/%s" % (k, _catalog.file_names(k)[1])}
-           for k, n in SHANK_COUNTS.items()]
+# variants sharing a kind's slots (after nesting): about 1/3 of the dummy pairs non-shorted (no bottom handle, its
+# outline inside the shorted pair's, so it takes the same slots). Unlisted kinds: one design, key = kind.
+VARIANTS = {"dummy_2x768_56_15": {"dummy_2x768_56_15": 12, "dummy_2x768_56_15_open": 6}}
+DESIGNS = [{"key": v, "kind": k, "count": m, "dxf": "%s/%s" % (v, _catalog.file_names(v)[1])}
+           for k, n in SHANK_COUNTS.items() for v, m in VARIANTS.get(k, {k: n}).items()]
+assert all(sum(VARIANTS[k].values()) == SHANK_COUNTS[k] for k in VARIANTS)
+# a kind's variants are placed on the FIRST variant's centre (extract_footprints.py, PI_BAND_UM): they share its
+# frame, so a smaller outline sits exactly inside the slot nested for the first
+VARIANTS_SHARE_CENTRE = True
 
 CLOSE_GAP, SIMPLIFY, ENVELOPE_PAD, ENVELOPE_SIMPLIFY = 0.08, 0.03, 0.01, 0.01
 WAFER_R, WAFER_FLAT_Y, EDGE_EXCL, GAP, MARK_BUF = 50.0, -47.285, 3.0, 0.05, 0.7

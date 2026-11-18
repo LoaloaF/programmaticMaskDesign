@@ -57,7 +57,7 @@ WAFERS = {
         note="MEA1K interconnects, nested",
         revs={
             1: dict(layout=dict(kind="nested", config="config_wafer6", nester="skyline"),
-                    layerset="interconnect_rev4", devices=("12block_56_15", "8x64_56_15", "dummy_2x768_56_15"),
+                    layerset="interconnect_rev4", devices=("12block_56_15", "8x64_56_15", "dummy_2x768_56_15", "dummy_2x768_56_15_open"),
                     note="in design: wafer4 Rev4's 12-block + changes"),
         }),
 }
